@@ -14,8 +14,9 @@ struct SBody
 	Vec3 m_Velocity; // Velocity (m/s)
 	Vec3 m_Acceleration; // Acceleration (m/s^2)
 	glm::vec3 m_Color;
+	int m_Id;
 
-	SBody(const std::string &Name, double Mass, double Radius, Vec3 Position, Vec3 Velocity, glm::vec3 Color);
+	SBody(int Id, const std::string &Name, double Mass, double Radius, Vec3 Position, Vec3 Velocity, glm::vec3 Color);
 };
 
 #endif // BODY_H

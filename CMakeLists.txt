@@ -12,6 +12,8 @@ set(SHADER_FILES
     data/shaders/vert_sphere.glsl
     data/shaders/frag_grid.glsl
     data/shaders/vert_grid.glsl
+    data/shaders/frag_trajectory.glsl
+    data/shaders/vert_trajectory.glsl
 )
 
 # create a header file with the shader source code as strings
@@ -76,6 +78,8 @@ add_executable(astrosim
 	src/gfx/grid.cpp
 	src/gfx/grid.h
 	src/gfx/shader.h
+	src/gfx/trajectories.cpp
+	src/gfx/trajectories.h
 	src/main.cpp
 	src/sim/body.cpp
 	src/sim/body.h

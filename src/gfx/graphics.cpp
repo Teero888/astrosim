@@ -112,12 +112,10 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	glEnable(GL_DEPTH_TEST); // this is so things have the right order
 	glDepthMask(GL_TRUE); // Enable depth writing
 
-	// TODO: this is going to be moved to some function
+	m_Grid.Init();
+	m_Trajectories.Init();
 
-	// Do grid shader stuff
-	{
-		m_Grid.Init();
-	}
+	// TODO: this is going to be moved to some function
 	// Do sphere shader stuff
 	{
 		m_SphereShader.CompileShader(Shaders::VERT_SPHERE, Shaders::FRAG_SPHERE);
@@ -148,6 +146,7 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 
 		glBindVertexArray(0);
 	}
+	// TODO: this shader is unused right now
 	// Do solid shader stuff this is just for testing
 	{
 		m_SolidShader.CompileShader(Shaders::VERT_SOLID, Shaders::FRAG_SOLID);
@@ -222,12 +221,10 @@ void CGraphics::OnRender()
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// m_Grid.Update(m_Camera.m_Radius);
 	m_Grid.Render(&m_Camera);
+	m_Trajectories.Render(&m_Camera);
 	// draw bodies
-	{
-		m_pStarSystem->RenderBodies(&m_SphereShader, &m_Camera);
-	}
+	m_pStarSystem->RenderBodies(&m_SphereShader, &m_Camera);
 	// draw test triangle xd
 	// {
 	// 	m_SolidShader.Use();
@@ -251,6 +248,7 @@ void CGraphics::OnExit()
 	m_SolidShader.Destroy();
 	m_SphereShader.Destroy();
 	m_Grid.Destroy();
+	m_Trajectories.Destroy();
 	glfwDestroyWindow(m_pWindow);
 	glfwTerminate();
 }

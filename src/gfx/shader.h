@@ -77,11 +77,20 @@ public:
 	void Destroy()
 	{
 		if(EBO != -1)
+		{
 			glDeleteBuffers(1, &EBO);
+			EBO = -1;
+		}
 		if(VBO != -1)
+		{
 			glDeleteBuffers(1, &VBO);
+			VBO = -1;
+		}
 		if(VAO != -1)
+		{
 			glDeleteVertexArrays(1, &VAO);
+			VAO = -1;
+		}
 
 		glDeleteProgram(m_Program);
 		m_Program = -1;

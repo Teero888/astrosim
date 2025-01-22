@@ -5,6 +5,7 @@
 #include "grid.h"
 #include "imgui.h"
 #include "shader.h"
+#include "trajectories.h"
 
 class CStarSystem;
 class GLFWwindow;
@@ -30,6 +31,7 @@ public:
 	// needs to be public for controls stuff since theyre static
 	ImGuiIO *m_pImGuiIO;
 	CCamera m_Camera;
+	CTrajectories m_Trajectories;
 	bool OnInit(CStarSystem *pStarSystem);
 	void OnRender();
 	void OnExit();

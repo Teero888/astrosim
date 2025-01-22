@@ -25,34 +25,36 @@ int main()
 
 	GfxEngine.m_Camera.m_pFocusedBody = &StarSystem.m_vBodies.front();
 
-	// constexpr int PredictionLength = 3600;
-	// CStarSystem PredictedStarSystem = StarSystem;
+	// This is for the trajectories
+	CStarSystem PredictedStarSystem = StarSystem;
 
 	using namespace std::chrono;
 	auto LastTick = high_resolution_clock::now();
 	auto LastRenderTick = high_resolution_clock::now();
-	double accumulatedTime = 0.0;
+	double AccTime = 0.0;
 
 	while(!glfwWindowShouldClose(GfxEngine.GetWindow()))
 	{
 		const double updateInterval = 1.0 / StarSystem.m_TPS;
 		glfwPollEvents();
 
-		auto currentTime = high_resolution_clock::now();
-		double elapsedTime = duration_cast<duration<double>>(currentTime - LastRenderTick).count();
-		LastRenderTick = currentTime;
-		accumulatedTime += elapsedTime;
+		const auto CurrentTime = high_resolution_clock::now();
+		double ElapsedTime = duration_cast<duration<double>>(CurrentTime - LastRenderTick).count();
+		LastRenderTick = CurrentTime;
+		AccTime += ElapsedTime;
 
-		while(accumulatedTime >= updateInterval)
+		while(AccTime >= updateInterval)
 		{
 			StarSystem.UpdateBodies();
 			GfxEngine.m_Camera.UpdateViewMatrix();
-			accumulatedTime -= updateInterval;
-			// while(PredictedStarSystem.m_SimTick < StarSystem.m_SimTick + PredictionLength)
-			// {
-			// 	PredictedStarSystem.UpdateBodies();
-			// }
+			AccTime -= updateInterval;
+			while(PredictedStarSystem.m_SimTick < StarSystem.m_SimTick + GfxEngine.m_Trajectories.m_TrajectoryLength)
+			{
+				GfxEngine.m_Trajectories.Update(PredictedStarSystem);
+				PredictedStarSystem.UpdateBodies();
+			}
 		}
+		GfxEngine.m_Trajectories.UpdateBuffers(PredictedStarSystem, GfxEngine.m_Camera);
 
 		GfxEngine.OnRender();
 	}
