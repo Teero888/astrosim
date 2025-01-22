@@ -1,12 +1,14 @@
 #include "camera.h"
 #include "glm/ext/vector_float3.hpp"
 
+// TODO: might want to add delta time here for the radius interpolation
 void CCamera::UpdateViewMatrix()
 {
 	switch(m_CameraMode)
 	{
 	case MODE_FOCUS:
 	{
+		m_Radius += (m_WantedRadius - m_Radius) / 10.0;
 		// Clamp pitch
 		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 

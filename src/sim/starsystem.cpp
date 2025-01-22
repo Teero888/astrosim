@@ -7,7 +7,7 @@
 
 constexpr double G = 6.67430e-11; // gravitational constant
 // basically the speed/accuracy of the simultion
-constexpr double dt = 60.0 * 60.0; // Time step (1 min in tick)
+constexpr double dt = 60.0 * 60.0; // Time step (1hr = 1tick)
 
 #include "vmath.h"
 

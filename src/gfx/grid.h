@@ -10,7 +10,7 @@ class CGrid
 
 public:
 	void Init();
-	void Render(CCamera *pCamera);
+	void Render(CCamera &Camera);
 	void Destroy();
 };
 #endif // GRID_H

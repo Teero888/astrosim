@@ -18,6 +18,7 @@ struct CCamera
 {
 	SBody *m_pFocusedBody = nullptr;
 
+	float m_WantedRadius = 50.f;
 	float m_Radius = 50.f;
 	Vec3 m_FocusPoint = Vec3(0, 0, 0);
 	ECameraMode m_CameraMode = MODE_FOCUS;
@@ -33,7 +34,7 @@ struct CCamera
 	float m_Sensitivity = 0.1f; // Mouse sensitivity
 
 	glm::mat4 m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
-	glm::mat4 m_Projection = glm::perspective(glm::radians(70.0f), 1600.0f / 1000.0f, 0.1f, 1000000.0f);
+	glm::mat4 m_Projection = glm::perspective(glm::radians(70.0f), 1600.0f / 1000.0f, 0.1f, 1e9f);
 
 	void UpdateViewMatrix();
 	void ProcessKeyboard(int direction, float deltaTime);

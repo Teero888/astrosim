@@ -83,7 +83,7 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	}
 
 	glfwMakeContextCurrent(m_pWindow);
-	glfwSwapInterval(0); // disable vsync
+	glfwSwapInterval(1); // enable vsync
 
 	// Initialize GLEW
 	if(glewInit() != GLEW_OK)
@@ -176,6 +176,9 @@ void CGraphics::OnRender()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
+	if(std::fabs(m_Camera.m_WantedRadius - m_Camera.m_Radius) > 1e-3)
+		m_Camera.UpdateViewMatrix();
+
 	// use imgui later xd
 	// ImGui::Begin("Style Editor");
 	// ImGui::ShowStyleEditor();
@@ -221,8 +224,8 @@ void CGraphics::OnRender()
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	m_Grid.Render(&m_Camera);
-	m_Trajectories.Render(&m_Camera);
+	m_Grid.Render(m_Camera);
+	m_Trajectories.Render(m_Camera);
 	// draw bodies
 	m_pStarSystem->RenderBodies(&m_SphereShader, &m_Camera);
 	// draw test triangle xd
@@ -261,7 +264,7 @@ void CGraphics::MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double 
 		printf("Window pointer does not exist in scroll callback. very very bad\n");
 		return;
 	}
-	pGraphics->m_Camera.m_Radius -= (pGraphics->m_Camera.m_Radius / 10.f) * YOffset;
+	pGraphics->m_Camera.m_WantedRadius -= (pGraphics->m_Camera.m_WantedRadius / 10.f) * YOffset;
 	pGraphics->m_Camera.UpdateViewMatrix();
 }
 
@@ -296,12 +299,12 @@ void CGraphics::KeyActionCallback(GLFWwindow *pWindow, int Key, int Scancode, in
 	{
 		if(Key == GLFW_KEY_W)
 		{
-			pGraphics->m_Camera.m_Radius -= pGraphics->m_Camera.m_Radius / 10.f;
+			pGraphics->m_Camera.m_WantedRadius -= pGraphics->m_Camera.m_WantedRadius / 10.f;
 			pGraphics->m_Camera.UpdateViewMatrix();
 		}
 		else if(Key == GLFW_KEY_S)
 		{
-			pGraphics->m_Camera.m_Radius += pGraphics->m_Camera.m_Radius / 10.f;
+			pGraphics->m_Camera.m_WantedRadius += pGraphics->m_Camera.m_WantedRadius / 10.f;
 			pGraphics->m_Camera.UpdateViewMatrix();
 		}
 	}
@@ -316,5 +319,5 @@ void CGraphics::WindowSizeCallback(GLFWwindow *pWindow, int Width, int Height)
 		return;
 	}
 	glViewport(0, 0, Width, Height);
-	pGraphics->m_Camera.m_Projection = glm::perspective(glm::radians(70.0f), (float)Width / (float)Height, 0.1f, 1000000.0f);
+	pGraphics->m_Camera.m_Projection = glm::perspective(glm::radians(70.0f), (float)Width / (float)Height, 0.1f, 1e9f);
 }
