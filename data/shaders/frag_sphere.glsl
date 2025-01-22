@@ -1,28 +1,33 @@
 #version 330 core
 
-in vec3 FragPos; // Fragment position in world space
-in vec3 Normal; // Transformed normal in world space
+in vec3 FragPos; // fragment position in world space
+in vec3 Normal; // transformed normal in world space
 
-out vec4 FragColor; // Output color
+out vec4 FragColor;
 
-uniform vec3 lightPos; // Light position in world space
-uniform vec3 lightColor; // Light color
-uniform vec3 objectColor; // Object color
+uniform vec3 lightPos;
+uniform vec3 lightColor;
+uniform vec3 objectColor;
+uniform bool Source;
 
 void main() {
-    // Ambient lighting
+	if(Source)
+	{
+    	FragColor = vec4(objectColor, 1.0);
+		return;
+	}
+    // ambient lighting
     float ambientStrength = 0.1;
     vec3 ambient = ambientStrength * lightColor;
 
-    // Diffuse lighting
+    // diffuse lighting
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(lightPos - FragPos);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
 
-    // Combine lighting
+    // combine lighting
     vec3 result = (ambient + diffuse) * objectColor;
 
-    // Output color
     FragColor = vec4(result, 1.0);
 }

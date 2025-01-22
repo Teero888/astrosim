@@ -1,5 +1,6 @@
 #ifndef VMATH_H
 #define VMATH_H
+#include "glm/ext/vector_float3.hpp"
 #include <cmath>
 
 struct Vec3
@@ -29,6 +30,11 @@ struct Vec3
 	Vec3 operator/(double scalar) const
 	{
 		return Vec3(x / scalar, y / scalar, z / scalar);
+	}
+
+	operator glm::vec3() const
+	{
+		return glm::vec3(x, y, z);
 	}
 
 	double length() const { return std::sqrt(x * x + y * y + z * z); }

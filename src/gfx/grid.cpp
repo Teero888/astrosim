@@ -9,7 +9,7 @@ void CGrid::Init()
 	m_Shader.CompileShader(Shaders::VERT_GRID, Shaders::FRAG_GRID);
 
 	// Define vertices for a simple quad (aligned with the XZ plane)
-	float Scale = 10.0f;
+	float Scale = 1;
 	float vertices[] = {
 		-1.0f * Scale, 0.0f, -1.0f * Scale, // Bottom-left
 		1.0f * Scale, 0.0f, -1.0f * Scale, // Bottom-right
@@ -50,11 +50,12 @@ void CGrid::Render(CCamera *pCamera)
 {
 	m_Shader.Use();
 
-	m_Shader.SetFloat("GridScale", (int)(pCamera->m_Radius / 10.0f));
+	m_Shader.SetFloat("Scale", pCamera->m_Radius);
+	m_Shader.SetFloat("GridScale", std::max(pCamera->m_pFocusedBody->m_Radius / RENDER_SCALE, 0.1));
 	m_Shader.SetVec3("GridColor", glm::vec3(0.2f));
 
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, pCamera->m_FocusPoint);
+	model = glm::translate(model, (glm::vec3)((pCamera->m_FocusPoint - pCamera->m_pFocusedBody->m_Position) / RENDER_SCALE));
 	m_Shader.SetMat4("Model", model);
 	m_Shader.SetMat4("View", pCamera->m_View);
 	m_Shader.SetMat4("Projection", pCamera->m_Projection);

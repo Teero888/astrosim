@@ -5,7 +5,7 @@
 #include "glm/ext/vector_float3.hpp"
 #include <glm/gtc/type_ptr.hpp>
 
-#define RENDER_SCALE 10000.0f
+#define RENDER_SCALE 1e8
 
 enum ECameraMode
 {
@@ -19,7 +19,7 @@ struct CCamera
 	SBody *m_pFocusedBody = nullptr;
 
 	float m_Radius = 50.f;
-	glm::vec3 m_FocusPoint = glm::vec3(0.f, 0.f, 0.f);
+	Vec3 m_FocusPoint = Vec3(0, 0, 0);
 	ECameraMode m_CameraMode = MODE_FOCUS;
 	glm::vec3 m_Position = glm::vec3(0.0f, 0.0f, 10.0f);
 	// Camera Directions
@@ -33,7 +33,7 @@ struct CCamera
 	float m_Sensitivity = 0.1f; // Mouse sensitivity
 
 	glm::mat4 m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
-	glm::mat4 m_Projection = glm::perspective(glm::radians(45.0f), 1600.0f / 1000.0f, 0.001f, 1000000.0f);
+	glm::mat4 m_Projection = glm::perspective(glm::radians(70.0f), 1600.0f / 1000.0f, 0.1f, 1000000.0f);
 
 	void UpdateViewMatrix();
 	void ProcessKeyboard(int direction, float deltaTime);

@@ -1,7 +1,9 @@
 #include "graphics.h"
 #include "../sim/starsystem.h"
+#include "camera.h"
 #include "generated/embedded_shaders.h"
 #include "glm/geometric.hpp"
+#include "shader.h"
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <cstdio>
@@ -81,7 +83,7 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	}
 
 	glfwMakeContextCurrent(m_pWindow);
-	glfwSwapInterval(1); // Enable vsync
+	glfwSwapInterval(0); // disable vsync
 
 	// Initialize GLEW
 	if(glewInit() != GLEW_OK)
@@ -94,12 +96,13 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	glfwSetWindowUserPointer(m_pWindow, this);
 	glfwSetCursorPosCallback(m_pWindow, MouseMotionCallback);
 	glfwSetScrollCallback(m_pWindow, MouseScrollCallback);
+	glfwSetKeyCallback(m_pWindow, KeyActionCallback);
+	glfwSetWindowSizeCallback(m_pWindow, WindowSizeCallback);
 
 	// Setup ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO &io = ImGui::GetIO();
-	(void)io;
+	m_pImGuiIO = &ImGui::GetIO();
 	ImGui::StyleColorsDark();
 
 	// Setup Platform/Renderer bindings
@@ -180,12 +183,38 @@ void CGraphics::OnRender()
 	// ImGui::End();
 	//
 	// // Render a simple ImGui window
-	// ImGui::Begin("Hello, ImGui!");
-	// ImGui::Text("This is a simple OpenGL + ImGui example.");
-	// if (ImGui::Button("Close")) {
-	//   glfwSetWindowShouldClose(m_pWindow, true);
-	// }
-	// ImGui::End();
+
+	ImGui::Begin("Settings");
+	ImGui::SliderInt("TPS", &m_pStarSystem->m_TPS, 1, 3600);
+	static const char *pCurrentItem = m_pStarSystem->m_vBodies.front().m_Name.c_str();
+
+	if(ImGui::BeginCombo("Select Focus##focus", pCurrentItem))
+	{
+		for(auto &Body : m_pStarSystem->m_vBodies)
+		{
+			bool IsSelected = (pCurrentItem == Body.m_Name.c_str());
+			if(ImGui::Selectable(Body.m_Name.c_str(), IsSelected))
+			{
+				pCurrentItem = Body.m_Name.c_str();
+				m_Camera.m_pFocusedBody = &Body;
+				m_Camera.m_FocusPoint = Body.m_Position;
+			}
+			if(IsSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
+	ImGui::PushTextWrapPos(5000.f);
+	ImGui::Text("Name: %s", m_Camera.m_pFocusedBody->m_Name.c_str());
+	ImGui::Text("Position: %.4e, %.4e, %.4e", m_Camera.m_pFocusedBody->m_Position.x, m_Camera.m_pFocusedBody->m_Position.y, m_Camera.m_pFocusedBody->m_Position.z);
+	ImGui::Text("Velocity: %.4e, %.4e, %.4e", m_Camera.m_pFocusedBody->m_Velocity.x, m_Camera.m_pFocusedBody->m_Velocity.y, m_Camera.m_pFocusedBody->m_Velocity.z);
+	ImGui::Text("Mass: %.4e", m_Camera.m_pFocusedBody->m_Mass);
+	ImGui::Text("Radius: %.4e", m_Camera.m_pFocusedBody->m_Radius);
+	ImGui::PopTextWrapPos();
+	ImGui::End();
+
+	// ImGui::ShowDemoWindow();
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -234,7 +263,7 @@ void CGraphics::MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double 
 		printf("Window pointer does not exist in scroll callback. very very bad\n");
 		return;
 	}
-	pGraphics->m_Camera.m_Radius -= YOffset;
+	pGraphics->m_Camera.m_Radius -= (pGraphics->m_Camera.m_Radius / 10.f) * YOffset;
 	pGraphics->m_Camera.UpdateViewMatrix();
 }
 
@@ -248,13 +277,46 @@ void CGraphics::MouseMotionCallback(GLFWwindow *pWindow, double XPos, double YPo
 	}
 	static double LastX = XPos, LastY = YPos;
 
-	if(glfwGetKey(pWindow, GLFW_KEY_SPACE))
+	if(glfwGetMouseButton(pWindow, GLFW_MOUSE_BUTTON_1) && !pGraphics->m_pImGuiIO->WantCaptureMouse)
 	{
-		pGraphics->m_Camera.ProcessMouse(LastX - XPos, YPos - LastY);
+		pGraphics->m_Camera.ProcessMouse(XPos - LastX, LastY - YPos);
 		pGraphics->m_Camera.UpdateViewMatrix();
 	}
 	LastX = XPos, LastY = YPos;
 }
 
 void CGraphics::MouseButtonCallback(GLFWwindow *pWindow, int Button, int Action, int Mods) {}
-void CGraphics::KeyActionCallback(GLFWwindow *pWindow, int Key, int Scancode, int Action, int Mods) {}
+void CGraphics::KeyActionCallback(GLFWwindow *pWindow, int Key, int Scancode, int Action, int Mods)
+{
+	CGraphics *pGraphics = ((CGraphics *)glfwGetWindowUserPointer(pWindow));
+	if(!pGraphics)
+	{
+		printf("Window pointer does not exist in scroll callback. very very bad\n");
+		return;
+	}
+	if(Action > 0)
+	{
+		if(Key == GLFW_KEY_W)
+		{
+			pGraphics->m_Camera.m_Radius -= pGraphics->m_Camera.m_Radius / 10.f;
+			pGraphics->m_Camera.UpdateViewMatrix();
+		}
+		else if(Key == GLFW_KEY_S)
+		{
+			pGraphics->m_Camera.m_Radius += pGraphics->m_Camera.m_Radius / 10.f;
+			pGraphics->m_Camera.UpdateViewMatrix();
+		}
+	}
+}
+
+void CGraphics::WindowSizeCallback(GLFWwindow *pWindow, int Width, int Height)
+{
+	CGraphics *pGraphics = ((CGraphics *)glfwGetWindowUserPointer(pWindow));
+	if(!pGraphics)
+	{
+		printf("Window pointer does not exist in window resize callback. very very bad\n");
+		return;
+	}
+	glViewport(0, 0, Width, Height);
+	pGraphics->m_Camera.m_Projection = glm::perspective(glm::radians(70.0f), (float)Width / (float)Height, 0.1f, 1000000.0f);
+}

@@ -11,10 +11,13 @@ struct CStarSystem
 	int m_TPS = 24; // dt is 1hr is 1 tick so this should be 1 day/s
 	std::vector<SBody> m_vBodies;
 
+	Vec3 m_LightSource;
+
+	void RenderBody(SBody *pBody, SBody *pLightBody, class CShader *pShader, class CCamera *pCamera);
+
 	void OnInit();
 	void RenderBodies(class CShader *pShader, class CCamera *pCamera);
 	void UpdateBodies();
-	inline const int GetTPS() const { return m_TPS; }
 };
 
 #endif // STARTSYSTEM_H

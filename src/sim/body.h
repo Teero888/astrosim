@@ -2,20 +2,20 @@
 #define BODY_H
 
 #include "vmath.h"
+#include <glm/gtc/type_ptr.hpp>
 #include <string>
 
 struct SBody
 {
 	std::string m_Name;
 	double m_Mass; // Mass (kg)
+	double m_Radius; // Radius (m)
 	Vec3 m_Position; // Position (m)
 	Vec3 m_Velocity; // Velocity (m/s)
 	Vec3 m_Acceleration; // Acceleration (m/s^2)
+	glm::vec3 m_Color;
 
-	SBody(const std::string &name, double mass, Vec3 position, Vec3 velocity) :
-		m_Name(name), m_Mass(mass), m_Position(position), m_Velocity(velocity), m_Acceleration(0, 0, 0) {}
-
-	void Render(class CShader *pShader, class CCamera *pCamera);
+	SBody(const std::string &Name, double Mass, double Radius, Vec3 Position, Vec3 Velocity, glm::vec3 Color);
 };
 
 #endif // BODY_H

@@ -7,22 +7,19 @@ void CCamera::UpdateViewMatrix()
 	{
 	case MODE_FOCUS:
 	{
-		if(m_pFocusedBody)
-			// we need to scale this xdd
-			m_FocusPoint = glm::vec3(m_pFocusedBody->m_Position.x / RENDER_SCALE, m_pFocusedBody->m_Position.y / RENDER_SCALE, m_pFocusedBody->m_Position.z / RENDER_SCALE);
 		// Clamp pitch
 		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 
 		// Calculate new position using spherical coordinates
-		m_Position.x = m_FocusPoint.x + m_Radius * cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
-		m_Position.y = m_FocusPoint.y + m_Radius * sin(glm::radians(m_Pitch));
-		m_Position.z = m_FocusPoint.z + m_Radius * sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
+		m_Position.x = m_Radius * cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
+		m_Position.y = m_Radius * sin(glm::radians(m_Pitch));
+		m_Position.z = m_Radius * sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
 
 		// Update front/right vectors to face focus point
-		m_Front = glm::normalize(m_FocusPoint - m_Position);
+		m_Front = glm::normalize(-m_Position);
 		m_Right = glm::normalize(glm::cross(m_Front, m_Up));
 
-		m_View = glm::lookAt(m_Position, m_FocusPoint, m_Up);
+		m_View = glm::lookAt(m_Position, {0, 0, 0}, m_Up);
 		break;
 	}
 	case MODE_FREEVIEW:
@@ -74,15 +71,6 @@ void CCamera::ProcessMouse(float xoffset, float yoffset)
 
 		// Clamp pitch
 		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
-
-		// Calculate new position using spherical coordinates
-		m_Position.x = m_FocusPoint.x + m_Radius * cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
-		m_Position.y = m_FocusPoint.y + m_Radius * sin(glm::radians(m_Pitch));
-		m_Position.z = m_FocusPoint.z + m_Radius * sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
-
-		// Update front/right vectors to face focus point
-		m_Front = glm::normalize(m_FocusPoint - m_Position);
-		m_Right = glm::normalize(glm::cross(m_Front, m_Up));
 		break;
 	}
 	}
