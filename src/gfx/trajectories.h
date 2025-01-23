@@ -18,6 +18,7 @@ class CTrajectories
 	std::vector<STrajectory> m_vPlanetTrajectories;
 
 public:
+	bool m_ShowAll = false;
 	int m_TrajectoryLength = 3600;
 	void Init();
 	void Update(CStarSystem &PredictedSystem);

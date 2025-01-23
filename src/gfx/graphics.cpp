@@ -190,6 +190,7 @@ void CGraphics::OnRender()
 	ImGui::SliderInt("TPS", &m_pStarSystem->m_TPS, 1, 3600);
 	static const char *pCurrentItem = m_pStarSystem->m_vBodies.front().m_Name.c_str();
 
+	ImGui::Checkbox("Show all trajectories", &m_Trajectories.m_ShowAll);
 	if(ImGui::BeginCombo("Select Focus##focus", pCurrentItem))
 	{
 		for(auto &Body : m_pStarSystem->m_vBodies)

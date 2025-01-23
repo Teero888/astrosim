@@ -41,11 +41,27 @@ void CTrajectories::UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera)
 {
 	if(m_vPlanetTrajectories.empty())
 		return;
-	for(size_t i = 0; i < PredictedSystem.m_vBodies.size(); ++i)
+	if(m_ShowAll)
 	{
-		auto &Trajectory = m_vPlanetTrajectories[i];
+		for(auto &Trajectory : m_vPlanetTrajectories)
+		{
+			// update gpu buffers
+			glBindVertexArray(Trajectory.VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, Trajectory.VBO);
+			glBufferData(GL_ARRAY_BUFFER,
+				Trajectory.m_vPositionHistory.size() * sizeof(glm::vec3),
+				Trajectory.m_vPositionHistory.data(),
+				GL_DYNAMIC_DRAW);
 
-		// Trajectory.m_vGLPositions.emplace_back((Pos - m_vPlanetTrajectories[Camera.m_pFocusedBody->m_Id].m_vPositionHistory.back()) / RENDER_SCALE);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+			glEnableVertexAttribArray(0);
+
+			glBindVertexArray(0);
+		}
+	}
+	else
+	{
+		auto &Trajectory = m_vPlanetTrajectories[Camera.m_pFocusedBody->m_Id];
 
 		// update gpu buffers
 		glBindVertexArray(Trajectory.VAO);
@@ -76,17 +92,31 @@ void CTrajectories::Render(CCamera &Camera)
 	glDisable(GL_DEPTH_TEST); // for always visible trajectories
 	glEnable(GL_LINE_SMOOTH);
 
-	for(auto &Trajectory : m_vPlanetTrajectories)
+	if(m_ShowAll)
 	{
-		if(Trajectory.m_vPositionHistory.size() < 2)
-			continue;
+		for(auto &Trajectory : m_vPlanetTrajectories)
+			if(Trajectory.m_vPositionHistory.size() >= 2)
+			{
+				m_Shader.SetVec3("Color", Trajectory.m_Color);
+				glLineWidth(Trajectory.m_LineWidth);
 
-		m_Shader.SetVec3("Color", Trajectory.m_Color);
-		glLineWidth(Trajectory.m_LineWidth);
+				glBindVertexArray(Trajectory.VAO);
+				glDrawArrays(GL_LINE_STRIP, 0, Trajectory.m_vPositionHistory.size());
+				glBindVertexArray(0);
+			}
+	}
+	else
+	{
+		auto &Trajectory = m_vPlanetTrajectories[Camera.m_pFocusedBody->m_Id];
+		if(Trajectory.m_vPositionHistory.size() >= 2)
+		{
+			m_Shader.SetVec3("Color", Trajectory.m_Color);
+			glLineWidth(Trajectory.m_LineWidth);
 
-		glBindVertexArray(Trajectory.VAO);
-		glDrawArrays(GL_LINE_STRIP, 0, Trajectory.m_vPositionHistory.size());
-		glBindVertexArray(0);
+			glBindVertexArray(Trajectory.VAO);
+			glDrawArrays(GL_LINE_STRIP, 0, Trajectory.m_vPositionHistory.size());
+			glBindVertexArray(0);
+		}
 	}
 
 	glEnable(GL_DEPTH_TEST);
