@@ -8,6 +8,8 @@
 #include "shader.h"
 #include "trajectories.h"
 
+#define DEFAULT_SCALE 100.0
+
 class CStarSystem;
 class GLFWwindow;
 

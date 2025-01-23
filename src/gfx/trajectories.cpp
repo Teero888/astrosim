@@ -84,8 +84,8 @@ void CTrajectories::Render(CCamera &Camera)
 		return;
 	m_Shader.Use();
 	auto Model = glm::mat4(1.0f);
-	Model = glm::translate(Model, -(glm::vec3)(Camera.m_pFocusedBody->m_Position / (double)RENDER_SCALE));
-	Model = glm::scale(Model, glm::vec3(1.0 / (double)RENDER_SCALE));
+	Model = glm::translate(Model, -(glm::vec3)(Camera.m_pFocusedBody->m_Position / (double)Camera.m_Radius));
+	Model = glm::scale(Model, glm::vec3(1.0 / (double)Camera.m_Radius));
 	m_Shader.SetMat4("Model", Model);
 	m_Shader.SetMat4("View", Camera.m_View);
 	m_Shader.SetMat4("Projection", Camera.m_Projection);

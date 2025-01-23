@@ -6,8 +6,6 @@
 #include "glm/ext/vector_float3.hpp"
 #include <glm/gtc/type_ptr.hpp>
 
-#define RENDER_SCALE 1e7
-
 enum ECameraMode
 {
 	MODE_FOCUS = 0,
@@ -19,9 +17,10 @@ struct CCamera
 {
 	SBody *m_pFocusedBody = nullptr;
 
+	double m_Radius = 1e8;
+	double m_WantedRadius = 1e8;
+
 	glm::vec2 m_ScreenSize; // get only
-	float m_WantedRadius = 500.f;
-	float m_Radius = 500.f;
 	Vec3 m_FocusPoint = Vec3(0, 0, 0);
 	ECameraMode m_CameraMode = MODE_FOCUS;
 	glm::vec3 m_Position = glm::vec3(0.0f, 0.0f, 10.0f);

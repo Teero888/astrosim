@@ -3,6 +3,7 @@
 #include "generated/embedded_shaders.h"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/ext/vector_float3.hpp"
+#include "graphics.h"
 
 void CGrid::Init()
 {
@@ -47,13 +48,13 @@ void CGrid::Render(CCamera &Camera)
 {
 	m_Shader.Use();
 
-	const float GridScale = std::max(Camera.m_pFocusedBody->m_Radius / RENDER_SCALE, 0.1);
-	m_Shader.SetFloat("Scale", Camera.m_Radius);
+	const float GridScale = std::max(Camera.m_pFocusedBody->m_Radius / Camera.m_Radius, 0.1);
+	m_Shader.SetFloat("Scale", DEFAULT_SCALE);
 	m_Shader.SetFloat("GridScale", GridScale);
 	m_Shader.SetVec3("GridColor", glm::vec3(0.4f));
 
 	glm::mat4 Model = glm::mat4(1.0f);
-	Model = glm::translate(Model, (glm::vec3)(((Camera.m_FocusPoint - Camera.m_pFocusedBody->m_Position) / RENDER_SCALE) % GridScale));
+	Model = glm::translate(Model, (glm::vec3)(((Camera.m_FocusPoint - Camera.m_pFocusedBody->m_Position) / Camera.m_Radius) % GridScale));
 	m_Shader.SetMat4("Model", Model);
 	m_Shader.SetMat4("View", Camera.m_View);
 	m_Shader.SetMat4("Projection", Camera.m_Projection);

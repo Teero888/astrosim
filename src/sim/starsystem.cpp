@@ -26,18 +26,18 @@ void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CShader *pShader, 
 
 	// set transformation matrices
 	glm::mat4 Model = glm::mat4(1.0f);
-	Vec3 NewPos = (pBody->m_Position - pCamera->m_pFocusedBody->m_Position) / RENDER_SCALE;
+	Vec3 NewPos = (pBody->m_Position - pCamera->m_pFocusedBody->m_Position) / pCamera->m_Radius;
 	Model = glm::translate(Model, (glm::vec3)NewPos);
 
 	pShader->SetBool("Source", pBody == pLightBody);
-	pShader->SetFloat("Radius", pBody->m_Radius / RENDER_SCALE);
+	pShader->SetFloat("Radius", pBody->m_Radius / pCamera->m_Radius);
 	pShader->SetMat4("model", Model);
 	pShader->SetMat4("view", pCamera->m_View);
 	pShader->SetMat4("projection", pCamera->m_Projection);
 
 	// set light properties
 	Vec3 NewLightPos = pLightBody->m_Position - pCamera->m_pFocusedBody->m_Position;
-	pShader->SetVec3("lightPos", (glm::vec3)(NewLightPos / RENDER_SCALE));
+	pShader->SetVec3("lightPos", (glm::vec3)(NewLightPos / pCamera->m_Radius));
 	pShader->SetVec3("lightColor", pLightBody->m_Color);
 	pShader->SetVec3("objectColor", pBody->m_Color);
 

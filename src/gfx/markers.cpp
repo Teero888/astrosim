@@ -3,6 +3,7 @@
 #include "camera.h"
 #include "generated/embedded_shaders.h"
 #include "glm/fwd.hpp"
+#include "graphics.h"
 #include <algorithm>
 #include <cstdio>
 
@@ -60,9 +61,9 @@ void CMarkers::Render(CStarSystem &System, CCamera &Camera)
 	glDisable(GL_DEPTH_TEST);
 	for(auto &Body : System.m_vBodies)
 	{
-		const Vec3 NewPos = (Body.m_Position - Camera.m_pFocusedBody->m_Position) / RENDER_SCALE;
-		const float Radius = (Body.m_Radius / RENDER_SCALE);
-		const float Min = Body.m_Id == Camera.m_pFocusedBody->m_Id ? Radius / Camera.m_Radius : Radius / NewPos.length();
+		const Vec3 NewPos = (Body.m_Position - Camera.m_pFocusedBody->m_Position) / Camera.m_Radius;
+		const float Radius = (Body.m_Radius / Camera.m_Radius);
+		const float Min = Body.m_Id == Camera.m_pFocusedBody->m_Id ? Radius / DEFAULT_SCALE : Radius / NewPos.length();
 		m_Shader.SetVec3("Color", glm::vec3(1.0f));
 		m_Shader.SetFloat("Scale", std::max(Min, 0.01f) * 2);
 

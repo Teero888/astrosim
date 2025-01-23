@@ -1,5 +1,6 @@
 #include "camera.h"
 #include "glm/ext/vector_float3.hpp"
+#include "graphics.h"
 
 // TODO: might want to add delta time here for the radius interpolation
 void CCamera::UpdateViewMatrix()
@@ -9,13 +10,14 @@ void CCamera::UpdateViewMatrix()
 	case MODE_FOCUS:
 	{
 		m_Radius += (m_WantedRadius - m_Radius) / 10.0;
+
 		// Clamp pitch
 		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 
 		// Calculate new position using spherical coordinates
-		m_Position.x = m_Radius * cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
-		m_Position.y = m_Radius * sin(glm::radians(m_Pitch));
-		m_Position.z = m_Radius * sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
+		m_Position.x = DEFAULT_SCALE * cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
+		m_Position.y = DEFAULT_SCALE * sin(glm::radians(m_Pitch));
+		m_Position.z = DEFAULT_SCALE * sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
 
 		// Update front/right vectors to face focus point
 		m_Front = glm::normalize(-m_Position);
