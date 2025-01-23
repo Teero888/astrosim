@@ -11,6 +11,8 @@ struct Vec3
 		x(0), y(0), z(0) {}
 	Vec3(double x, double y, double z) :
 		x(x), y(y), z(z) {}
+	Vec3(glm::vec3 v) :
+		x(v.x), y(v.y), z(v.z) {}
 
 	Vec3 operator+(const Vec3 &other) const
 	{
@@ -20,6 +22,16 @@ struct Vec3
 	Vec3 operator-(const Vec3 &other) const
 	{
 		return Vec3(x - other.x, y - other.y, z - other.z);
+	}
+
+	Vec3 operator-(double sub) const
+	{
+		return Vec3(x - sub, y - sub, z - sub);
+	}
+
+	Vec3 operator+(double add) const
+	{
+		return Vec3(x - add, y - add, z - add);
 	}
 
 	Vec3 operator*(double scalar) const
@@ -42,7 +54,7 @@ struct Vec3
 		return glm::vec3(x, y, z);
 	}
 
-	double length() const { return std::sqrt(x * x + y * y + z * z); }
+	inline double length() const { return std::sqrt(x * x + y * y + z * z); }
 };
 
 #endif // VMATH_H

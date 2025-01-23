@@ -26,8 +26,8 @@ void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CShader *pShader, 
 
 	// set transformation matrices
 	glm::mat4 Model = glm::mat4(1.0f);
-	Vec3 NewPos = pBody->m_Position - pCamera->m_pFocusedBody->m_Position;
-	Model = glm::translate(Model, (glm::vec3)(NewPos / RENDER_SCALE));
+	Vec3 NewPos = (pBody->m_Position - pCamera->m_pFocusedBody->m_Position) / RENDER_SCALE;
+	Model = glm::translate(Model, (glm::vec3)NewPos);
 
 	pShader->SetBool("Source", pBody == pLightBody);
 	pShader->SetFloat("Radius", pBody->m_Radius / RENDER_SCALE);

@@ -4,6 +4,7 @@
 #include "camera.h"
 #include "grid.h"
 #include "imgui.h"
+#include "markers.h"
 #include "shader.h"
 #include "trajectories.h"
 
@@ -32,6 +33,7 @@ public:
 	ImGuiIO *m_pImGuiIO;
 	CCamera m_Camera;
 	CTrajectories m_Trajectories;
+	CMarkers m_Markers;
 	bool OnInit(CStarSystem *pStarSystem);
 	void OnRender();
 	void OnExit();

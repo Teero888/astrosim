@@ -8,7 +8,6 @@ void CGrid::Init()
 {
 	m_Shader.CompileShader(Shaders::VERT_GRID, Shaders::FRAG_GRID);
 
-	// Define vertices for a simple quad (aligned with the XZ plane)
 	float Scale = 1;
 	float vertices[] = {
 		-1.0f * Scale, 0.0f, -1.0f * Scale, // Bottom-left
@@ -17,7 +16,6 @@ void CGrid::Init()
 		-1.0f * Scale, 0.0f, 1.0f * Scale // Top-left
 	};
 
-	// Define indices for the quad (two triangles)
 	unsigned int indices[] = {
 		0, 1, 2, // First triangle
 		2, 3, 0 // Second triangle
@@ -42,7 +40,6 @@ void CGrid::Init()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
 	glEnableVertexAttribArray(0);
 
-	// Unbind the VAO
 	glBindVertexArray(0);
 }
 
@@ -55,9 +52,9 @@ void CGrid::Render(CCamera &Camera)
 	m_Shader.SetFloat("GridScale", GridScale);
 	m_Shader.SetVec3("GridColor", glm::vec3(0.4f));
 
-	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, (glm::vec3)(((Camera.m_FocusPoint - Camera.m_pFocusedBody->m_Position) / RENDER_SCALE) % GridScale));
-	m_Shader.SetMat4("Model", model);
+	glm::mat4 Model = glm::mat4(1.0f);
+	Model = glm::translate(Model, (glm::vec3)(((Camera.m_FocusPoint - Camera.m_pFocusedBody->m_Position) / RENDER_SCALE) % GridScale));
+	m_Shader.SetMat4("Model", Model);
 	m_Shader.SetMat4("View", Camera.m_View);
 	m_Shader.SetMat4("Projection", Camera.m_Projection);
 

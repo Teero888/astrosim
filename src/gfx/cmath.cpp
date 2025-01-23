@@ -22,7 +22,6 @@ glm::vec3 wavelength_to_rgb(int wavelength)
 	double b = 0.0;
 	double factor;
 
-	// Calculate color components based on wavelength ranges
 	if(wavelength >= 380 && wavelength < 440)
 	{
 		r = (440.0 - wavelength) / (440.0 - 380.0);
@@ -71,12 +70,11 @@ glm::vec3 wavelength_to_rgb(int wavelength)
 		factor = 0.0;
 	}
 
-	// Apply intensity factor
 	r *= factor;
 	g *= factor;
 	b *= factor;
 
-	// Gamma correction
+	// gamma correction
 	r = std::pow(r, gamma);
 	g = std::pow(g, gamma);
 	b = std::pow(b, gamma);

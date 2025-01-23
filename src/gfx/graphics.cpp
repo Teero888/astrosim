@@ -114,6 +114,7 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 
 	m_Grid.Init();
 	m_Trajectories.Init();
+	m_Markers.Init();
 
 	// TODO: this is going to be moved to some function
 	// Do sphere shader stuff
@@ -220,6 +221,7 @@ void CGraphics::OnRender()
 	// ImGui::ShowDemoWindow();
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_TRUE);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -227,8 +229,11 @@ void CGraphics::OnRender()
 
 	m_Grid.Render(m_Camera);
 	m_Trajectories.Render(m_Camera);
+
 	// draw bodies
 	m_pStarSystem->RenderBodies(&m_SphereShader, &m_Camera);
+	// draw markers after bodies have been drawn
+	m_Markers.Render(*m_pStarSystem, m_Camera);
 	// draw test triangle xd
 	// {
 	// 	m_SolidShader.Use();
@@ -253,6 +258,7 @@ void CGraphics::OnExit()
 	m_SphereShader.Destroy();
 	m_Grid.Destroy();
 	m_Trajectories.Destroy();
+	m_Markers.Destroy();
 	glfwDestroyWindow(m_pWindow);
 	glfwTerminate();
 }
@@ -321,4 +327,5 @@ void CGraphics::WindowSizeCallback(GLFWwindow *pWindow, int Width, int Height)
 	}
 	glViewport(0, 0, Width, Height);
 	pGraphics->m_Camera.m_Projection = glm::perspective(glm::radians(70.0f), (float)Width / (float)Height, 0.1f, 1e9f);
+	pGraphics->m_Camera.m_ScreenSize = glm::vec2(Width, Height);
 }

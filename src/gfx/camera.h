@@ -2,10 +2,11 @@
 #define CAMERA_H
 
 #include "../sim/body.h"
+#include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include <glm/gtc/type_ptr.hpp>
 
-#define RENDER_SCALE 1e8
+#define RENDER_SCALE 1e7
 
 enum ECameraMode
 {
@@ -18,8 +19,9 @@ struct CCamera
 {
 	SBody *m_pFocusedBody = nullptr;
 
-	float m_WantedRadius = 50.f;
-	float m_Radius = 50.f;
+	glm::vec2 m_ScreenSize; // get only
+	float m_WantedRadius = 500.f;
+	float m_Radius = 500.f;
 	Vec3 m_FocusPoint = Vec3(0, 0, 0);
 	ECameraMode m_CameraMode = MODE_FOCUS;
 	glm::vec3 m_Position = glm::vec3(0.0f, 0.0f, 10.0f);

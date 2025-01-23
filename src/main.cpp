@@ -1,4 +1,3 @@
-#define GLM_FORCE_DEFAULT_PRECISION_DOUBLE
 #include "gfx/graphics.h"
 #include "sim/starsystem.h"
 #include <GLFW/glfw3.h>
