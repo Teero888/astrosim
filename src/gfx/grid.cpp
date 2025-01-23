@@ -4,6 +4,8 @@
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "graphics.h"
+#include <cmath>
+#include <cstdio>
 
 void CGrid::Init()
 {
@@ -48,18 +50,30 @@ void CGrid::Render(CCamera &Camera)
 {
 	m_Shader.Use();
 
-	const float GridScale = std::max(Camera.m_pFocusedBody->m_Radius / Camera.m_Radius, 0.1);
-	m_Shader.SetFloat("Scale", DEFAULT_SCALE);
+	// using static const instead of constexpr since math funcs no work
+	constexpr float ZOOM_STEP = 10.0f; // every 10 zooms grid updates
+	static const float STEP_FACTOR = std::pow(1.f + (1.f / ZOOM_FACTOR), ZOOM_STEP);
+	static const float LOG_STEP = std::log(STEP_FACTOR);
+
+	const float BodyRadius = Camera.m_pFocusedBody->m_Radius;
+	const float InitialScale = Camera.m_Radius / BodyRadius;
+	int QuantizedScale = std::pow(STEP_FACTOR, (int)(std::log(InitialScale) / LOG_STEP));
+
+	const float GridScale = (BodyRadius / Camera.m_Radius) * std::max(QuantizedScale * 10.f, 1.f);
 	m_Shader.SetFloat("GridScale", GridScale);
-	m_Shader.SetVec3("GridColor", glm::vec3(0.4f));
+
+	glm::vec3 Offset = (Camera.m_FocusPoint - Camera.m_pFocusedBody->m_Position) / Camera.m_Radius;
+	Offset = Offset - glm::mod(Offset, glm::vec3(BodyRadius / Camera.m_Radius));
 
 	glm::mat4 Model = glm::mat4(1.0f);
-	Model = glm::translate(Model, (glm::vec3)(((Camera.m_FocusPoint - Camera.m_pFocusedBody->m_Position) / Camera.m_Radius) % GridScale));
+	Model = glm::translate(Model, -(glm::vec3)Offset);
 	m_Shader.SetMat4("Model", Model);
+
+	m_Shader.SetFloat("Scale", DEFAULT_SCALE);
+	m_Shader.SetVec3("GridColor", glm::vec3(0.4f));
 	m_Shader.SetMat4("View", Camera.m_View);
 	m_Shader.SetMat4("Projection", Camera.m_Projection);
 
-	// Bind the VAO and draw the quad
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBindVertexArray(m_Shader.VAO);

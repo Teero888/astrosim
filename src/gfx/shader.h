@@ -17,7 +17,8 @@ static void CheckShaderCompileErrors(GLuint Shader)
 		fprintf(stderr, "ERROR: Shader Compilation Failed\n%s\n", aInfoLog);
 		return;
 	}
-	printf("Shader compilation successful!\n");
+	// dont print this. too annoying
+	// printf("Shader compilation successful!\n");
 }
 
 static void CheckProgramLinkErrors(GLuint Program)
@@ -32,7 +33,8 @@ static void CheckProgramLinkErrors(GLuint Program)
 		fprintf(stderr, "ERROR: Program Linking Failed\n%s\n", aInfoLog);
 		return;
 	}
-	printf("Shader program linking successful!\n");
+	// dont print this. too annoying
+	// printf("Shader program linking successful!\n");
 }
 
 class CShader

@@ -47,6 +47,8 @@ void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CShader *pShader, 
 	glBindVertexArray(0);
 }
 
+// TODO: tune these values xd
+// very unstable atm
 void CStarSystem::OnInit()
 {
 	int Id = 0;

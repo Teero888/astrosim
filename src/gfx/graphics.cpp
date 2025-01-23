@@ -85,12 +85,16 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	glfwMakeContextCurrent(m_pWindow);
 	glfwSwapInterval(1); // enable vsync
 
-	// Initialize GLEW
+	// init glew
 	if(glewInit() != GLEW_OK)
 	{
 		std::cerr << "Failed to initialize GLEW" << std::endl;
 		return false;
 	}
+
+	// noice print
+	printf("Renderer: %s\n", glGetString(GL_RENDERER));
+	printf("OpenGL version supported %s\n", glGetString(GL_VERSION));
 
 	// Setup callbacks for inputs (i hate it xd)
 	glfwSetWindowUserPointer(m_pWindow, this);
@@ -105,12 +109,12 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	m_pImGuiIO = &ImGui::GetIO();
 	ImGui::StyleColorsDark();
 
-	// Setup Platform/Renderer bindings
+	// setup renderer bindings
 	ImGui_ImplGlfw_InitForOpenGL(m_pWindow, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
 
 	glEnable(GL_DEPTH_TEST); // this is so things have the right order
-	glDepthMask(GL_TRUE); // Enable depth writing
+	glDepthMask(GL_TRUE); // enable depth writing
 
 	m_Grid.Init();
 	m_Trajectories.Init();
@@ -271,6 +275,8 @@ void CGraphics::MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double 
 		printf("Window pointer does not exist in scroll callback. very very bad\n");
 		return;
 	}
+	if(pGraphics->m_pImGuiIO->WantCaptureMouse)
+		return;
 	pGraphics->m_Camera.m_WantedRadius -= (pGraphics->m_Camera.m_WantedRadius / 10.f) * YOffset;
 	pGraphics->m_Camera.UpdateViewMatrix();
 }

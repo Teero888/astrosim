@@ -9,23 +9,22 @@ void CCamera::UpdateViewMatrix()
 	{
 	case MODE_FOCUS:
 	{
-		m_Radius += (m_WantedRadius - m_Radius) / 10.0;
+		m_Radius += (m_WantedRadius - m_Radius) / ZOOM_FACTOR;
 
-		// Clamp pitch
 		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 
-		// Calculate new position using spherical coordinates
 		m_Position.x = DEFAULT_SCALE * cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
 		m_Position.y = DEFAULT_SCALE * sin(glm::radians(m_Pitch));
 		m_Position.z = DEFAULT_SCALE * sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
 
-		// Update front/right vectors to face focus point
 		m_Front = glm::normalize(-m_Position);
 		m_Right = glm::normalize(glm::cross(m_Front, m_Up));
 
 		m_View = glm::lookAt(m_Position, {0, 0, 0}, m_Up);
 		break;
 	}
+
+	// TODO: this mode doesn't actually work lol fix this once i need it
 	case MODE_FREEVIEW:
 	{
 		m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
@@ -34,6 +33,7 @@ void CCamera::UpdateViewMatrix()
 	}
 }
 
+// TODO: unused currently this will be for the freeview mode (idk maybe do spaceships, would be fun)
 void CCamera::ProcessKeyboard(int direction, float deltaTime)
 {
 	float velocity = m_Speed * deltaTime;
@@ -56,24 +56,21 @@ void CCamera::ProcessMouse(float xoffset, float yoffset)
 
 	switch(m_CameraMode)
 	{
+	// TODO: will be changed dw
 	case MODE_FREEVIEW:
 	{
-		// Existing free-view rotation
 		m_Yaw += xoffset;
 		m_Pitch += yoffset;
 
-		// Clamp pitch
 		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 		break;
 	}
 
 	case MODE_FOCUS:
 	{
-		// Orbit around focus point
 		m_Yaw += xoffset;
-		m_Pitch -= yoffset; // Invert Y-axis for intuitive orbit
+		m_Pitch -= yoffset;
 
-		// Clamp pitch
 		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 		break;
 	}
