@@ -6,6 +6,7 @@ in vec3 FragPos;
 
 out vec4 FragColor;
 
+uniform float Scale;
 uniform float GridScale;
 uniform vec3 GridColor;
 
@@ -20,5 +21,5 @@ void main()
     if (GridLine > 0.05)
         discard;
 
-    FragColor = vec4(GridColor, 1.0/*  - (length(FragPos) / 10.0) */);
+    FragColor = vec4(GridColor, 1.0 - (length(FragPos) / Scale));
 }

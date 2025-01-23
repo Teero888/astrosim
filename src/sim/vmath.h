@@ -32,6 +32,11 @@ struct Vec3
 		return Vec3(x / scalar, y / scalar, z / scalar);
 	}
 
+	Vec3 operator%(double mod) const
+	{
+		return Vec3(fmod(x, mod), fmod(y, mod), fmod(z, mod));
+	}
+
 	operator glm::vec3() const
 	{
 		return glm::vec3(x, y, z);
