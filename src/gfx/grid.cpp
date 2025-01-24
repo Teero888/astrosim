@@ -74,11 +74,9 @@ void CGrid::Render(CCamera &Camera)
 	m_Shader.SetMat4("View", Camera.m_View);
 	m_Shader.SetMat4("Projection", Camera.m_Projection);
 
-	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBindVertexArray(m_Shader.VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	glDisable(GL_BLEND);
 	glBindVertexArray(0);
 }
 

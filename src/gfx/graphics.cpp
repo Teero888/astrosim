@@ -233,6 +233,7 @@ void CGraphics::OnRender()
 
 	// draw bodies
 	m_pStarSystem->RenderBodies(&m_SphereShader, &m_Camera);
+	glDisable(GL_BLEND);
 	// draw markers after bodies have been drawn
 	m_Markers.Render(*m_pStarSystem, m_Camera);
 	// draw test triangle xd

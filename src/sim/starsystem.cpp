@@ -36,7 +36,7 @@ void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CShader *pShader, 
 	// set light properties
 	Vec3 NewLightPos = pLightBody->m_Position - pCamera->m_pFocusedBody->m_Position;
 	pShader->SetVec3("lightPos", (glm::vec3)(NewLightPos / pCamera->m_Radius));
-	pShader->SetVec3("lightColor", pLightBody->m_Color);
+	pShader->SetVec3("lightColor", glm::vec3(1.f) /* pLightBody->m_Color */);
 	pShader->SetVec3("objectColor", pBody->m_Color);
 
 	// bind the vao and draw the sphere

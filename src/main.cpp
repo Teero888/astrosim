@@ -36,7 +36,6 @@ int main()
 	while(!glfwWindowShouldClose(GfxEngine.GetWindow()))
 	{
 		const double UpdateInterval = 1.0 / (StarSystem.m_TPS * (86400.0 / StarSystem.m_DeltaTime));
-		printf("Interval: %f\n", UpdateInterval);
 		glfwPollEvents();
 
 		const auto CurrentTime = high_resolution_clock::now();
