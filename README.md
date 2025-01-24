@@ -16,5 +16,5 @@ No idea figure it out
 
 Screenshots
 --------------------------
-[![Jupiter.png](https://i.postimg.cc/Y0zZksnG/Jupiter.png)](https://postimg.cc/LghN3NM2)
-[![Sun.png](https://i.postimg.cc/CKR3DJ1X/Sun.png)](https://postimg.cc/67NbxrCf)
+[![Jupiter](https://i.postimg.cc/WbBBc01P/Jupiter.png)](https://postimg.cc/gnKSvXhM)
+[![Sun](https://i.postimg.cc/1zPbfPFC/Sun.png)](https://postimg.cc/WdW5HBXg)
