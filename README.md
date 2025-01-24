@@ -14,7 +14,12 @@ Building on Windows
 ---------------------------
 No idea figure it out
 
+Keybinds
+---------------------------
+- `A/S, ScrollUp/ScrollDown` Zoom
+- `Left/Right` Switch focus to the next/previous body
+
 Screenshots
---------------------------
+---------------------------
 [![Jupiter](https://i.postimg.cc/WbBBc01P/Jupiter.png)](https://postimg.cc/gnKSvXhM)
 [![Sun](https://i.postimg.cc/1zPbfPFC/Sun.png)](https://postimg.cc/WdW5HBXg)
