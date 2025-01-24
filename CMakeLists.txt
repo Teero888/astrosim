@@ -48,6 +48,9 @@ set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/libs/imgui)
 # include glm (header-only)
 set(GLM_DIR ${CMAKE_SOURCE_DIR}/libs/glm)
 
+# include fastnoiselite (header-only)
+set(FASTNOISE_DIR ${CMAKE_SOURCE_DIR}/libs/FastNoiseLite/Cpp)
+
 # add imgui sources
 file(GLOB IMGUI_SOURCES
     ${IMGUI_DIR}/*.cpp
@@ -103,5 +106,6 @@ target_include_directories(astrosim PRIVATE
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${GLM_DIR}
+	${FASTNOISE_DIR}
     ${CMAKE_SOURCE_DIR}/shaders
 )
