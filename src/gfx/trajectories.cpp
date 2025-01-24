@@ -33,41 +33,17 @@ void CTrajectories::UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera)
 {
 	if(m_vPlanetTrajectories.empty())
 		return;
-	if(m_ShowAll)
+
+	for(int i = m_ShowAll ? 0 : Camera.m_pFocusedBody->m_Id;
+		m_ShowAll ? (i < (int)m_vPlanetTrajectories.size()) : i == Camera.m_pFocusedBody->m_Id;
+		++i)
 	{
-		for(auto &Trajectory : m_vPlanetTrajectories)
-		{
-			for(int i = 0; i < TRAJECTORY_LENGTH; ++i)
-			{
-				Vec3 NewPos = (Trajectory.m_aPositionHistory[i] - Camera.m_pFocusedBody->m_Position) / Camera.m_Radius;
-				Trajectory.m_aGLHistory[i] = NewPos;
-				if(Trajectory.m_aGLHistory[i] == glm::vec3(0.f))
-					Trajectory.m_aGLHistory[i] = glm::vec3(0.01f);
-			}
-
-			Trajectory.m_aGLHistory[(PredictedSystem.m_SimTick - 1) % TRAJECTORY_LENGTH] = {};
-
-			// update gpu buffers
-			glBindVertexArray(Trajectory.VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, Trajectory.VBO);
-			glBufferData(GL_ARRAY_BUFFER,
-				TRAJECTORY_LENGTH * sizeof(glm::vec3),
-				Trajectory.m_aGLHistory,
-				GL_STATIC_DRAW);
-
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
-			glEnableVertexAttribArray(0);
-
-			glBindVertexArray(0);
-		}
-	}
-	else
-	{
-		auto &Trajectory = m_vPlanetTrajectories[Camera.m_pFocusedBody->m_Id];
+		auto &Trajectory = m_vPlanetTrajectories[i];
 		for(int i = 0; i < TRAJECTORY_LENGTH; ++i)
 		{
 			Vec3 NewPos = (Trajectory.m_aPositionHistory[i] - Camera.m_pFocusedBody->m_Position) / Camera.m_Radius;
 			Trajectory.m_aGLHistory[i] = NewPos;
+			// 0,0,0 is reserved for not rendering so make it some val that is not 0,0,0
 			if(Trajectory.m_aGLHistory[i] == glm::vec3(0.f))
 				Trajectory.m_aGLHistory[i] = glm::vec3(0.01f);
 		}
@@ -103,21 +79,11 @@ void CTrajectories::Render(CCamera &Camera)
 	glDisable(GL_DEPTH_TEST); // for always visible trajectories
 	glEnable(GL_LINE_SMOOTH);
 
-	if(m_ShowAll)
+	for(int i = m_ShowAll ? 0 : Camera.m_pFocusedBody->m_Id;
+		m_ShowAll ? (i < (int)m_vPlanetTrajectories.size()) : i == Camera.m_pFocusedBody->m_Id;
+		++i)
 	{
-		for(auto &Trajectory : m_vPlanetTrajectories)
-		{
-			m_Shader.SetVec3("Color", Trajectory.m_Color);
-			glLineWidth(Trajectory.m_LineWidth);
-
-			glBindVertexArray(Trajectory.VAO);
-			glDrawArrays(GL_LINE_STRIP, 0, TRAJECTORY_LENGTH);
-			glBindVertexArray(0);
-		}
-	}
-	else
-	{
-		auto &Trajectory = m_vPlanetTrajectories[Camera.m_pFocusedBody->m_Id];
+		auto &Trajectory = m_vPlanetTrajectories[i];
 		m_Shader.SetVec3("Color", Trajectory.m_Color);
 		glLineWidth(Trajectory.m_LineWidth);
 
