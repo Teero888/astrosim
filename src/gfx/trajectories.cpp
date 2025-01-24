@@ -43,7 +43,6 @@ void CTrajectories::UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera)
 				Trajectory.m_aGLHistory[i] = NewPos;
 				if(Trajectory.m_aGLHistory[i] == glm::vec3(0.f))
 					Trajectory.m_aGLHistory[i] = glm::vec3(0.01f);
-				// printf("Pos: %e, %e, %e\n", NewPos.x, NewPos.y, NewPos.z);
 			}
 
 			Trajectory.m_aGLHistory[(PredictedSystem.m_SimTick - 1) % TRAJECTORY_LENGTH] = {};
@@ -65,14 +64,23 @@ void CTrajectories::UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera)
 	else
 	{
 		auto &Trajectory = m_vPlanetTrajectories[Camera.m_pFocusedBody->m_Id];
+		for(int i = 0; i < TRAJECTORY_LENGTH; ++i)
+		{
+			Vec3 NewPos = (Trajectory.m_aPositionHistory[i] - Camera.m_pFocusedBody->m_Position) / Camera.m_Radius;
+			Trajectory.m_aGLHistory[i] = NewPos;
+			if(Trajectory.m_aGLHistory[i] == glm::vec3(0.f))
+				Trajectory.m_aGLHistory[i] = glm::vec3(0.01f);
+		}
+
+		Trajectory.m_aGLHistory[(PredictedSystem.m_SimTick - 1) % TRAJECTORY_LENGTH] = {};
 
 		// update gpu buffers
 		glBindVertexArray(Trajectory.VAO);
 		glBindBuffer(GL_ARRAY_BUFFER, Trajectory.VBO);
 		glBufferData(GL_ARRAY_BUFFER,
 			TRAJECTORY_LENGTH * sizeof(glm::vec3),
-			Trajectory.m_aPositionHistory,
-			GL_DYNAMIC_DRAW);
+			Trajectory.m_aGLHistory,
+			GL_STATIC_DRAW);
 
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
 		glEnableVertexAttribArray(0);

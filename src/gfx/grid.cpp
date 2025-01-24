@@ -62,8 +62,8 @@ void CGrid::Render(CCamera &Camera)
 	const float GridScale = (BodyRadius / Camera.m_Radius) * std::max(QuantizedScale * 10.f, 1.f);
 	m_Shader.SetFloat("GridScale", GridScale);
 
-	Vec3 GridPos = Camera.m_pFocusedBody->m_Position / (GridScale * Camera.m_Radius);
-	Vec3 Offset = (GridPos % 1) * GridScale;
+	const Vec3 GridPos = Camera.m_pFocusedBody->m_Position / (GridScale * Camera.m_Radius);
+	const Vec3 Offset = (GridPos % 1) * GridScale;
 
 	glm::mat4 Model = glm::mat4(1.0f);
 	Model = glm::translate(Model, (glm::vec3)Offset);
