@@ -35,7 +35,8 @@ int main()
 
 	while(!glfwWindowShouldClose(GfxEngine.GetWindow()))
 	{
-		const double updateInterval = 1.0 / StarSystem.m_TPS;
+		const double UpdateInterval = 1.0 / (StarSystem.m_TPS * (86400.0 / StarSystem.m_DeltaTime));
+		printf("Interval: %f\n", UpdateInterval);
 		glfwPollEvents();
 
 		const auto CurrentTime = high_resolution_clock::now();
@@ -43,10 +44,10 @@ int main()
 		LastRenderTick = CurrentTime;
 		AccTime += ElapsedTime;
 
-		while(AccTime >= updateInterval)
+		while(AccTime >= UpdateInterval)
 		{
 			StarSystem.UpdateBodies();
-			AccTime -= updateInterval;
+			AccTime -= UpdateInterval;
 			while(PredictedStarSystem.m_SimTick < StarSystem.m_SimTick + TRAJECTORY_LENGTH)
 			{
 				GfxEngine.m_Trajectories.Update(PredictedStarSystem);

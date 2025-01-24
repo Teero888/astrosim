@@ -6,8 +6,6 @@
 #include <cstdio>
 
 constexpr double G = 6.67430e-11; // gravitational constant
-// basically the speed/accuracy of the simultion
-constexpr double dt = 60.0 * 60.0; // Time step (1hr = 1tick)
 
 #include "vmath.h"
 
@@ -108,11 +106,11 @@ void CStarSystem::UpdateBodies()
 
 	// update velocities by half a time step using current accelerations
 	for(auto &Body : m_vBodies)
-		Body.m_Velocity = Body.m_Velocity + Body.m_Acceleration * (0.5 * dt);
+		Body.m_Velocity = Body.m_Velocity + Body.m_Acceleration * (0.5 * m_DeltaTime);
 
 	// update positions using the half-step updated velocities
 	for(auto &Body : m_vBodies)
-		Body.m_Position = Body.m_Position + Body.m_Velocity * dt;
+		Body.m_Position = Body.m_Position + Body.m_Velocity * m_DeltaTime;
 
 	// calculate new accelerations based on updated positions
 	for(auto &Body : m_vBodies)
@@ -126,7 +124,7 @@ void CStarSystem::UpdateBodies()
 
 	// update velocities by the other half time step using new accelerations
 	for(auto &Body : m_vBodies)
-		Body.m_Velocity = Body.m_Velocity + Body.m_Acceleration * (0.5 * dt);
+		Body.m_Velocity = Body.m_Velocity + Body.m_Acceleration * (0.5 * m_DeltaTime);
 
 	++m_SimTick;
 }

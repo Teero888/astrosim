@@ -192,7 +192,7 @@ void CGraphics::OnRender()
 	// // Render a simple ImGui window
 
 	ImGui::Begin("Settings");
-	ImGui::SliderInt("TPS", &m_pStarSystem->m_TPS, 1, 3600);
+	ImGui::SliderInt("Days per second", &m_pStarSystem->m_TPS, 1, 365);
 	static const char *pCurrentItem = m_pStarSystem->m_vBodies.front().m_Name.c_str();
 	pCurrentItem = m_Camera.m_pFocusedBody->m_Name.c_str();
 
