@@ -194,6 +194,7 @@ void CGraphics::OnRender()
 	ImGui::Begin("Settings");
 	ImGui::SliderInt("TPS", &m_pStarSystem->m_TPS, 1, 3600);
 	static const char *pCurrentItem = m_pStarSystem->m_vBodies.front().m_Name.c_str();
+	pCurrentItem = m_Camera.m_pFocusedBody->m_Name.c_str();
 
 	ImGui::Checkbox("Show all trajectories", &m_Trajectories.m_ShowAll);
 	if(ImGui::BeginCombo("Select Focus##focus", pCurrentItem))
@@ -202,11 +203,7 @@ void CGraphics::OnRender()
 		{
 			bool IsSelected = (pCurrentItem == Body.m_Name.c_str());
 			if(ImGui::Selectable(Body.m_Name.c_str(), IsSelected))
-			{
-				pCurrentItem = Body.m_Name.c_str();
-				m_Camera.m_pFocusedBody = &Body;
-				m_Camera.m_FocusPoint = Body.m_Position;
-			}
+				m_Camera.SetBody(&Body);
 			if(IsSelected)
 				ImGui::SetItemDefaultFocus();
 		}
@@ -319,6 +316,14 @@ void CGraphics::KeyActionCallback(GLFWwindow *pWindow, int Key, int Scancode, in
 		{
 			pGraphics->m_Camera.m_WantedRadius += pGraphics->m_Camera.m_WantedRadius / 10.f;
 			pGraphics->m_Camera.UpdateViewMatrix();
+		}
+		else if(Key == GLFW_KEY_LEFT)
+		{
+			pGraphics->m_Camera.SetBody(&pGraphics->m_pStarSystem->m_vBodies[(pGraphics->m_Camera.m_pFocusedBody->m_Id - 1) % pGraphics->m_pStarSystem->m_vBodies.size()]);
+		}
+		else if(Key == GLFW_KEY_RIGHT)
+		{
+			pGraphics->m_Camera.SetBody(&pGraphics->m_pStarSystem->m_vBodies[(pGraphics->m_Camera.m_pFocusedBody->m_Id + 1) % pGraphics->m_pStarSystem->m_vBodies.size()]);
 		}
 	}
 }

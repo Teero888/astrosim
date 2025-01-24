@@ -38,6 +38,7 @@ struct CCamera
 	glm::mat4 m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
 	glm::mat4 m_Projection = glm::perspective(glm::radians(70.0f), 1600.0f / 1000.0f, 0.1f, 1e9f);
 
+	void SetBody(SBody *pBody);
 	void UpdateViewMatrix();
 	void ProcessKeyboard(int direction, float deltaTime);
 	void ProcessMouse(float xoffset, float yoffset);

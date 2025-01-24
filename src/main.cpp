@@ -1,4 +1,5 @@
 #include "gfx/graphics.h"
+#include "gfx/trajectories.h"
 #include "sim/starsystem.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -45,14 +46,14 @@ int main()
 		while(AccTime >= updateInterval)
 		{
 			StarSystem.UpdateBodies();
-			GfxEngine.m_Camera.UpdateViewMatrix();
 			AccTime -= updateInterval;
-			while(PredictedStarSystem.m_SimTick < StarSystem.m_SimTick + GfxEngine.m_Trajectories.m_TrajectoryLength)
+			while(PredictedStarSystem.m_SimTick < StarSystem.m_SimTick + TRAJECTORY_LENGTH)
 			{
 				GfxEngine.m_Trajectories.Update(PredictedStarSystem);
 				PredictedStarSystem.UpdateBodies();
 			}
 		}
+		GfxEngine.m_Camera.UpdateViewMatrix();
 		GfxEngine.m_Trajectories.UpdateBuffers(PredictedStarSystem, GfxEngine.m_Camera);
 
 		GfxEngine.OnRender();

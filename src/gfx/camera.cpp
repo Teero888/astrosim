@@ -2,6 +2,12 @@
 #include "glm/ext/vector_float3.hpp"
 #include "graphics.h"
 
+void CCamera::SetBody(SBody *pBody)
+{
+	m_pFocusedBody = pBody;
+	m_FocusPoint = pBody->m_Position;
+}
+
 // TODO: might want to add delta time here for the radius interpolation
 void CCamera::UpdateViewMatrix()
 {
