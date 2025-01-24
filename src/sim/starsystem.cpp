@@ -103,17 +103,18 @@ void CStarSystem::OnInit()
 
 void CStarSystem::UpdateBodies()
 {
-	// PrintState(m_vBodies, m_SimTick);
-
-	// yea no xd
 	if(m_vBodies.empty())
 		return;
 
-	// update positions first
+	// update velocities by half a time step using current accelerations
 	for(auto &Body : m_vBodies)
-		Body.m_Position = Body.m_Position + Body.m_Velocity * dt + Body.m_Acceleration * (0.5 * dt * dt);
+		Body.m_Velocity = Body.m_Velocity + Body.m_Acceleration * (0.5 * dt);
 
-	// calculate new accelerations
+	// update positions using the half-step updated velocities
+	for(auto &Body : m_vBodies)
+		Body.m_Position = Body.m_Position + Body.m_Velocity * dt;
+
+	// calculate new accelerations based on updated positions
 	for(auto &Body : m_vBodies)
 	{
 		Vec3 TotalForce(0, 0, 0);
@@ -123,9 +124,9 @@ void CStarSystem::UpdateBodies()
 		Body.m_Acceleration = TotalForce / Body.m_Mass; // a = F / m
 	}
 
-	// update velocities afterwards to avoid breaking the ordering
+	// update velocities by the other half time step using new accelerations
 	for(auto &Body : m_vBodies)
-		Body.m_Velocity = Body.m_Velocity + Body.m_Acceleration * dt;
+		Body.m_Velocity = Body.m_Velocity + Body.m_Acceleration * (0.5 * dt);
 
 	++m_SimTick;
 }
