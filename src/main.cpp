@@ -18,10 +18,7 @@ int main()
 	}
 
 	// for(int i = 0; i < 1'000'000; ++i)
-	// {
 	// 	StarSystem.UpdateBodies();
-	// 	GfxEngine.m_Camera.UpdateViewMatrix();
-	// }
 
 	GfxEngine.m_Camera.m_pFocusedBody = &StarSystem.m_vBodies.front();
 

@@ -18,7 +18,8 @@ class CTrajectories
 		float m_LineWidth = 2.0f;
 		STrajectory()
 		{
-			memset(m_aPositionHistory, 0, TRAJECTORY_LENGTH * sizeof(glm::vec3));
+			memset(m_aPositionHistory, 0, TRAJECTORY_LENGTH * sizeof(Vec3));
+			memset(m_aGLHistory, 0, TRAJECTORY_LENGTH * sizeof(glm::vec3));
 		};
 	};
 	CShader m_Shader;

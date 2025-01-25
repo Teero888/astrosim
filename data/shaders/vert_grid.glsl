@@ -1,6 +1,8 @@
 #version 330 core
 layout(location = 0) in vec3 aPos;
 
+uniform float PlanetScale;
+uniform float PlanetMass;
 uniform float Scale;
 uniform mat4 Model;
 uniform mat4 View;
@@ -11,10 +13,13 @@ out vec3 FragPos;
 
 void main()
 {
-    vec4 WorldPos = vec4(aPos * Scale, 1.0);
-    FragWorldPos = (Model * WorldPos).xyz;
-	FragPos = aPos * Scale;
+	vec3 NewPos = aPos;
+	float Distance = length(NewPos);
+	NewPos.y = -smoothstep(PlanetMass, 0.0, (Distance * PlanetMass) / PlanetScale) * PlanetScale;
 
-    // transform the vertex position to clip space
-    gl_Position = Projection * View * WorldPos;
+	vec4 WorldPos = vec4(NewPos * Scale, 1.0);
+	FragWorldPos = (Model * WorldPos).xyz;
+	FragPos = NewPos * Scale;
+
+	gl_Position = Projection * View * WorldPos;
 }

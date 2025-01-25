@@ -20,5 +20,5 @@ void main()
     if (GridLine > 0.05)
         discard;
 
-    FragColor = vec4(GridColor, 1.0 - (length(FragPos) / Scale));
+    FragColor = vec4(GridColor, 1.0 - (length(FragPos.xz) / Scale));
 }

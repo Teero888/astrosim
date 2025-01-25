@@ -3,6 +3,7 @@
 #include "../gfx/shader.h"
 #include "body.h"
 #include "glm/ext/vector_float3.hpp"
+#include <chrono>
 #include <cstdio>
 
 constexpr double G = 6.67430e-11; // gravitational constant
@@ -18,6 +19,7 @@ static Vec3 CalculateForce(const SBody &a, const SBody &b)
 	return Force;
 }
 
+static const std::chrono::time_point<std::chrono::steady_clock> StartTime = std::chrono::steady_clock::now();
 void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CShader *pShader, class CCamera *pCamera)
 {
 	pShader->Use();
@@ -28,6 +30,7 @@ void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CShader *pShader, 
 	Model = glm::translate(Model, (glm::vec3)NewPos);
 
 	pShader->SetBool("Source", pBody == pLightBody);
+	pShader->SetFloat("Time", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - StartTime).count() / 1000.0);
 	pShader->SetFloat("Radius", pBody->m_Radius / pCamera->m_Radius);
 	pShader->SetMat4("model", Model);
 	pShader->SetMat4("view", pCamera->m_View);

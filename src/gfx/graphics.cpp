@@ -4,6 +4,7 @@
 #include "generated/embedded_shaders.h"
 #include "glm/geometric.hpp"
 #include "shader.h"
+#include <FastNoiseLite.h>
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <cstdio>
@@ -24,6 +25,10 @@ struct Vertex
 
 static void GenerateSphere(float Radius, int Stacks, int Slices, std::vector<Vertex> &vVertices, std::vector<unsigned int> &vIndices)
 {
+	FastNoiseLite Noise;
+	Noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+	Noise.SetFrequency(1.f);
+
 	vVertices.clear();
 	vIndices.clear();
 
@@ -38,6 +43,11 @@ static void GenerateSphere(float Radius, int Stacks, int Slices, std::vector<Ver
 			v.position.x = Radius * std::sin(phi) * std::cos(theta);
 			v.position.y = Radius * std::cos(phi);
 			v.position.z = Radius * std::sin(phi) * std::sin(theta);
+
+			// float Mod = (Noise.GetNoise(v.position.x, v.position.y, v.position.z) + 1.f) / 4.f;
+			// v.position.x *= Mod;
+			// v.position.y *= Mod;
+			// v.position.z *= Mod;
 
 			v.normal = glm::normalize(v.position);
 

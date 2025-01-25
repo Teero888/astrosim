@@ -7,39 +7,60 @@
 #include <cmath>
 #include <cstdio>
 
+#define GRID_RESOLUTION 256
+
 void CGrid::Init()
 {
 	m_Shader.CompileShader(Shaders::VERT_GRID, Shaders::FRAG_GRID);
 
-	float Scale = 1;
-	float vertices[] = {
-		-1.0f * Scale, 0.0f, -1.0f * Scale, // Bottom-left
-		1.0f * Scale, 0.0f, -1.0f * Scale, // Bottom-right
-		1.0f * Scale, 0.0f, 1.0f * Scale, // Top-right
-		-1.0f * Scale, 0.0f, 1.0f * Scale // Top-left
-	};
+	const float STEP = 2.0f / GRID_RESOLUTION;
 
-	unsigned int indices[] = {
-		0, 1, 2, // First triangle
-		2, 3, 0 // Second triangle
-	};
+	std::vector<float> vertices;
+	for(int i = 0; i <= GRID_RESOLUTION; ++i)
+	{
+		for(int j = 0; j <= GRID_RESOLUTION; ++j)
+		{
+			vertices.push_back(-1.0f + j * STEP); // X
+			vertices.push_back(0.0f); // Y
+			vertices.push_back(-1.0f + i * STEP); // Z
+		}
+	}
 
-	// Generate and bind the VAO, VBO, and EBO
+	std::vector<unsigned int> indices;
+	for(int i = 0; i < GRID_RESOLUTION; ++i)
+	{
+		for(int j = 0; j < GRID_RESOLUTION; ++j)
+		{
+			int topLeft = i * (GRID_RESOLUTION + 1) + j;
+			int topRight = topLeft + 1;
+			int bottomLeft = (i + 1) * (GRID_RESOLUTION + 1) + j;
+			int bottomRight = bottomLeft + 1;
+
+			// First triangle
+			indices.push_back(topLeft);
+			indices.push_back(bottomLeft);
+			indices.push_back(topRight);
+
+			// Second triangle
+			indices.push_back(topRight);
+			indices.push_back(bottomLeft);
+			indices.push_back(bottomRight);
+		}
+	}
+
+	// Create and bind buffers
 	glGenVertexArrays(1, &m_Shader.VAO);
 	glGenBuffers(1, &m_Shader.VBO);
 	glGenBuffers(1, &m_Shader.EBO);
 
 	glBindVertexArray(m_Shader.VAO);
 
-	// Bind and set the vertex buffer
 	glBindBuffer(GL_ARRAY_BUFFER, m_Shader.VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
-	// Bind and set the element buffer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_Shader.EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
-	// Set the vertex attribute pointers
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
 	glEnableVertexAttribArray(0);
 
@@ -69,6 +90,9 @@ void CGrid::Render(CCamera &Camera)
 	Model = glm::translate(Model, (glm::vec3)Offset);
 	m_Shader.SetMat4("Model", Model);
 
+	// printf("PlanetDensity: %e\n", (Camera.m_pFocusedBody->m_Mass / BodyRadius));
+	m_Shader.SetFloat("PlanetMass", BodyRadius / 1e8);
+	m_Shader.SetFloat("PlanetScale", (BodyRadius / Camera.m_Radius));
 	m_Shader.SetFloat("Scale", DEFAULT_SCALE);
 	m_Shader.SetVec3("GridColor", glm::vec3(0.4f));
 	m_Shader.SetMat4("View", Camera.m_View);
@@ -76,7 +100,7 @@ void CGrid::Render(CCamera &Camera)
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBindVertexArray(m_Shader.VAO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, GRID_RESOLUTION * GRID_RESOLUTION * 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 }
 
