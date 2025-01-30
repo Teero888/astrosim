@@ -1,7 +1,6 @@
 #include "trajectories.h"
 #include "camera.h"
 #include "generated/embedded_shaders.h"
-#include "glm/ext/matrix_transform.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "shader.h"
 #include <cstdio>
@@ -19,14 +18,14 @@ void CTrajectories::Update(CStarSystem &PredictedSystem)
 		for(int i = 0; i < (int)m_vPlanetTrajectories.size(); ++i)
 		{
 			auto &Traj = m_vPlanetTrajectories[i];
-			Traj.m_Color = PredictedSystem.m_vBodies[i].m_Color;
+			Traj.m_Color = PredictedSystem.m_vBodies[i].m_RenderParams.m_SurfaceColor;
 			glGenVertexArrays(1, &Traj.VAO);
 			glGenBuffers(1, &Traj.VBO);
 		}
 	}
 
 	for(size_t i = 0; i < PredictedSystem.m_vBodies.size(); ++i)
-		m_vPlanetTrajectories[i].m_aPositionHistory[PredictedSystem.m_SimTick % TRAJECTORY_LENGTH] = PredictedSystem.m_vBodies[i].m_Position;
+		m_vPlanetTrajectories[i].m_aPositionHistory[PredictedSystem.m_SimTick % TRAJECTORY_LENGTH] = PredictedSystem.m_vBodies[i].m_SimParams.m_Position;
 }
 
 void CTrajectories::UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera)
@@ -41,7 +40,7 @@ void CTrajectories::UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera)
 		auto &Trajectory = m_vPlanetTrajectories[i];
 		for(int i = 0; i < TRAJECTORY_LENGTH; ++i)
 		{
-			Vec3 NewPos = (Trajectory.m_aPositionHistory[i] - Camera.m_pFocusedBody->m_Position) / Camera.m_Radius;
+			Vec3 NewPos = (Trajectory.m_aPositionHistory[i] - Camera.m_pFocusedBody->m_SimParams.m_Position) / Camera.m_Radius;
 			Trajectory.m_aGLHistory[i] = NewPos;
 			// 0,0,0 is reserved for not rendering so make it some val that is not 0,0,0
 			if(Trajectory.m_aGLHistory[i] == glm::vec3(0.f))
@@ -76,7 +75,6 @@ void CTrajectories::Render(CCamera &Camera)
 	m_Shader.SetMat4("Model", Model);
 	m_Shader.SetMat4("View", Camera.m_View);
 	m_Shader.SetMat4("Projection", Camera.m_Projection);
-	glDisable(GL_DEPTH_TEST); // for always visible trajectories
 	glEnable(GL_LINE_SMOOTH);
 
 	for(int i = m_ShowAll ? 0 : Camera.m_pFocusedBody->m_Id;
@@ -91,8 +89,6 @@ void CTrajectories::Render(CCamera &Camera)
 		glDrawArrays(GL_LINE_STRIP, 0, TRAJECTORY_LENGTH);
 		glBindVertexArray(0);
 	}
-
-	glEnable(GL_DEPTH_TEST);
 }
 
 void CTrajectories::Destroy()

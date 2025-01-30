@@ -5,7 +5,7 @@
 void CCamera::SetBody(SBody *pBody)
 {
 	m_pFocusedBody = pBody;
-	m_FocusPoint = pBody->m_Position;
+	m_FocusPoint = pBody->m_SimParams.m_Position;
 }
 
 // TODO: might want to add delta time here for the radius interpolation

@@ -39,9 +39,9 @@ static void CheckProgramLinkErrors(GLuint Program)
 
 class CShader
 {
+public:
 	GLuint m_Program = -1;
 
-public:
 	unsigned int VBO = -1, VAO = -1, EBO = -1;
 	unsigned int m_NumIndices = 0;
 

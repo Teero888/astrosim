@@ -2,7 +2,9 @@
 #include "../gfx/camera.h"
 #include "../gfx/shader.h"
 #include "body.h"
+#include "glm/ext/quaternion_geometric.hpp"
 #include "glm/ext/vector_float3.hpp"
+#include "glm/geometric.hpp"
 #include <chrono>
 #include <cstdio>
 
@@ -12,9 +14,9 @@ constexpr double G = 6.67430e-11; // gravitational constant
 
 static Vec3 CalculateForce(const SBody &a, const SBody &b)
 {
-	Vec3 r = b.m_Position - a.m_Position; // Vector from a to b
+	Vec3 r = b.m_SimParams.m_Position - a.m_SimParams.m_Position; // Vector from a to b
 	const double Distance = r.length();
-	const double ForceMagnitude = (G * a.m_Mass * b.m_Mass) / (Distance * Distance); // F = G * m1 * m2 / r^2
+	const double ForceMagnitude = (G * a.m_SimParams.m_Mass * b.m_SimParams.m_Mass) / (Distance * Distance); // F = G * m1 * m2 / r^2
 	Vec3 Force = r * (ForceMagnitude / Distance);
 	return Force;
 }
@@ -26,21 +28,46 @@ void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CShader *pShader, 
 
 	// set transformation matrices
 	glm::mat4 Model = glm::mat4(1.0f);
-	Vec3 NewPos = (pBody->m_Position - pCamera->m_pFocusedBody->m_Position) / pCamera->m_Radius;
+	Vec3 NewPos = (pBody->m_SimParams.m_Position - pCamera->m_pFocusedBody->m_SimParams.m_Position) / pCamera->m_Radius;
 	Model = glm::translate(Model, (glm::vec3)NewPos);
 
-	pShader->SetBool("Source", pBody == pLightBody);
-	pShader->SetFloat("Time", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - StartTime).count() / 1000.0);
-	pShader->SetFloat("Radius", pBody->m_Radius / pCamera->m_Radius);
+	// ---------- Fragment shader props ----------
+
+	Vec3 NewLightPos = pLightBody->m_SimParams.m_Position - pCamera->m_pFocusedBody->m_SimParams.m_Position;
+	pShader->SetVec3("lightPos", (glm::vec3)(NewLightPos / pCamera->m_Radius));
+	pShader->SetVec3("lightColor", pLightBody->m_RenderParams.m_SurfaceColor);
+
+	pShader->SetFloat("radius", pBody->m_RenderParams.m_Radius / pCamera->m_Radius);
+	pShader->SetFloat("albedo", pBody->m_RenderParams.m_Albedo);
+	pShader->SetFloat("roughness", pBody->m_RenderParams.m_Roughness);
+	pShader->SetFloat("specularity", pBody->m_RenderParams.m_Specularity);
+
+	pShader->SetVec3("surfaceColor", pBody->m_RenderParams.m_SurfaceColor);
+	pShader->SetVec3("oceanColor", pBody->m_RenderParams.m_OceanColor);
+	pShader->SetVec3("cloudColor", pBody->m_RenderParams.m_CloudColor);
+	pShader->SetVec3("atmoColor", pBody->m_RenderParams.m_AtmoColor);
+
+	pShader->SetFloat("atmoStrength", pBody->m_RenderParams.m_AtmoStrength);
+	pShader->SetFloat("cloudCover", pBody->m_RenderParams.m_CloudCover);
+	pShader->SetFloat("coreTemperature", pBody->m_RenderParams.m_CoreTemperature);
+	pShader->SetFloat("surfaceTemperature", pBody->m_RenderParams.m_SurfaceTemperature);
+	pShader->SetFloat("orbitalSpeed", pBody->m_RenderParams.m_OrbitalSpeed);
+	pShader->SetFloat("rotationSpeed", pBody->m_RenderParams.m_RotationSpeed);
+	pShader->SetFloat("magneticField", pBody->m_RenderParams.m_MagneticField);
+	pShader->SetFloat("auroraIntensity", pBody->m_RenderParams.m_AuroraIntensity);
+
+	pShader->SetFloat("textureScale", 2.0);
+	pShader->SetFloat("time", m_SimTick / m_DeltaTime);
+
+	// ---------- Fragment shader props ----------
+
+	// 0 for now will get data later
+	pShader->SetFloat("axialTilt", 0.0);
+
+	pShader->SetVec3("cameraPos", glm::normalize(pCamera->m_Position));
 	pShader->SetMat4("model", Model);
 	pShader->SetMat4("view", pCamera->m_View);
 	pShader->SetMat4("projection", pCamera->m_Projection);
-
-	// set light properties
-	Vec3 NewLightPos = pLightBody->m_Position - pCamera->m_pFocusedBody->m_Position;
-	pShader->SetVec3("lightPos", (glm::vec3)(NewLightPos / pCamera->m_Radius));
-	pShader->SetVec3("lightColor", glm::vec3(1.f) /* pLightBody->m_Color */);
-	pShader->SetVec3("objectColor", pBody->m_Color);
 
 	// bind the vao and draw the sphere
 	glBindVertexArray(pShader->VAO);
@@ -48,51 +75,155 @@ void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CShader *pShader, 
 	glBindVertexArray(0);
 }
 
-// TODO: tune these values xd
-// very unstable atm
+// clang-format off
 void CStarSystem::OnInit()
 {
-	int Id = 0;
+	int id = 0;
 	m_vBodies = {
-		// Sun
-		SBody(Id++, "Sun", 1.989e30, 6.957e8, Vec3(0, 0, 0), Vec3(0, 0, 0), glm::vec3(1.0, 0.8, 0.1)),
-
-		// Mercury (no moons)
-		SBody(Id++, "Mercury", 3.3011e23, 2.4397e6, Vec3(5.791e10, 0, 0), Vec3(0, 0, 47870), glm::vec3(0.7, 0.5, 0.5)),
-
-		// Venus (no moons)
-		SBody(Id++, "Venus", 4.8675e24, 6.0518e6, Vec3(1.082e11, 0, 0), Vec3(0, 0, 35020), glm::vec3(0.9, 0.7, 0.3)),
-
-		// Earth + Moon
-		SBody(Id++, "Earth", 5.972e24, 6.371e6, Vec3(1.496e11, 0, 0), Vec3(0, 0, 29780), glm::vec3(0.1, 0.1, 1.0)),
-		SBody(Id++, "Moon", 7.342e22, 1.737e6, Vec3(1.496e11 + 3.844e8, 0, 0), Vec3(0, 0, 29780 + 1022), glm::vec3(0.5, 0.5, 0.5)),
-
-		// Mars + Moons
-		SBody(Id++, "Mars", 6.4171e23, 3.3895e6, Vec3(2.279e11, 0, 0), Vec3(0, 0, 24070), glm::vec3(0.8, 0.3, 0.1)),
-		SBody(Id++, "Phobos", 1.0659e16, 11.267e3, Vec3(2.279e11 + 9.377e6, 0, 0), Vec3(0, 0, 24070 + 2138), glm::vec3(0.6, 0.6, 0.6)),
-		SBody(Id++, "Deimos", 1.4762e15, 6.2e3, Vec3(2.279e11 + 2.346e7, 0, 0), Vec3(0, 0, 24070 + 1351), glm::vec3(0.7, 0.7, 0.7)),
-
-		// Jupiter + Galilean Moons
-		SBody(Id++, "Jupiter", 1.8982e27, 6.9911e7, Vec3(7.785e11, 0, 0), Vec3(0, 0, 13070), glm::vec3(0.8, 0.6, 0.4)),
-		SBody(Id++, "Io", 8.9319e22, 1.8216e6, Vec3(7.785e11 + 4.217e8, 0, 0), Vec3(0, 0, 13070 + 17334), glm::vec3(0.9, 0.8, 0.2)),
-		SBody(Id++, "Europa", 4.7998e22, 1.561e6, Vec3(7.785e11 + 6.709e8, 0, 0), Vec3(0, 0, 13070 + 13740), glm::vec3(0.8, 0.8, 0.9)),
-		SBody(Id++, "Ganymede", 1.4819e23, 2.631e6, Vec3(7.785e11 + 1.0704e9, 0, 0), Vec3(0, 0, 13070 + 10880), glm::vec3(0.6, 0.6, 0.7)),
-		SBody(Id++, "Callisto", 1.0759e23, 2.4103e6, Vec3(7.785e11 + 1.8827e9, 0, 0), Vec3(0, 0, 13070 + 8204), glm::vec3(0.5, 0.5, 0.6)),
-
-		// Saturn + Moons
-		SBody(Id++, "Saturn", 5.6834e26, 5.8232e7, Vec3(1.429e12, 0, 0), Vec3(0, 0, 9690), glm::vec3(0.9, 0.8, 0.5)),
-		SBody(Id++, "Titan", 1.3452e23, 2.5747e6, Vec3(1.429e12 + 1.221e9, 0, 0), Vec3(0, 0, 9690 + 5570), glm::vec3(0.8, 0.7, 0.3)),
-		SBody(Id++, "Enceladus", 1.0802e20, 2.521e5, Vec3(1.429e12 + 2.38e8, 0, 0), Vec3(0, 0, 9690 + 12600), glm::vec3(0.9, 0.9, 0.9)),
-
-		// Uranus + Moons
-		SBody(Id++, "Uranus", 8.6810e25, 2.5362e7, Vec3(2.871e12, 0, 0), Vec3(0, 0, 6810), glm::vec3(0.4, 0.6, 0.8)),
-		SBody(Id++, "Titania", 3.4e21, 7.887e5, Vec3(2.871e12 + 4.356e8, 0, 0), Vec3(0, 0, 6810 + 3640), glm::vec3(0.7, 0.7, 0.8)),
-		SBody(Id++, "Oberon", 3.076e21, 7.618e5, Vec3(2.871e12 + 5.835e8, 0, 0), Vec3(0, 0, 6810 + 3010), glm::vec3(0.6, 0.6, 0.7)),
-
-		// Neptune + Triton
-		SBody(Id++, "Neptune", 1.02413e26, 2.4622e7, Vec3(4.498e12, 0, 0), Vec3(0, 0, 5430), glm::vec3(0.2, 0.3, 0.9)),
-		SBody(Id++, "Triton", 2.14e22, 1.3534e6, Vec3(4.498e12 + 3.547e8, 0, 0), Vec3(0, 0, 5430 + 4390), glm::vec3(0.7, 0.7, 0.8))};
+		SBody(id++, "Sun",
+			{
+				1.989e30, // Mass (kg)
+				Vec3(0, 0, 0), // Position (m)
+				Vec3(0, 0, 0), // Velocity (m/s)
+				Vec3(0, 0, 0) // Acceleration
+			},
+			{
+				6.957e8, // Radius (m)
+				0.07f, // Albedo
+				0.1f, // Roughness
+				0.0f, // Specularity
+				Vec3(1.0f, 0.93f, 0.85f), // Surface color (yellow-white)
+				Vec3(0.0f), // Ocean color (none)
+				Vec3(0.0f),
+				Vec3(1.0f, 0.9f, 0.8f), // Atmosphere color (corona)
+				0.2f, // Atmosphere strength
+				0.0f, // Cloud cover
+				15.0e6f, // Core temp (°C)
+				5500.0f, // Surface temp (°C)
+				0.0f, // Orbital speed (central star)
+				glm::radians(360.0f / 27.0f) / 86400.0f, // Rotation speed (rad/s)
+				0.0001f, // Magnetic field (T)
+				0.0f // Aurora intensity
+			}),
+		SBody(id++, "Mercury",
+			{
+				3.3011e23,
+				Vec3(5.791e10, 0, 0),
+				Vec3(0, 0, 47870),
+				Vec3(0, 0, 0)},
+			{
+				2.4397e6,
+				0.12f, // Low albedo (Moon-like)
+				0.85f, // Very rough surface
+				0.05f, // Non-reflective
+				Vec3(0.6f, 0.5f, 0.4f), // Gray-brown surface
+				Vec3(0.0f), // No oceans
+				Vec3(0.0f),
+				Vec3(0.02f, 0.01f, 0.01f), // Trace exosphere
+				0.01f, // Minimal atmosphere
+				0.0f, // No clouds
+				4300.0f, // Core temp
+				167.0f, // Surface temp
+				47870.0f, // Orbital speed
+				glm::radians(360.0f / (58.6f * 24.0f)) / 3600.0f, // 58.6-day rotation
+				0.0f, // Negligible magnetic field
+				0.0f}),
+		SBody(id++, "Venus",
+			{
+				4.8675e24,
+				Vec3(1.082e11, 0, 0),
+				Vec3(0, 0, 35020),
+				Vec3(0, 0, 0)},
+			{
+				6.0518e6,
+				0.75f, // High albedo (clouds)
+				0.3f, // Smooth cloud layer
+				0.9f, // Cloud reflectivity
+				Vec3(0.9f, 0.7f, 0.3f), // Yellowish clouds
+				Vec3(0.0f), // No liquid surface
+				Vec3(0.0f),
+				Vec3(0.8f, 0.6f, 0.4f), // Thick CO₂ atmosphere
+				1.5f, // Dense atmosphere
+				1.0f, // Full cloud cover
+				4900.0f, // Core temp
+				464.0f, // Surface temp
+				35020.0f,
+				glm::radians(-360.0f / (243.0f * 24.0f)) / 3600.0f, // Retrograde rotation
+				0.0f,
+				0.0f}),
+		SBody(id++, "Earth",
+			{
+				5.972e24,
+				Vec3(1.496e11, 0, 0),
+				Vec3(0, 0, 29780),
+				Vec3(0, 0, 0)},
+			{
+				6.371e6,
+				0.3f, // Albedo
+				0.2f, // Mixed roughness
+				0.25f, // Ocean specularity
+				Vec3(0.2f, 0.5f, 0.3f), // Vegetation/land color
+				Vec3(0.0f, 0.15f, 0.35f), // Ocean blue
+				Vec3(0.95f, 0.95f, 1.0f),
+				Vec3(0.29f, 0.58f, 0.88f), // Atmospheric blue
+				0.5f, // Moderate atmosphere
+				0.6f, // Partial cloud cover
+				6000.0f, // Core temp
+				15.0f, // Surface temp
+				29780.0f,
+				glm::radians(360.0f) / 86400.0f, // 24-hour rotation
+				50e-6f, // ~50μT magnetic field
+				0.3f // Aurora intensity
+			}),
+		SBody(id++, "Moon",
+			{
+				7.342e22,
+				Vec3(1.496e11 + 3.844e8, 0, 0),
+				Vec3(0, 0, 29780 + 1022),
+				Vec3(0, 0, 0)},
+			{
+				1.737e6,
+				0.12f, // Low albedo
+				0.9f, // Very rough
+				0.02f, // Non-reflective
+				Vec3(0.5f, 0.5f, 0.5f), // Gray regolith
+				Vec3(0.0f), // No oceans
+				Vec3(0.0f), 
+				Vec3(0.0f), // No atmosphere
+				0.0f,
+				0.0f,
+				1500.0f, // Core temp
+				-23.0f, // Surface temp
+				1022.0f,
+				glm::radians(360.0f / (27.3f * 24.0f)) / 3600.0f, // Tidally locked
+				0.0f,
+				0.0f}),
+		SBody(id++, "Jupiter",
+			{
+				1.8982e27,
+				Vec3(7.785e11, 0, 0),
+				Vec3(0, 0, 13070),
+				Vec3(0, 0, 0)},
+			{
+				6.9911e7,
+				0.52f, // Albedo
+				0.4f, // Gaseous surface
+				0.7f, // Cloud reflectivity
+				Vec3(0.8f, 0.6f, 0.4f), // Band colors
+				Vec3(0.1f, 0.1f, 0.5f), // Hypothetical liquid layer
+				Vec3(0.9f, 0.9f, 1.0f), // idk
+				Vec3(0.6f, 0.5f, 0.4f), // Upper atmosphere
+				1.2f, // Thick atmosphere
+				0.8f, // Cloud coverage
+				24000.0f, // Core temp
+				-145.0f, // Cloud top temp
+				13070.0f,
+				glm::radians(360.0f / 9.93f) / 3600.0f, // 9.9-hour rotation
+				4.2e-4f, // Strong magnetic field
+				0.8f // Intense auroras
+			})};
 }
+// clang-format on
 
 // static void PrintState(const std::vector<SBody> &vBodies, uint64_t Time)
 // {
@@ -109,11 +240,11 @@ void CStarSystem::UpdateBodies()
 
 	// update velocities by half a time step using current accelerations
 	for(auto &Body : m_vBodies)
-		Body.m_Velocity = Body.m_Velocity + Body.m_Acceleration * (0.5 * m_DeltaTime);
+		Body.m_SimParams.m_Velocity = Body.m_SimParams.m_Velocity + Body.m_SimParams.m_Acceleration * (0.5 * m_DeltaTime);
 
 	// update positions using the half-step updated velocities
 	for(auto &Body : m_vBodies)
-		Body.m_Position = Body.m_Position + Body.m_Velocity * m_DeltaTime;
+		Body.m_SimParams.m_Position = Body.m_SimParams.m_Position + Body.m_SimParams.m_Velocity * m_DeltaTime;
 
 	// calculate new accelerations based on updated positions
 	for(auto &Body : m_vBodies)
@@ -122,12 +253,12 @@ void CStarSystem::UpdateBodies()
 		for(const auto &other : m_vBodies)
 			if(&Body != &other)
 				TotalForce = TotalForce + CalculateForce(Body, other);
-		Body.m_Acceleration = TotalForce / Body.m_Mass; // a = F / m
+		Body.m_SimParams.m_Acceleration = TotalForce / Body.m_SimParams.m_Mass; // a = F / m
 	}
 
 	// update velocities by the other half time step using new accelerations
 	for(auto &Body : m_vBodies)
-		Body.m_Velocity = Body.m_Velocity + Body.m_Acceleration * (0.5 * m_DeltaTime);
+		Body.m_SimParams.m_Velocity = Body.m_SimParams.m_Velocity + Body.m_SimParams.m_Acceleration * (0.5 * m_DeltaTime);
 
 	++m_SimTick;
 }

@@ -61,13 +61,13 @@ void CMarkers::Render(CStarSystem &System, CCamera &Camera)
 	glDisable(GL_DEPTH_TEST);
 	for(auto &Body : System.m_vBodies)
 	{
-		const Vec3 Distance = (Body.m_Position - Camera.m_pFocusedBody->m_Position) + Camera.m_Radius;
-		const float Radius = (Body.m_Radius / Distance.length());
+		const Vec3 Distance = (Body.m_SimParams.m_Position - Camera.m_pFocusedBody->m_SimParams.m_Position) + Camera.m_Radius;
+		const float Radius = (Body.m_RenderParams.m_Radius / Distance.length());
 		const float Min = Radius / DEFAULT_SCALE;
 		m_Shader.SetVec3("Color", glm::vec3(1.0f));
 		m_Shader.SetFloat("Scale", std::max(Min, 0.01f) * 4);
 
-		const Vec3 NewPos = (Body.m_Position - Camera.m_pFocusedBody->m_Position) / Camera.m_Radius;
+		const Vec3 NewPos = (Body.m_SimParams.m_Position - Camera.m_pFocusedBody->m_SimParams.m_Position) / Camera.m_Radius;
 		glm::vec2 ScreenPos = WorldToScreenCoordinates(NewPos, glm::mat4(1.f), Camera.m_View, Camera.m_Projection, Camera.m_ScreenSize.x, Camera.m_ScreenSize.y);
 		if(ScreenPos.x < 0 || ScreenPos.y < 0 ||
 			ScreenPos.x > Camera.m_ScreenSize.x || ScreenPos.y > Camera.m_ScreenSize.y)

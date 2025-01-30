@@ -5,6 +5,7 @@
 #include "glm/ext/vector_float3.hpp"
 #include "graphics.h"
 #include <cmath>
+#include <csignal>
 #include <cstdio>
 
 #define GRID_RESOLUTION 256
@@ -63,42 +64,77 @@ void CGrid::Init()
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
 	glEnableVertexAttribArray(0);
-
 	glBindVertexArray(0);
+
+	// // Create an SSBO for planet data
+	// glGenBuffers(1, &m_PlanetSSBO);
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_PlanetSSBO);
+	//
+	// // Bind the SSBO to binding point 0
+	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_PlanetSSBO);
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // Unbind
 }
 
-void CGrid::Render(CCamera &Camera)
+void CGrid::Render(CStarSystem &System, CCamera &Camera)
 {
 	m_Shader.Use();
+
+	// if(m_vPlanetInfo.empty())
+	// 	m_vPlanetInfo.resize(System.m_vBodies.size());
 
 	// using static const instead of constexpr since math funcs no work
 	constexpr float ZOOM_STEP = 10.0f; // every 10 zooms grid updates
 	static const float STEP_FACTOR = std::pow(1.f + (1.f / ZOOM_FACTOR), ZOOM_STEP);
 	static const float LOG_STEP = std::log(STEP_FACTOR);
 
-	const float BodyRadius = Camera.m_pFocusedBody->m_Radius;
+	const float BodyRadius = Camera.m_pFocusedBody->m_RenderParams.m_Radius;
 	const float InitialScale = Camera.m_Radius / BodyRadius;
 	int QuantizedScale = std::pow(STEP_FACTOR, (int)(std::log(InitialScale) / LOG_STEP));
 
 	const float GridScale = (BodyRadius / Camera.m_Radius) * std::max(QuantizedScale * 10.f, 1.f);
 	m_Shader.SetFloat("GridScale", GridScale);
 
-	const Vec3 GridPos = Camera.m_pFocusedBody->m_Position / (GridScale * Camera.m_Radius);
-	const Vec3 Offset = (GridPos % 1) * GridScale;
+	const Vec3 GridPos = Camera.m_pFocusedBody->m_SimParams.m_Position / (GridScale * Camera.m_Radius);
+	const Vec3 Offset = (GridPos - GridPos.floor()) * GridScale;
 
 	glm::mat4 Model = glm::mat4(1.0f);
 	Model = glm::translate(Model, (glm::vec3)Offset);
 	m_Shader.SetMat4("Model", Model);
 
+	// for(int i = 0; i < (int)m_vPlanetInfo.size(); ++i)
+	// {
+	// 	auto &Body = System.m_vBodies[i];
+	// 	auto &Info = m_vPlanetInfo[i];
+	// 	Info.Scale = Body.m_Radius / Camera.m_Radius;
+	// 	Info.Mass = Body.m_Radius / 1e8;
+	//
+	// 	// Transform positions into the grid's vertex space
+	// 	Vec3 Position = (Body.m_Position - Camera.m_pFocusedBody->m_Position) / (Camera.m_Radius);
+	// 	// Position = Position / (GridPos * GridScale);
+	//
+	// 	// Assign the transformed position to the planet info
+	// 	Info.Position[0] = Position.x;
+	// 	Info.Position[1] = Position.y;
+	// 	Info.Position[2] = Position.z;
+	//
+	// 	// printf("%d:GridPos: %.3f, %.3f\n", i, GridPos.x, GridPos.z);
+	// 	printf("%d:Pos: %.3f, %.3f\n", i, Position.x, Position.z);
+	// 	break;
+	// }
+	// // Re-upload data to the SSBO
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_PlanetSSBO);
+	// glBufferData(GL_SHADER_STORAGE_BUFFER, m_vPlanetInfo.size() * sizeof(SPlanetInfo), m_vPlanetInfo.data(), GL_DYNAMIC_DRAW);
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // Unbind
 	// printf("PlanetDensity: %e\n", (Camera.m_pFocusedBody->m_Mass / BodyRadius));
-	m_Shader.SetFloat("PlanetMass", BodyRadius / 1e8);
-	m_Shader.SetFloat("PlanetScale", (BodyRadius / Camera.m_Radius));
-	m_Shader.SetFloat("Scale", DEFAULT_SCALE);
+	// m_Shader.SetFloat("PlanetMass", BodyRadius / 1e8);
+	// m_Shader.SetFloat("PlanetScale", (BodyRadius / Camera.m_Radius));
+
+	m_Shader.SetFloat("CameraScale", BodyRadius / Camera.m_Radius);
+	m_Shader.SetFloat("Scale", DEFAULT_SCALE * 2);
 	m_Shader.SetVec3("GridColor", glm::vec3(0.4f));
 	m_Shader.SetMat4("View", Camera.m_View);
 	m_Shader.SetMat4("Projection", Camera.m_Projection);
 
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBindVertexArray(m_Shader.VAO);
 	glDrawElements(GL_TRIANGLES, GRID_RESOLUTION * GRID_RESOLUTION * 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);

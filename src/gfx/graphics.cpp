@@ -137,7 +137,8 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 		// Generate sphere data
 		std::vector<Vertex> vVertices;
 		std::vector<unsigned int> vIndices;
-		GenerateSphere(1.0f, 32, 32, vVertices, vIndices);
+		constexpr int Num = 128;
+		GenerateSphere(1.0f, Num, Num, vVertices, vIndices);
 		m_SphereShader.m_NumIndices = vIndices.size();
 
 		// Set up VBO, VAO, and EBO
@@ -221,29 +222,47 @@ void CGraphics::OnRender()
 	}
 
 	ImGui::PushTextWrapPos(5000.f);
-	ImGui::Text("Name: %s", m_Camera.m_pFocusedBody->m_Name.c_str());
-	ImGui::Text("Position: %.4e, %.4e, %.4e", m_Camera.m_pFocusedBody->m_Position.x, m_Camera.m_pFocusedBody->m_Position.y, m_Camera.m_pFocusedBody->m_Position.z);
-	ImGui::Text("Velocity: %.4e, %.4e, %.4e", m_Camera.m_pFocusedBody->m_Velocity.x, m_Camera.m_pFocusedBody->m_Velocity.y, m_Camera.m_pFocusedBody->m_Velocity.z);
-	ImGui::Text("Mass: %.4e", m_Camera.m_pFocusedBody->m_Mass);
-	ImGui::Text("Radius: %.4e", m_Camera.m_pFocusedBody->m_Radius);
+	auto &Body = *m_Camera.m_pFocusedBody;
+	ImGui::Text("Name: %s", Body.m_Name.c_str());
+	ImGui::Text("Position: %.4e, %.4e, %.4e", Body.m_SimParams.m_Position.x, Body.m_SimParams.m_Position.y, Body.m_SimParams.m_Position.z);
+	ImGui::Text("Velocity: %.4e, %.4e, %.4e", Body.m_SimParams.m_Velocity.x, Body.m_SimParams.m_Velocity.y, Body.m_SimParams.m_Velocity.z);
+	ImGui::Text("Mass: %.4e", Body.m_SimParams.m_Mass);
+	ImGui::Text("Radius: %.4e", Body.m_RenderParams.m_Radius);
+
+	ImGui::SliderFloat("Albedo", &Body.m_RenderParams.m_Albedo, 0.0f, 1.0f, "%.2f");
+	ImGui::SliderFloat("Roughness", &Body.m_RenderParams.m_Roughness, 0.0f, 1.0f, "%.2f");
+	ImGui::SliderFloat("Specularity", &Body.m_RenderParams.m_Specularity, 0.0f, 1.0f, "%.2f");
+	ImGui::ColorEdit3("Surface Color", glm::value_ptr(Body.m_RenderParams.m_SurfaceColor));
+	ImGui::ColorEdit3("Ocean Color", glm::value_ptr(Body.m_RenderParams.m_OceanColor));
+	ImGui::ColorEdit3("Cloud Color", glm::value_ptr(Body.m_RenderParams.m_CloudColor));
+	ImGui::ColorEdit3("Atmo Color", glm::value_ptr(Body.m_RenderParams.m_AtmoColor));
+	ImGui::SliderFloat("Atmo Strength", &Body.m_RenderParams.m_AtmoStrength, 0.0f, 2.0f, "%.2f");
+	ImGui::SliderFloat("Cloud Cover", &Body.m_RenderParams.m_CloudCover, 0.0f, 1.0f, "%.2f");
+	ImGui::SliderFloat("Core Temp (°C)", &Body.m_RenderParams.m_CoreTemperature, 0.0f, 15.0e6f, "%.0f");
+	ImGui::SliderFloat("Surface Temp (°C)", &Body.m_RenderParams.m_SurfaceTemperature, -273.15f, 500.0f, "%.1f");
+	ImGui::SliderFloat("Orbital Speed (m/s)", &Body.m_RenderParams.m_OrbitalSpeed, 0.0f, 100000.0f, "%.0f");
+	ImGui::SliderFloat("Rotation Speed (rad/s)", &Body.m_RenderParams.m_RotationSpeed, 0.0f, 0.1f, "%.6f");
+	ImGui::SliderFloat("Magnetic Field (T)", &Body.m_RenderParams.m_MagneticField, 0.0f, 0.001f, "%.6f");
+	ImGui::SliderFloat("Aurora Intensity", &Body.m_RenderParams.m_AuroraIntensity, 0.0f, 1.0f, "%.2f");
 	ImGui::PopTextWrapPos();
 	ImGui::End();
 
 	// ImGui::ShowDemoWindow();
 
 	glEnable(GL_DEPTH_TEST);
+
 	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	glDepthFunc(GL_LESS);
-	glDepthMask(GL_TRUE);
+
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	m_Grid.Render(m_Camera);
-	m_Trajectories.Render(m_Camera);
-
 	// draw bodies
 	m_pStarSystem->RenderBodies(&m_SphereShader, &m_Camera);
-	glDisable(GL_BLEND);
+	m_Grid.Render(*m_pStarSystem, m_Camera);
+	m_Trajectories.Render(m_Camera);
 	// draw markers after bodies have been drawn
 	m_Markers.Render(*m_pStarSystem, m_Camera);
 	// draw test triangle xd
