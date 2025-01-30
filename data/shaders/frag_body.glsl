@@ -1,29 +1,13 @@
-// --------------------- VERTEX SHADER ---------------------
+// --------------------- FRAGMENT SHADER ---------------------
 #version 330 core
 
-layout(location = 0) in vec3 aPos;
-layout(location = 1) in vec3 aNormal;
+in vec3 ViewDir;
+in vec3 WorldPos;
+in vec3 Normal;
 
-uniform vec3 cameraPos;
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
-uniform float radius;
-uniform float time;
-uniform float textureScale;
-uniform float rotationSpeed;
-uniform float axialTilt;
-uniform float roughness;
+uniform vec3 LightDir;
 
-uniform vec3 lightPos;
-
-out vec3 ViewDir;
-out vec3 WorldPos;
-out vec3 Normal;
-out vec3 LocalPos;
-out vec3 TangentLightDir;
-
-const float PI = 3.14159265359;
+out vec4 FragColor;
 
 vec4 hash(vec4 p)
 {
@@ -84,55 +68,24 @@ float noise(vec4 p)
 	return w0;
 }
 
-float fbm(vec4 p, int octaves)
-{
-	float value = 0.0;
-	float amplitude = 0.5;
-	float frequency = 1.0;
-
-	for(int i = 0; i < octaves; i++)
-	{
-		value += amplitude * noise(p * frequency);
-		frequency *= 2.0;
-		amplitude *= 0.5;
-		p += vec4(12.345, 67.890, 123.456, 789.012);
-	}
-	return value;
-}
+// vec3 CalculateAtmosphere(vec3 normal)
+// {
+// 	float rim = 1.0 - max(dot(ViewDir, normal), 0.0);
+// 	float depth = length(WorldPos) - radius;
+//
+// 	// Rayleigh scattering approximation
+// 	vec3 scattering = atmoColor * pow(rim, 3.0) * (1.0 + depth * 0.1);
+//
+// 	// Mie scattering
+// 	float mie = pow(rim, 0.5) * atmoStrength * 4.0;
+//
+// 	return scattering * (mie + 0.5) * atmoStrength * 4.0;
+// }
 
 void main()
 {
-	// Apply axial tilt
-	float tiltRad = radians(axialTilt);
-	mat3 tiltMatrix = mat3(
-		1, 0, 0,
-		0, cos(tiltRad), -sin(tiltRad),
-		0, sin(tiltRad), cos(tiltRad));
-
-	vec3 tiltedPos = tiltMatrix * aPos;
-
-	ViewDir = vec3(model * vec4(cameraPos, 1.0));
-	LocalPos = tiltedPos;
-
-	// Apply elevation
-	{
-		vec4 coord = vec4(LocalPos * textureScale, time * rotationSpeed * 0.01);
-		float height = (1.0 - (fbm(coord * 2.0, 5) * 0.5 + 1.0)) * roughness;
-
-		WorldPos = vec3(model * vec4(tiltedPos * radius, 1.0));
-		WorldPos *= 1.0 + height;
-	}
-
-	// Calculate TBN matrix
-	vec3 T = normalize(vec3(tiltMatrix * vec3(1, 0, 0)));
-	vec3 B = normalize(vec3(tiltMatrix * vec3(0, 1, 0)));
-	vec3 N = normalize(vec3(tiltMatrix * aNormal));
-	mat3 TBN = mat3(T, B, N);
-
-	// Transform light direction to tangent space
-	vec3 lightDir = normalize(lightPos - WorldPos);
-	TangentLightDir = lightDir * TBN;
-
-	Normal = N;
-	gl_Position = projection * view * vec4(WorldPos, 1.0);
+	float Diffusion = dot(LightDir, Normal);
+	if(LightDir == vec3(0.0, 0.0, 0.0))
+		Diffusion = 1.0;
+	FragColor = vec4(vec3(Diffusion), 1.0);
 }

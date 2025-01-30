@@ -31,43 +31,15 @@ void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CShader *pShader, 
 	Vec3 NewPos = (pBody->m_SimParams.m_Position - pCamera->m_pFocusedBody->m_SimParams.m_Position) / pCamera->m_Radius;
 	Model = glm::translate(Model, (glm::vec3)NewPos);
 
-	// ---------- Fragment shader props ----------
+	// ---------- shader props ----------
 
-	Vec3 NewLightPos = pLightBody->m_SimParams.m_Position - pCamera->m_pFocusedBody->m_SimParams.m_Position;
-	pShader->SetVec3("lightPos", (glm::vec3)(NewLightPos / pCamera->m_Radius));
-	pShader->SetVec3("lightColor", pLightBody->m_RenderParams.m_SurfaceColor);
-
-	pShader->SetFloat("radius", pBody->m_RenderParams.m_Radius / pCamera->m_Radius);
-	pShader->SetFloat("albedo", pBody->m_RenderParams.m_Albedo);
-	pShader->SetFloat("roughness", pBody->m_RenderParams.m_Roughness);
-	pShader->SetFloat("specularity", pBody->m_RenderParams.m_Specularity);
-
-	pShader->SetVec3("surfaceColor", pBody->m_RenderParams.m_SurfaceColor);
-	pShader->SetVec3("oceanColor", pBody->m_RenderParams.m_OceanColor);
-	pShader->SetVec3("cloudColor", pBody->m_RenderParams.m_CloudColor);
-	pShader->SetVec3("atmoColor", pBody->m_RenderParams.m_AtmoColor);
-
-	pShader->SetFloat("atmoStrength", pBody->m_RenderParams.m_AtmoStrength);
-	pShader->SetFloat("cloudCover", pBody->m_RenderParams.m_CloudCover);
-	pShader->SetFloat("coreTemperature", pBody->m_RenderParams.m_CoreTemperature);
-	pShader->SetFloat("surfaceTemperature", pBody->m_RenderParams.m_SurfaceTemperature);
-	pShader->SetFloat("orbitalSpeed", pBody->m_RenderParams.m_OrbitalSpeed);
-	pShader->SetFloat("rotationSpeed", pBody->m_RenderParams.m_RotationSpeed);
-	pShader->SetFloat("magneticField", pBody->m_RenderParams.m_MagneticField);
-	pShader->SetFloat("auroraIntensity", pBody->m_RenderParams.m_AuroraIntensity);
-
-	pShader->SetFloat("textureScale", 2.0);
-	pShader->SetFloat("time", m_SimTick / m_DeltaTime);
-
-	// ---------- Fragment shader props ----------
-
-	// 0 for now will get data later
-	pShader->SetFloat("axialTilt", 0.0);
-
-	pShader->SetVec3("cameraPos", glm::normalize(pCamera->m_Position));
-	pShader->SetMat4("model", Model);
-	pShader->SetMat4("view", pCamera->m_View);
-	pShader->SetMat4("projection", pCamera->m_Projection);
+	pShader->SetFloat("Radius", pBody->m_RenderParams.m_Radius / pCamera->m_Radius);
+	pShader->SetFloat("Roughness", pBody->m_RenderParams.m_Roughness);
+	pShader->SetVec3("LightDir", pLightBody == pBody ? glm::vec3(0, 0, 0) : glm::normalize((glm::vec3)((pLightBody->m_SimParams.m_Position - pCamera->m_pFocusedBody->m_SimParams.m_Position) / pCamera->m_Radius)));
+	pShader->SetVec3("CameraPos", glm::normalize(pCamera->m_Position));
+	pShader->SetMat4("Model", Model);
+	pShader->SetMat4("View", pCamera->m_View);
+	pShader->SetMat4("Projection", pCamera->m_Projection);
 
 	// bind the vao and draw the sphere
 	glBindVertexArray(pShader->VAO);

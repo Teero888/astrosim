@@ -8,8 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SHADER_FILES
     data/shaders/frag_solid.glsl
     data/shaders/vert_solid.glsl
-    data/shaders/frag_sphere.glsl
-    data/shaders/vert_sphere.glsl
+    data/shaders/frag_body.glsl
+    data/shaders/vert_body.glsl
     data/shaders/frag_grid.glsl
     data/shaders/vert_grid.glsl
     data/shaders/frag_trajectory.glsl

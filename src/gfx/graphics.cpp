@@ -133,7 +133,7 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	// TODO: this is going to be moved to some function
 	// Do sphere shader stuff
 	{
-		m_SphereShader.CompileShader(Shaders::VERT_SPHERE, Shaders::FRAG_SPHERE);
+		m_SphereShader.CompileShader(Shaders::VERT_BODY, Shaders::FRAG_BODY);
 		// Generate sphere data
 		std::vector<Vertex> vVertices;
 		std::vector<unsigned int> vIndices;
