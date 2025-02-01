@@ -5,7 +5,6 @@
 #include "grid.h"
 #include "imgui.h"
 #include "markers.h"
-#include "shader.h"
 #include "trajectories.h"
 
 #define DEFAULT_SCALE 100.0
@@ -17,9 +16,6 @@ class CGraphics
 {
 	GLFWwindow *m_pWindow = nullptr;
 	CStarSystem *m_pStarSystem = nullptr;
-
-	CShader m_SolidShader;
-	CShader m_SphereShader;
 
 	// beautiful nice grid by meine wenigkeit
 	CGrid m_Grid;

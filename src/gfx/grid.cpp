@@ -8,7 +8,7 @@
 #include <csignal>
 #include <cstdio>
 
-#define GRID_RESOLUTION 256
+#define GRID_RESOLUTION 1
 
 void CGrid::Init()
 {

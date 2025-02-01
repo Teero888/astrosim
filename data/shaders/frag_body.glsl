@@ -1,13 +1,9 @@
-// --------------------- FRAGMENT SHADER ---------------------
 #version 330 core
-
-in vec3 ViewDir;
-in vec3 WorldPos;
-in vec3 Normal;
+out vec4 FragColor;
+in vec2 uv;
 
 uniform vec3 LightDir;
-
-out vec4 FragColor;
+uniform vec3 CameraPos;
 
 vec4 hash(vec4 p)
 {
@@ -68,24 +64,60 @@ float noise(vec4 p)
 	return w0;
 }
 
-// vec3 CalculateAtmosphere(vec3 normal)
-// {
-// 	float rim = 1.0 - max(dot(ViewDir, normal), 0.0);
-// 	float depth = length(WorldPos) - radius;
-//
-// 	// Rayleigh scattering approximation
-// 	vec3 scattering = atmoColor * pow(rim, 3.0) * (1.0 + depth * 0.1);
-//
-// 	// Mie scattering
-// 	float mie = pow(rim, 0.5) * atmoStrength * 4.0;
-//
-// 	return scattering * (mie + 0.5) * atmoStrength * 4.0;
-// }
+float sdSphere(vec3 p, float radius)
+{
+	float sdf = 0.0;
+	radius += noise(vec4(p * 3.0, 0.0)) * 0.1;
+	return (length(p) - radius) * 0.5;
+}
 
+mat3 GetCam(vec3 ro, vec3 lookAt)
+{
+	vec3 camF = normalize(vec3(lookAt - ro));
+	vec3 camR = normalize(cross(vec3(0, 1, 0), camF));
+	vec3 camU = cross(camF, camR);
+	return mat3(camR, camU, camF);
+}
+
+vec3 CalcNormal(vec3 p, float radius)
+{
+	const float eps = 0.001;
+	return normalize(vec3(
+		sdSphere(p + vec3(eps, 0, 0), radius) - sdSphere(p - vec3(eps, 0, 0), radius),
+		sdSphere(p + vec3(0, eps, 0), radius) - sdSphere(p - vec3(0, eps, 0), radius),
+		sdSphere(p + vec3(0, 0, eps), radius) - sdSphere(p - vec3(0, 0, eps), radius)));
+}
+
+#define BODY_RADIUS 0.5
+
+#define MAX_DIST 1.
+#define MAX_ITER 100.
+#define EPSILON .001
 void main()
 {
-	float Diffusion = dot(LightDir, Normal);
-	if(LightDir == vec3(0.0, 0.0, 0.0))
-		Diffusion = 1.0;
-	FragColor = vec4(vec3(Diffusion), 1.0);
+	vec3 ro = vec3(CameraPos.xy, -CameraPos.z); // Ray origin
+	vec3 rd = GetCam(ro, vec3(0.0)) * normalize(vec3(uv, 1.0)); // Ray direction
+
+	// Raymarching params
+	vec4 color = vec4(0.0);
+	int i = 0;
+	float t = 0.0;
+	for(; i < MAX_ITER; i++)
+	{
+		vec3 p = ro + rd * t;
+		float distance = sdSphere(p, BODY_RADIUS);
+
+		if(distance < EPSILON)
+		{
+			vec3 normal = CalcNormal(ro + rd * t, BODY_RADIUS);
+			color = vec4(normal, 1.0);
+			break;
+		}
+
+		if(t > MAX_DIST)
+			break;
+
+		t += distance;
+	}
+	FragColor = color;
 }

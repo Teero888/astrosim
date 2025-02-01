@@ -18,7 +18,7 @@ void CTrajectories::Update(CStarSystem &PredictedSystem)
 		for(int i = 0; i < (int)m_vPlanetTrajectories.size(); ++i)
 		{
 			auto &Traj = m_vPlanetTrajectories[i];
-			Traj.m_Color = PredictedSystem.m_vBodies[i].m_RenderParams.m_SurfaceColor;
+			Traj.m_Color = glm::vec3(1.f); // PredictedSystem.m_vBodies[i].m_RenderParams.m_SurfaceColor;
 			glGenVertexArrays(1, &Traj.VAO);
 			glGenBuffers(1, &Traj.VBO);
 		}

@@ -1,8 +1,6 @@
 #include "graphics.h"
 #include "../sim/starsystem.h"
 #include "camera.h"
-#include "generated/embedded_shaders.h"
-#include "glm/geometric.hpp"
 #include "shader.h"
 #include <FastNoiseLite.h>
 #include <GLFW/glfw3.h>
@@ -23,55 +21,55 @@ struct Vertex
 	glm::vec3 normal;
 };
 
-static void GenerateSphere(float Radius, int Stacks, int Slices, std::vector<Vertex> &vVertices, std::vector<unsigned int> &vIndices)
-{
-	FastNoiseLite Noise;
-	Noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-	Noise.SetFrequency(1.f);
-
-	vVertices.clear();
-	vIndices.clear();
-
-	for(int i = 0; i <= Stacks; ++i)
-	{
-		float phi = static_cast<float>(i) / Stacks * glm::pi<float>();
-		for(int j = 0; j <= Slices; ++j)
-		{
-			float theta = static_cast<float>(j) / Slices * 2.0f * glm::pi<float>();
-
-			Vertex v;
-			v.position.x = Radius * std::sin(phi) * std::cos(theta);
-			v.position.y = Radius * std::cos(phi);
-			v.position.z = Radius * std::sin(phi) * std::sin(theta);
-
-			// float Mod = (Noise.GetNoise(v.position.x, v.position.y, v.position.z) + 1.f) / 4.f;
-			// v.position.x *= Mod;
-			// v.position.y *= Mod;
-			// v.position.z *= Mod;
-
-			v.normal = glm::normalize(v.position);
-
-			vVertices.push_back(v);
-		}
-	}
-
-	for(int i = 0; i < Stacks; ++i)
-	{
-		for(int j = 0; j < Slices; ++j)
-		{
-			int first = (i * (Slices + 1)) + j;
-			int second = first + Slices + 1;
-
-			vIndices.push_back(first);
-			vIndices.push_back(second);
-			vIndices.push_back(first + 1);
-
-			vIndices.push_back(second);
-			vIndices.push_back(second + 1);
-			vIndices.push_back(first + 1);
-		}
-	}
-}
+// static void GenerateSphere(float Radius, int Stacks, int Slices, std::vector<Vertex> &vVertices, std::vector<unsigned int> &vIndices)
+// {
+// 	FastNoiseLite Noise;
+// 	Noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+// 	Noise.SetFrequency(1.f);
+//
+// 	vVertices.clear();
+// 	vIndices.clear();
+//
+// 	for(int i = 0; i <= Stacks; ++i)
+// 	{
+// 		float phi = static_cast<float>(i) / Stacks * glm::pi<float>();
+// 		for(int j = 0; j <= Slices; ++j)
+// 		{
+// 			float theta = static_cast<float>(j) / Slices * 2.0f * glm::pi<float>();
+//
+// 			Vertex v;
+// 			v.position.x = Radius * std::sin(phi) * std::cos(theta);
+// 			v.position.y = Radius * std::cos(phi);
+// 			v.position.z = Radius * std::sin(phi) * std::sin(theta);
+//
+// 			// float Mod = (Noise.GetNoise(v.position.x, v.position.y, v.position.z) + 1.f) / 4.f;
+// 			// v.position.x *= Mod;
+// 			// v.position.y *= Mod;
+// 			// v.position.z *= Mod;
+//
+// 			v.normal = glm::normalize(v.position);
+//
+// 			vVertices.push_back(v);
+// 		}
+// 	}
+//
+// 	for(int i = 0; i < Stacks; ++i)
+// 	{
+// 		for(int j = 0; j < Slices; ++j)
+// 		{
+// 			int first = (i * (Slices + 1)) + j;
+// 			int second = first + Slices + 1;
+//
+// 			vIndices.push_back(first);
+// 			vIndices.push_back(second);
+// 			vIndices.push_back(first + 1);
+//
+// 			vIndices.push_back(second);
+// 			vIndices.push_back(second + 1);
+// 			vIndices.push_back(first + 1);
+// 		}
+// 	}
+// }
 
 bool CGraphics::OnInit(CStarSystem *pStarSystem)
 {
@@ -129,60 +127,8 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	m_Grid.Init();
 	m_Trajectories.Init();
 	m_Markers.Init();
+	m_pStarSystem->InitGfx();
 
-	// TODO: this is going to be moved to some function
-	// Do sphere shader stuff
-	{
-		m_SphereShader.CompileShader(Shaders::VERT_BODY, Shaders::FRAG_BODY);
-		// Generate sphere data
-		std::vector<Vertex> vVertices;
-		std::vector<unsigned int> vIndices;
-		constexpr int Num = 128;
-		GenerateSphere(1.0f, Num, Num, vVertices, vIndices);
-		m_SphereShader.m_NumIndices = vIndices.size();
-
-		// Set up VBO, VAO, and EBO
-		glGenVertexArrays(1, &m_SphereShader.VAO);
-		glGenBuffers(1, &m_SphereShader.VBO);
-		glGenBuffers(1, &m_SphereShader.EBO);
-
-		glBindVertexArray(m_SphereShader.VAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, m_SphereShader.VBO);
-		glBufferData(GL_ARRAY_BUFFER, vVertices.size() * sizeof(Vertex), vVertices.data(), GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_SphereShader.EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, vIndices.size() * sizeof(unsigned int), vIndices.data(), GL_STATIC_DRAW);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)0);
-		glEnableVertexAttribArray(0);
-
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, normal));
-		glEnableVertexAttribArray(1);
-
-		glBindVertexArray(0);
-	}
-	// TODO: this shader is unused right now
-	// Do solid shader stuff this is just for testing
-	{
-		m_SolidShader.CompileShader(Shaders::VERT_SOLID, Shaders::FRAG_SOLID);
-
-		// Set up vertex data and buffers
-		float vertices[] = {-0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f};
-
-		glGenVertexArrays(1, &m_SolidShader.VAO);
-		glGenBuffers(1, &m_SolidShader.VBO);
-
-		glBindVertexArray(m_SolidShader.VAO);
-		glBindBuffer(GL_ARRAY_BUFFER, m_SolidShader.VBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-		glEnableVertexAttribArray(0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-	}
 	return true;
 }
 
@@ -203,7 +149,7 @@ void CGraphics::OnRender()
 	// // Render a simple ImGui window
 
 	ImGui::Begin("Settings");
-	ImGui::SliderInt("Days per second", &m_pStarSystem->m_TPS, 1, 365);
+	ImGui::SliderInt("Days per second", &m_pStarSystem->m_DPS, 1, 365);
 	static const char *pCurrentItem = m_pStarSystem->m_vBodies.front().m_Name.c_str();
 	pCurrentItem = m_Camera.m_pFocusedBody->m_Name.c_str();
 
@@ -229,21 +175,10 @@ void CGraphics::OnRender()
 	ImGui::Text("Mass: %.4e", Body.m_SimParams.m_Mass);
 	ImGui::Text("Radius: %.4e", Body.m_RenderParams.m_Radius);
 
-	ImGui::SliderFloat("Albedo", &Body.m_RenderParams.m_Albedo, 0.0f, 1.0f, "%.2f");
-	ImGui::SliderFloat("Roughness", &Body.m_RenderParams.m_Roughness, 0.0f, 1.0f, "%.2f");
-	ImGui::SliderFloat("Specularity", &Body.m_RenderParams.m_Specularity, 0.0f, 1.0f, "%.2f");
-	ImGui::ColorEdit3("Surface Color", glm::value_ptr(Body.m_RenderParams.m_SurfaceColor));
-	ImGui::ColorEdit3("Ocean Color", glm::value_ptr(Body.m_RenderParams.m_OceanColor));
-	ImGui::ColorEdit3("Cloud Color", glm::value_ptr(Body.m_RenderParams.m_CloudColor));
-	ImGui::ColorEdit3("Atmo Color", glm::value_ptr(Body.m_RenderParams.m_AtmoColor));
-	ImGui::SliderFloat("Atmo Strength", &Body.m_RenderParams.m_AtmoStrength, 0.0f, 2.0f, "%.2f");
-	ImGui::SliderFloat("Cloud Cover", &Body.m_RenderParams.m_CloudCover, 0.0f, 1.0f, "%.2f");
-	ImGui::SliderFloat("Core Temp (°C)", &Body.m_RenderParams.m_CoreTemperature, 0.0f, 15.0e6f, "%.0f");
-	ImGui::SliderFloat("Surface Temp (°C)", &Body.m_RenderParams.m_SurfaceTemperature, -273.15f, 500.0f, "%.1f");
-	ImGui::SliderFloat("Orbital Speed (m/s)", &Body.m_RenderParams.m_OrbitalSpeed, 0.0f, 100000.0f, "%.0f");
-	ImGui::SliderFloat("Rotation Speed (rad/s)", &Body.m_RenderParams.m_RotationSpeed, 0.0f, 0.1f, "%.6f");
-	ImGui::SliderFloat("Magnetic Field (T)", &Body.m_RenderParams.m_MagneticField, 0.0f, 0.001f, "%.6f");
-	ImGui::SliderFloat("Aurora Intensity", &Body.m_RenderParams.m_AuroraIntensity, 0.0f, 1.0f, "%.2f");
+	ImGui::SliderFloat("atms_radius", &Body.m_RenderParams.m_AtmosphereRadius, 0.0f, 2.0f, "%.2f");
+	ImGui::SliderFloat("atms_density_falloff", &Body.m_RenderParams.m_AtmosphereDensityFalloff, 0.0f, 10.0f, "%.2f");
+	// ImGui::ColorEdit3("atms_betaR", glm::value_ptr(Body.m_RenderParams.m_AtmosphereBetaR));
+	// ImGui::ColorEdit3("atms_betaM", glm::value_ptr(Body.m_RenderParams.m_AtmosphereBetaM));
 	ImGui::PopTextWrapPos();
 	ImGui::End();
 
@@ -259,18 +194,12 @@ void CGraphics::OnRender()
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// draw bodies
-	m_pStarSystem->RenderBodies(&m_SphereShader, &m_Camera);
 	m_Grid.Render(*m_pStarSystem, m_Camera);
 	m_Trajectories.Render(m_Camera);
+	// draw bodies
+	m_pStarSystem->RenderBodies(m_Camera);
 	// draw markers after bodies have been drawn
 	m_Markers.Render(*m_pStarSystem, m_Camera);
-	// draw test triangle xd
-	// {
-	// 	m_SolidShader.Use();
-	// 	glBindVertexArray(m_SolidShader.VAO);
-	// 	glDrawArrays(GL_TRIANGLES, 0, 3);
-	// }
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -285,8 +214,6 @@ void CGraphics::OnExit()
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
-	m_SolidShader.Destroy();
-	m_SphereShader.Destroy();
 	m_Grid.Destroy();
 	m_Trajectories.Destroy();
 	m_Markers.Destroy();

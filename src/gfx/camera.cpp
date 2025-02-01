@@ -1,4 +1,5 @@
 #include "camera.h"
+#include "glm/common.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "graphics.h"
 
@@ -67,8 +68,6 @@ void CCamera::ProcessMouse(float xoffset, float yoffset)
 	{
 		m_Yaw += xoffset;
 		m_Pitch += yoffset;
-
-		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 		break;
 	}
 
@@ -76,8 +75,6 @@ void CCamera::ProcessMouse(float xoffset, float yoffset)
 	{
 		m_Yaw += xoffset;
 		m_Pitch -= yoffset;
-
-		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 		break;
 	}
 	}

@@ -1,8 +1,9 @@
 #include "starsystem.h"
 #include "../gfx/camera.h"
+#include "../gfx/graphics.h"
 #include "../gfx/shader.h"
 #include "body.h"
-#include "glm/ext/quaternion_geometric.hpp"
+#include "generated/embedded_shaders.h"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/geometric.hpp"
 #include <chrono>
@@ -12,38 +13,85 @@ constexpr double G = 6.67430e-11; // gravitational constant
 
 #include "vmath.h"
 
-static Vec3 CalculateForce(const SBody &a, const SBody &b)
+static const std::chrono::time_point<std::chrono::steady_clock> StartTime = std::chrono::steady_clock::now();
+void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CCamera &Camera)
 {
-	Vec3 r = b.m_SimParams.m_Position - a.m_SimParams.m_Position; // Vector from a to b
-	const double Distance = r.length();
-	const double ForceMagnitude = (G * a.m_SimParams.m_Mass * b.m_SimParams.m_Mass) / (Distance * Distance); // F = G * m1 * m2 / r^2
-	Vec3 Force = r * (ForceMagnitude / Distance);
-	return Force;
+	const Vec3 Distance = (pBody->m_SimParams.m_Position - Camera.m_pFocusedBody->m_SimParams.m_Position) + (Vec3)Camera.m_Position * Camera.m_Radius;
+	const float Radius = (pBody->m_RenderParams.m_Radius / Distance.length());
+	m_BodyShader.SetFloat("Scale", Radius);
+
+	const Vec3 NewPos = (pBody->m_SimParams.m_Position - Camera.m_pFocusedBody->m_SimParams.m_Position) / Camera.m_Radius;
+	glm::vec2 ScreenPos = WorldToScreenCoordinates(NewPos, glm::mat4(1.f), Camera.m_View, Camera.m_Projection, Camera.m_ScreenSize.x, Camera.m_ScreenSize.y);
+	if(ScreenPos.x < 0 || ScreenPos.y < 0 ||
+		ScreenPos.x > Camera.m_ScreenSize.x || ScreenPos.y > Camera.m_ScreenSize.y)
+		return;
+
+	glm::vec2 Pos;
+	Pos.x = (ScreenPos.x / Camera.m_ScreenSize.x) * 2.0f - 1.0f; // converts x to [-1, 1]
+	Pos.y = 1.0f - (ScreenPos.y / Camera.m_ScreenSize.y) * 2.0f; // converts y to [-1, 1] (flip axis)
+	// shader uniforms
+	m_BodyShader.SetVec2("Offset", Pos);
+	m_BodyShader.SetFloat("ScreenRatio", Camera.m_ScreenSize.x / Camera.m_ScreenSize.y);
+	m_BodyShader.SetVec3("LightDir", pLightBody == pBody ? glm::vec3(0, 0, 0) : glm::normalize((glm::vec3)((pLightBody->m_SimParams.m_Position - Camera.m_pFocusedBody->m_SimParams.m_Position) / Camera.m_Radius)));
+	m_BodyShader.SetVec3("CameraPos", glm::normalize(Camera.m_Position));
+	// Atmosphere uniforms
+	// uniform float atmosphereRadius;
+	// uniform vec3 betaR; // Rayleigh scattering coefficient
+	// uniform vec3 betaM; // Mie scattering coefficient
+	// uniform float densityFalloff;
+	// uniform float sunPower;
+	auto &RP = pBody->m_RenderParams;
+	m_BodyShader.SetFloat("sunPower", 1.0);
+	m_BodyShader.SetFloat("densityFalloff", RP.m_AtmosphereDensityFalloff);
+	m_BodyShader.SetFloat("atmosphereRadius", 0.5 * RP.m_AtmosphereRadius);
+	m_BodyShader.SetVec3("betaR", RP.m_AtmosphereBetaR);
+	m_BodyShader.SetVec3("betaM", RP.m_AtmosphereBetaM);
+
+	glBindVertexArray(m_BodyShader.VAO);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
 }
 
-static const std::chrono::time_point<std::chrono::steady_clock> StartTime = std::chrono::steady_clock::now();
-void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CShader *pShader, class CCamera *pCamera)
+void CStarSystem::RenderBodies(CCamera &Camera)
 {
-	pShader->Use();
+	m_BodyShader.Use();
+	glDisable(GL_DEPTH_TEST);
+	for(auto &Body : m_vBodies)
+		RenderBody(&Body, &m_vBodies.front(), Camera);
+	glEnable(GL_DEPTH_TEST);
+}
 
-	// set transformation matrices
-	glm::mat4 Model = glm::mat4(1.0f);
-	Vec3 NewPos = (pBody->m_SimParams.m_Position - pCamera->m_pFocusedBody->m_SimParams.m_Position) / pCamera->m_Radius;
-	Model = glm::translate(Model, (glm::vec3)NewPos);
+void CStarSystem::InitGfx()
+{
+	m_BodyShader.CompileShader(Shaders::VERT_BODY, Shaders::FRAG_BODY);
 
-	// ---------- shader props ----------
+	float aVertices[] = {
+		-1.0f, -1.0f, // Bottom-left
+		1.0f, -1.0f, // Bottom-right
+		1.0f, 1.0f, // Top-right
+		-1.0f, 1.0f // Top-left
+	};
 
-	pShader->SetFloat("Radius", pBody->m_RenderParams.m_Radius / pCamera->m_Radius);
-	pShader->SetFloat("Roughness", pBody->m_RenderParams.m_Roughness);
-	pShader->SetVec3("LightDir", pLightBody == pBody ? glm::vec3(0, 0, 0) : glm::normalize((glm::vec3)((pLightBody->m_SimParams.m_Position - pCamera->m_pFocusedBody->m_SimParams.m_Position) / pCamera->m_Radius)));
-	pShader->SetVec3("CameraPos", glm::normalize(pCamera->m_Position));
-	pShader->SetMat4("Model", Model);
-	pShader->SetMat4("View", pCamera->m_View);
-	pShader->SetMat4("Projection", pCamera->m_Projection);
+	unsigned int aIndices[] = {
+		0, 1, 2, // First triangle
+		2, 3, 0 // Second triangle
+	};
 
-	// bind the vao and draw the sphere
-	glBindVertexArray(pShader->VAO);
-	glDrawElements(GL_TRIANGLES, pShader->m_NumIndices, GL_UNSIGNED_INT, 0);
+	glGenVertexArrays(1, &m_BodyShader.VAO);
+	glGenBuffers(1, &m_BodyShader.VBO);
+	glGenBuffers(1, &m_BodyShader.EBO);
+
+	glBindVertexArray(m_BodyShader.VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_BodyShader.VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(aVertices), aVertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_BodyShader.EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(aIndices), aIndices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
+	glEnableVertexAttribArray(0);
+
 	glBindVertexArray(0);
 }
 
@@ -61,21 +109,6 @@ void CStarSystem::OnInit()
 			},
 			{
 				6.957e8, // Radius (m)
-				0.07f, // Albedo
-				0.1f, // Roughness
-				0.0f, // Specularity
-				Vec3(1.0f, 0.93f, 0.85f), // Surface color (yellow-white)
-				Vec3(0.0f), // Ocean color (none)
-				Vec3(0.0f),
-				Vec3(1.0f, 0.9f, 0.8f), // Atmosphere color (corona)
-				0.2f, // Atmosphere strength
-				0.0f, // Cloud cover
-				15.0e6f, // Core temp (°C)
-				5500.0f, // Surface temp (°C)
-				0.0f, // Orbital speed (central star)
-				glm::radians(360.0f / 27.0f) / 86400.0f, // Rotation speed (rad/s)
-				0.0001f, // Magnetic field (T)
-				0.0f // Aurora intensity
 			}),
 		SBody(id++, "Mercury",
 			{
@@ -85,21 +118,7 @@ void CStarSystem::OnInit()
 				Vec3(0, 0, 0)},
 			{
 				2.4397e6,
-				0.12f, // Low albedo (Moon-like)
-				0.85f, // Very rough surface
-				0.05f, // Non-reflective
-				Vec3(0.6f, 0.5f, 0.4f), // Gray-brown surface
-				Vec3(0.0f), // No oceans
-				Vec3(0.0f),
-				Vec3(0.02f, 0.01f, 0.01f), // Trace exosphere
-				0.01f, // Minimal atmosphere
-				0.0f, // No clouds
-				4300.0f, // Core temp
-				167.0f, // Surface temp
-				47870.0f, // Orbital speed
-				glm::radians(360.0f / (58.6f * 24.0f)) / 3600.0f, // 58.6-day rotation
-				0.0f, // Negligible magnetic field
-				0.0f}),
+			}),
 		SBody(id++, "Venus",
 			{
 				4.8675e24,
@@ -108,21 +127,7 @@ void CStarSystem::OnInit()
 				Vec3(0, 0, 0)},
 			{
 				6.0518e6,
-				0.75f, // High albedo (clouds)
-				0.3f, // Smooth cloud layer
-				0.9f, // Cloud reflectivity
-				Vec3(0.9f, 0.7f, 0.3f), // Yellowish clouds
-				Vec3(0.0f), // No liquid surface
-				Vec3(0.0f),
-				Vec3(0.8f, 0.6f, 0.4f), // Thick CO₂ atmosphere
-				1.5f, // Dense atmosphere
-				1.0f, // Full cloud cover
-				4900.0f, // Core temp
-				464.0f, // Surface temp
-				35020.0f,
-				glm::radians(-360.0f / (243.0f * 24.0f)) / 3600.0f, // Retrograde rotation
-				0.0f,
-				0.0f}),
+			}),
 		SBody(id++, "Earth",
 			{
 				5.972e24,
@@ -131,21 +136,10 @@ void CStarSystem::OnInit()
 				Vec3(0, 0, 0)},
 			{
 				6.371e6,
-				0.3f, // Albedo
-				0.2f, // Mixed roughness
-				0.25f, // Ocean specularity
-				Vec3(0.2f, 0.5f, 0.3f), // Vegetation/land color
-				Vec3(0.0f, 0.15f, 0.35f), // Ocean blue
-				Vec3(0.95f, 0.95f, 1.0f),
-				Vec3(0.29f, 0.58f, 0.88f), // Atmospheric blue
-				0.5f, // Moderate atmosphere
-				0.6f, // Partial cloud cover
-				6000.0f, // Core temp
-				15.0f, // Surface temp
-				29780.0f,
-				glm::radians(360.0f) / 86400.0f, // 24-hour rotation
-				50e-6f, // ~50μT magnetic field
-				0.3f // Aurora intensity
+				1.2,
+				4.0,
+				Vec3(5.8e-6, 1.35e-5, 3.31e-5),
+				Vec3(4e-6),
 			}),
 		SBody(id++, "Moon",
 			{
@@ -155,21 +149,7 @@ void CStarSystem::OnInit()
 				Vec3(0, 0, 0)},
 			{
 				1.737e6,
-				0.12f, // Low albedo
-				0.9f, // Very rough
-				0.02f, // Non-reflective
-				Vec3(0.5f, 0.5f, 0.5f), // Gray regolith
-				Vec3(0.0f), // No oceans
-				Vec3(0.0f), 
-				Vec3(0.0f), // No atmosphere
-				0.0f,
-				0.0f,
-				1500.0f, // Core temp
-				-23.0f, // Surface temp
-				1022.0f,
-				glm::radians(360.0f / (27.3f * 24.0f)) / 3600.0f, // Tidally locked
-				0.0f,
-				0.0f}),
+			}),
 		SBody(id++, "Jupiter",
 			{
 				1.8982e27,
@@ -178,21 +158,6 @@ void CStarSystem::OnInit()
 				Vec3(0, 0, 0)},
 			{
 				6.9911e7,
-				0.52f, // Albedo
-				0.4f, // Gaseous surface
-				0.7f, // Cloud reflectivity
-				Vec3(0.8f, 0.6f, 0.4f), // Band colors
-				Vec3(0.1f, 0.1f, 0.5f), // Hypothetical liquid layer
-				Vec3(0.9f, 0.9f, 1.0f), // idk
-				Vec3(0.6f, 0.5f, 0.4f), // Upper atmosphere
-				1.2f, // Thick atmosphere
-				0.8f, // Cloud coverage
-				24000.0f, // Core temp
-				-145.0f, // Cloud top temp
-				13070.0f,
-				glm::radians(360.0f / 9.93f) / 3600.0f, // 9.9-hour rotation
-				4.2e-4f, // Strong magnetic field
-				0.8f // Intense auroras
 			})};
 }
 // clang-format on
@@ -204,6 +169,15 @@ void CStarSystem::OnInit()
 // 		printf("%s - Pos: %.3f, %.3f, %.3f\n", body.m_Name.c_str(), body.m_Position.x, body.m_Position.y, body.m_Position.z);
 // 	printf("\n");
 // }
+
+static Vec3 CalculateForce(const SBody &a, const SBody &b)
+{
+	Vec3 r = b.m_SimParams.m_Position - a.m_SimParams.m_Position; // Vector from a to b
+	const double Distance = r.length();
+	const double ForceMagnitude = (G * a.m_SimParams.m_Mass * b.m_SimParams.m_Mass) / (Distance * Distance); // F = G * m1 * m2 / r^2
+	Vec3 Force = r * (ForceMagnitude / Distance);
+	return Force;
+}
 
 void CStarSystem::UpdateBodies()
 {
@@ -233,10 +207,4 @@ void CStarSystem::UpdateBodies()
 		Body.m_SimParams.m_Velocity = Body.m_SimParams.m_Velocity + Body.m_SimParams.m_Acceleration * (0.5 * m_DeltaTime);
 
 	++m_SimTick;
-}
-
-void CStarSystem::RenderBodies(class CShader *pShader, class CCamera *pCamera)
-{
-	for(auto &Body : m_vBodies)
-		RenderBody(&Body, &m_vBodies.front(), pShader, pCamera);
 }
