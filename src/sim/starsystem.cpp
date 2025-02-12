@@ -34,18 +34,9 @@ void CStarSystem::RenderBody(SBody *pBody, SBody *pLightBody, CCamera &Camera)
 	m_BodyShader.SetFloat("ScreenRatio", Camera.m_ScreenSize.x / Camera.m_ScreenSize.y);
 	m_BodyShader.SetVec3("LightDir", pLightBody == pBody ? glm::vec3(0, 0, 0) : glm::normalize((glm::vec3)((pLightBody->m_SimParams.m_Position - Camera.m_pFocusedBody->m_SimParams.m_Position) / Camera.m_Radius)));
 	m_BodyShader.SetVec3("CameraPos", glm::normalize(Camera.m_Position));
-	// Atmosphere uniforms
-	// uniform float atmosphereRadius;
-	// uniform vec3 betaR; // Rayleigh scattering coefficient
-	// uniform vec3 betaM; // Mie scattering coefficient
-	// uniform float densityFalloff;
-	// uniform float sunPower;
-	auto &RP = pBody->m_RenderParams;
-	m_BodyShader.SetFloat("sunPower", 1.0);
-	m_BodyShader.SetFloat("densityFalloff", RP.m_AtmosphereDensityFalloff);
-	m_BodyShader.SetFloat("atmosphereRadius", 0.5 * RP.m_AtmosphereRadius);
-	m_BodyShader.SetVec3("betaR", RP.m_AtmosphereBetaR);
-	m_BodyShader.SetVec3("betaM", RP.m_AtmosphereBetaM);
+
+	float Time = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - StartTime).count() / 1e9; // Time in seconds
+	m_BodyShader.SetFloat("Time", Time);
 
 	glBindVertexArray(m_BodyShader.VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -136,10 +127,6 @@ void CStarSystem::OnInit()
 				Vec3(0, 0, 0)},
 			{
 				6.371e6,
-				1.2,
-				4.0,
-				Vec3(5.8e-6, 1.35e-5, 3.31e-5),
-				Vec3(4e-6),
 			}),
 		SBody(id++, "Moon",
 			{

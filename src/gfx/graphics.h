@@ -27,6 +27,7 @@ class CGraphics
 	static void WindowSizeCallback(GLFWwindow *pWindow, int Width, int Height);
 
 public:
+	float m_FrameTime = 0.0f;
 	// needs to be public for controls stuff since theyre static
 	ImGuiIO *m_pImGuiIO;
 	CCamera m_Camera;

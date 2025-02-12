@@ -21,12 +21,7 @@ struct SBody
 
 	struct SRenderParams
 	{
-		double m_Radius;				// Planetary radius [meters] (Earth ≈ 6.371e6 m)
-		float m_AtmosphereRadius; // relative to the planet radius. 1.1 for example
-		float m_AtmosphereDensityFalloff;
-		glm::vec3 m_AtmosphereBetaR; // Rayleigh scattering coefficient
-		glm::vec3 m_AtmosphereBetaM; // Mie scattering coefficient
-
+		double m_Radius; // Planetary radius [meters] (Earth ≈ 6.371e6 m)
 	} m_RenderParams;
 	// clang-format on
 

@@ -4,6 +4,7 @@
 #include "shader.h"
 #include <FastNoiseLite.h>
 #include <GLFW/glfw3.h>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -134,6 +135,8 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 
 void CGraphics::OnRender()
 {
+	static auto s_LastFrame = std::chrono::steady_clock::now();
+
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
@@ -175,11 +178,71 @@ void CGraphics::OnRender()
 	ImGui::Text("Mass: %.4e", Body.m_SimParams.m_Mass);
 	ImGui::Text("Radius: %.4e", Body.m_RenderParams.m_Radius);
 
-	ImGui::SliderFloat("atms_radius", &Body.m_RenderParams.m_AtmosphereRadius, 0.0f, 2.0f, "%.2f");
-	ImGui::SliderFloat("atms_density_falloff", &Body.m_RenderParams.m_AtmosphereDensityFalloff, 0.0f, 10.0f, "%.2f");
-	// ImGui::ColorEdit3("atms_betaR", glm::value_ptr(Body.m_RenderParams.m_AtmosphereBetaR));
-	// ImGui::ColorEdit3("atms_betaM", glm::value_ptr(Body.m_RenderParams.m_AtmosphereBetaM));
+	// auto &TP = Body.m_RenderParams.m_TerrainParams;
+	//
+	// // Continent parameters
+	// ImGui::SliderFloat("Continent Base Height", &TP.continentBaseHeight, 0.0f, 2.0f, "%.2f");
+	// ImGui::SliderFloat("Continent Frequency", &TP.continentFrequency, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Continent Amplitude", &TP.continentAmplitude, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Continent Lacunarity", &TP.continentLacunarity, 1.0f, 4.0f, "%.2f");
+	// ImGui::SliderFloat("Continent Gain", &TP.continentGain, 0.0f, 1.0f, "%.2f");
+	// ImGui::SliderInt("Continent Octaves", &TP.continentOctaves, 1, 10);
+	//
+	// // Mountain parameters
+	// ImGui::SliderFloat("Mountain Amplitude", &TP.mountainAmplitude, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Mountain Frequency", &TP.mountainFrequency, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Mountain Vertical Sharpness", &TP.mountainVerticalSharpness, 0.0f, 5.0f, "%.2f");
+	// ImGui::SliderFloat("Mountain Warping Strength", &TP.mountainWarpingStrength, 0.0f, 10.0f, "%.2f");
+	//
+	// // Ridge parameters
+	// ImGui::SliderFloat("Ridge Scale", &TP.ridgeScale, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Ridge Offset", &TP.ridgeOffset, -5.0f, 5.0f, "%.2f");
+	// ImGui::SliderFloat("Ridge Amplitude", &TP.ridgeAmplitude, 0.0f, 10.0f, "%.2f");
+	//
+	// // Canyon parameters
+	// ImGui::SliderFloat("Canyon Depth", &TP.canyonDepth, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Canyon Width", &TP.canyonWidth, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Canyon Frequency", &TP.canyonFrequency, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Canyon Edge Sharpness", &TP.canyonEdgeSharpness, 0.0f, 10.0f, "%.2f");
+	//
+	// // Crater parameters
+	// ImGui::SliderFloat("Crater Density", &TP.craterDensity, 0.0f, 1.0f, "%.2f");
+	// ImGui::SliderFloat("Crater Depth", &TP.craterDepth, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Crater Radius Variation", &TP.craterRadiusVariation, 0.0f, 1.0f, "%.2f");
+	// ImGui::SliderFloat("Crater Smoothness", &TP.craterSmoothness, 0.0f, 10.0f, "%.2f");
+	//
+	// // Noise parameters
+	// ImGui::SliderFloat("Noise Warping Strength", &TP.noiseWarpingStrength, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Detail Scale", &TP.detailScale, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Detail Amplitude", &TP.detailAmplitude, 0.0f, 10.0f, "%.2f");
+	//
+	// // Erosion parameters
+	// ImGui::SliderFloat("Erosion Scale", &TP.erosionScale, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Erosion Intensity", &TP.erosionIntensity, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Sediment Deposit", &TP.sedimentDeposit, 0.0f, 10.0f, "%.2f");
+	//
+	// // Polar parameters
+	// ImGui::SliderFloat("Polar Cap Height", &TP.polarCapHeight, 0.0f, 2.0f, "%.2f");
+	// ImGui::SliderFloat("Polar Cap Sharpness", &TP.polarCapSharpness, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Polar Latitude", &TP.polarLatitude, 0.0f, 90.0f, "%.2f");
+	//
+	// // Advanced parameters
+	// ImGui::SliderFloat("Tectonic Plates", &TP.tectonicPlates, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Volcanic Activity", &TP.volcanicActivity, 0.0f, 10.0f, "%.2f");
+	// ImGui::SliderFloat("Sedimentary Layering", &TP.sedimentaryLayering, 0.0f, 10.0f, "%.2f");
+	//
+	// // Blend controls
+	// ImGui::SliderFloat("Mountain-Continent Blend", &TP.mountainContinentBlend, 0.0f, 1.0f, "%.2f");
+	// ImGui::SliderFloat("Canyon-Mountain Blend", &TP.canyonMountainBlend, 0.0f, 1.0f, "%.2f");
+	// ImGui::SliderFloat("Crater Blend Sharpness", &TP.craterBlendSharpness, 0.0f, 10.0f, "%.2f");
+	//
+	// // Toggles
+	// ImGui::Checkbox("Enable Craters", &TP.enableCraters);
+	// ImGui::Checkbox("Enable Canyons", &TP.enableCanyons);
+	// ImGui::Checkbox("Enable Polar Caps", &TP.enablePolarCaps);
+
 	ImGui::PopTextWrapPos();
+	ImGui::Text("FPS: %.2f", 1.f / m_FrameTime);
 	ImGui::End();
 
 	// ImGui::ShowDemoWindow();
@@ -205,6 +268,9 @@ void CGraphics::OnRender()
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	glfwSwapBuffers(m_pWindow);
+
+	m_FrameTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - s_LastFrame).count() / 1e9;
+	s_LastFrame = std::chrono::steady_clock::now();
 }
 
 // cleanup

@@ -3,6 +3,7 @@
 #include "sim/starsystem.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 
 int main()
@@ -26,7 +27,6 @@ int main()
 	CStarSystem PredictedStarSystem = StarSystem;
 
 	using namespace std::chrono;
-	auto LastTick = high_resolution_clock::now();
 	auto LastRenderTick = high_resolution_clock::now();
 	double AccTime = 0.0;
 

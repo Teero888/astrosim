@@ -5,6 +5,8 @@ in vec2 uv;
 uniform vec3 LightDir;
 uniform vec3 CameraPos;
 
+uniform float Time; // in seconds
+
 vec4 hash(vec4 p)
 {
 	p = vec4(
@@ -60,14 +62,13 @@ float noise(vec4 p)
 				u.y),
 			u.z),
 		u.w);
-
 	return w0;
 }
 
 float sdSphere(vec3 p, float radius)
 {
 	float sdf = 0.0;
-	radius += noise(vec4(p * 3.0, 0.0)) * 0.1;
+	radius += noise(vec4(p * 300.0, Time * 0.01)) * 0.2;
 	return (length(p) - radius) * 0.5;
 }
 
@@ -91,8 +92,8 @@ vec3 CalcNormal(vec3 p, float radius)
 #define BODY_RADIUS 0.5
 
 #define MAX_DIST 1.
-#define MAX_ITER 100.
-#define EPSILON .001
+#define MAX_ITER 10.
+#define EPSILON .04
 void main()
 {
 	vec3 ro = vec3(CameraPos.xy, -CameraPos.z); // Ray origin
@@ -110,6 +111,12 @@ void main()
 		if(distance < EPSILON)
 		{
 			vec3 normal = CalcNormal(ro + rd * t, BODY_RADIUS);
+			normal.g = normal.r * 0.5 + normal.g * 0.1;
+			normal.r = min(abs(normal.r) + 0.5, 1.0);
+			normal.b *= 0.1;
+			// normal.r += min(normal.g + normal.b, 1.0);
+			// normal.g = normal.r * 0.5 + normal.g * 0.1;
+			// normal.b *= 0.1;
 			color = vec4(normal, 1.0);
 			break;
 		}
