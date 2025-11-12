@@ -18,6 +18,7 @@
 #include <imgui_impl_opengl3.h>
 #include <iostream>
 #include <vector>
+#include <map>
 
 bool CGraphics::OnInit(CStarSystem *pStarSystem)
 {
@@ -253,45 +254,108 @@ struct Vertex
 	glm::vec3 normal;
 };
 
-static void GenerateSphere(float Radius, int Stacks, int Slices, std::vector<Vertex> &vVertices, std::vector<unsigned int> &vIndices)
+// Helper function to get a midpoint vertex, creating it if it doesn't exist
+static unsigned int GetMidpoint(unsigned int p1, unsigned int p2, std::vector<Vertex>& vertices, std::map<long long, unsigned int>& MidpointCache, float Radius)
 {
-	vVertices.clear();
-	vIndices.clear();
+    bool FirstIsSmaller = p1 < p2;
+    long long SmallerIndex = FirstIsSmaller ? p1 : p2;
+    long long GreaterIndex = FirstIsSmaller ? p2 : p1;
+    long long Key = (SmallerIndex << 32) + GreaterIndex;
 
-	for(int i = 0; i <= Stacks; ++i)
-	{
-		float phi = static_cast<float>(i) / Stacks * glm::pi<float>();
-		for(int j = 0; j <= Slices; ++j)
-		{
-			float theta = static_cast<float>(j) / Slices * 2.0f * glm::pi<float>();
+    if (MidpointCache.count(Key))
+    {
+        return MidpointCache[Key];
+    }
 
-			Vertex v;
-			v.normal.x = std::sin(phi) * std::cos(theta);
-			v.normal.y = std::cos(phi);
-			v.normal.z = std::sin(phi) * std::sin(theta);
+    Vertex v1 = vertices[p1];
+    Vertex v2 = vertices[p2];
+    glm::vec3 Mid = glm::normalize(v1.position + v2.position) * Radius;
 
-			v.position = v.normal * Radius;
+    Vertex NewV;
+    NewV.position = Mid;
+    NewV.normal = glm::normalize(Mid); // Normal is just the normalized position for a sphere
 
-			vVertices.push_back(v);
-		}
-	}
+    vertices.push_back(NewV);
+    unsigned int Index = vertices.size() - 1;
+    MidpointCache[Key] = Index;
+    return Index;
+}
 
-	for(int i = 0; i < Stacks; ++i)
-	{
-		for(int j = 0; j < Slices; ++j)
-		{
-			int first = (i * (Slices + 1)) + j;
-			int second = first + Slices + 1;
+static void GenerateSphere(float Radius, int Subdivisions, std::vector<Vertex>& vVertices, std::vector<unsigned int>& vIndices)
+{
+    vVertices.clear();
+    vIndices.clear();
+    std::map<long long, unsigned int> mMidpointCache;
 
-			vIndices.push_back(first);
-			vIndices.push_back(second);
-			vIndices.push_back(first + 1);
+    // Create 12 vertices of an icosahedron
+	#define SQRT_5__ 2.236067977499789696409173f
+    float t = (1.0f + SQRT_5__) / 2.0f;
+	#undef SQRT_5__
 
-			vIndices.push_back(second);
-			vIndices.push_back(second + 1);
-			vIndices.push_back(first + 1);
-		}
-	}
+    vVertices.push_back({{glm::normalize(glm::vec3(-1, t, 0)) * Radius}, {glm::normalize(glm::vec3(-1, t, 0))}});
+    vVertices.push_back({{glm::normalize(glm::vec3(1, t, 0)) * Radius}, {glm::normalize(glm::vec3(1, t, 0))}});
+    vVertices.push_back({{glm::normalize(glm::vec3(-1, -t, 0)) * Radius}, {glm::normalize(glm::vec3(-1, -t, 0))}});
+    vVertices.push_back({{glm::normalize(glm::vec3(1, -t, 0)) * Radius}, {glm::normalize(glm::vec3(1, -t, 0))}});
+
+    vVertices.push_back({{glm::normalize(glm::vec3(0, -1, t)) * Radius}, {glm::normalize(glm::vec3(0, -1, t))}});
+    vVertices.push_back({{glm::normalize(glm::vec3(0, 1, t)) * Radius}, {glm::normalize(glm::vec3(0, 1, t))}});
+    vVertices.push_back({{glm::normalize(glm::vec3(0, -1, -t)) * Radius}, {glm::normalize(glm::vec3(0, -1, -t))}});
+    vVertices.push_back({{glm::normalize(glm::vec3(0, 1, -t)) * Radius}, {glm::normalize(glm::vec3(0, 1, -t))}});
+
+    vVertices.push_back({{glm::normalize(glm::vec3(t, 0, -1)) * Radius}, {glm::normalize(glm::vec3(t, 0, -1))}});
+    vVertices.push_back({{glm::normalize(glm::vec3(t, 0, 1)) * Radius}, {glm::normalize(glm::vec3(t, 0, 1))}});
+    vVertices.push_back({{glm::normalize(glm::vec3(-t, 0, -1)) * Radius}, {glm::normalize(glm::vec3(-t, 0, -1))}});
+    vVertices.push_back({{glm::normalize(glm::vec3(-t, 0, 1)) * Radius}, {glm::normalize(glm::vec3(-t, 0, 1))}});
+
+    // 5 faces around point 0
+    vIndices.push_back(0); vIndices.push_back(11); vIndices.push_back(5);
+    vIndices.push_back(0); vIndices.push_back(5); vIndices.push_back(1);
+    vIndices.push_back(0); vIndices.push_back(1); vIndices.push_back(7);
+    vIndices.push_back(0); vIndices.push_back(7); vIndices.push_back(10);
+    vIndices.push_back(0); vIndices.push_back(10); vIndices.push_back(11);
+
+    // 5 adjacent faces
+    vIndices.push_back(1); vIndices.push_back(5); vIndices.push_back(9);
+    vIndices.push_back(5); vIndices.push_back(11); vIndices.push_back(4);
+    vIndices.push_back(11); vIndices.push_back(10); vIndices.push_back(2);
+    vIndices.push_back(10); vIndices.push_back(7); vIndices.push_back(6);
+    vIndices.push_back(7); vIndices.push_back(1); vIndices.push_back(8);
+
+    // 5 faces around point 3
+    vIndices.push_back(3); vIndices.push_back(9); vIndices.push_back(4);
+    vIndices.push_back(3); vIndices.push_back(4); vIndices.push_back(2);
+    vIndices.push_back(3); vIndices.push_back(2); vIndices.push_back(6);
+    vIndices.push_back(3); vIndices.push_back(6); vIndices.push_back(8);
+    vIndices.push_back(3); vIndices.push_back(8); vIndices.push_back(9);
+
+    // 5 adjacent faces
+    vIndices.push_back(4); vIndices.push_back(9); vIndices.push_back(5);
+    vIndices.push_back(2); vIndices.push_back(4); vIndices.push_back(11);
+    vIndices.push_back(6); vIndices.push_back(2); vIndices.push_back(10);
+    vIndices.push_back(8); vIndices.push_back(6); vIndices.push_back(7);
+    vIndices.push_back(9); vIndices.push_back(8); vIndices.push_back(1);
+
+    // Subdivide
+    for (int i = 0; i < Subdivisions; ++i)
+    {
+        std::vector<unsigned int> vNewIndices;
+        for (size_t j = 0; j < vIndices.size(); j += 3)
+        {
+            unsigned int v1 = vIndices[j];
+            unsigned int v2 = vIndices[j + 1];
+            unsigned int v3 = vIndices[j + 2];
+
+            unsigned int a = GetMidpoint(v1, v2, vVertices, mMidpointCache, Radius);
+            unsigned int b = GetMidpoint(v2, v3, vVertices, mMidpointCache, Radius);
+            unsigned int c = GetMidpoint(v3, v1, vVertices, mMidpointCache, Radius);
+
+            vNewIndices.push_back(v1); vNewIndices.push_back(a); vNewIndices.push_back(c);
+            vNewIndices.push_back(v2); vNewIndices.push_back(b); vNewIndices.push_back(a);
+            vNewIndices.push_back(v3); vNewIndices.push_back(c); vNewIndices.push_back(b);
+            vNewIndices.push_back(a); vNewIndices.push_back(b); vNewIndices.push_back(c);
+        }
+        vIndices = vNewIndices;
+    }
 }
 
 void CGraphics::InitGfx()
@@ -300,7 +364,7 @@ void CGraphics::InitGfx()
 
 	std::vector<Vertex> vVertices;
 	std::vector<unsigned int> vIndices;
-	GenerateSphere(1.0f, 32, 32, vVertices, vIndices);
+	GenerateSphere(1.0f, 3, vVertices, vIndices);
 	m_BodyShader.m_NumIndices = vIndices.size();
 
 	// Set up VBO, VAO, and EBO
