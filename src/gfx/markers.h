@@ -7,6 +7,7 @@ class CMarkers
 	CShader m_Shader;
 
 public:
+	bool m_ShowMarkers = true;
 	void Init();
 	void Render(class CStarSystem &System, class CCamera &Camera);
 	void Destroy();

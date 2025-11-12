@@ -104,6 +104,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	pCurrentItem = m_Camera.m_pFocusedBody->m_Name.c_str();
 
 	ImGui::Checkbox("Show all trajectories", &m_Trajectories.m_ShowAll);
+	ImGui::Checkbox("Show markers", &m_Markers.m_ShowMarkers);
 	if(ImGui::BeginCombo("Select Focus##focus", pCurrentItem))
 	{
 		for(auto &Body : StarSystem.m_vBodies)
