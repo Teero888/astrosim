@@ -5,8 +5,6 @@
 #include "glm/ext/vector_float3.hpp"
 #include "graphics.h"
 #include <cmath>
-#include <csignal>
-#include <cstdio>
 
 #define GRID_RESOLUTION 1
 

@@ -3,7 +3,6 @@
 #include "sim/starsystem.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
-#include <cmath>
 #include <cstdio>
 
 int main()

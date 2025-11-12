@@ -1,8 +1,6 @@
 #ifndef STARTSYSTEM_H
 #define STARTSYSTEM_H
 
-#include "../gfx/camera.h"
-#include "../gfx/shader.h"
 #include "body.h"
 #include <cstdint>
 #include <vector>

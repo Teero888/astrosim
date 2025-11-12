@@ -5,7 +5,6 @@
 #include "glm/fwd.hpp"
 #include "glm/geometric.hpp"
 #include "graphics.h"
-#include <cstdio>
 
 void CMarkers::Init()
 {

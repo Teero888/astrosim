@@ -7,6 +7,9 @@
 #include <vector>
 
 #define TRAJECTORY_LENGTH 3600
+
+class CStarSystem;
+class CCamera;
 class CTrajectories
 {
 	struct STrajectory
