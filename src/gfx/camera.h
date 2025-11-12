@@ -6,7 +6,7 @@
 #include "glm/ext/vector_float3.hpp"
 #include <glm/gtc/type_ptr.hpp>
 
-#define ZOOM_FACTOR 10.0
+#define ZOOM_FACTOR 1.0
 
 enum ECameraMode
 {
@@ -38,6 +38,8 @@ struct CCamera
 	float m_FOV = 70.f;
 	glm::mat4 m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
 	glm::mat4 m_Projection = glm::perspective(glm::radians(m_FOV), 1600.0f / 1000.0f, 0.1f, 1e9f);
+
+	int m_LOD = 0;
 
 	void SetBody(SBody *pBody);
 	void UpdateViewMatrix();

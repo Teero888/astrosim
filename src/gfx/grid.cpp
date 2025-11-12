@@ -82,7 +82,7 @@ void CGrid::Render(CStarSystem &System, CCamera &Camera)
 
 	// using static const instead of constexpr since math funcs no work
 	constexpr float ZOOM_STEP = 10.0f; // every 10 zooms grid updates
-	static const float STEP_FACTOR = std::pow(1.f + (1.f / ZOOM_FACTOR), ZOOM_STEP);
+	static const float STEP_FACTOR = std::pow(1.f + (0.1f), ZOOM_STEP);
 	static const float LOG_STEP = std::log(STEP_FACTOR);
 
 	const float BodyRadius = Camera.m_pFocusedBody->m_RenderParams.m_Radius;

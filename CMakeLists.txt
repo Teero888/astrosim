@@ -80,6 +80,10 @@ add_executable(astrosim
 	src/gfx/cmath.h
 	src/gfx/graphics.cpp
 	src/gfx/graphics.h
+    src/gfx/marchingcubes.cpp
+    src/gfx/marchingcubes.h
+    src/gfx/proceduralmesh.cpp
+    src/gfx/proceduralmesh.h
 	src/gfx/grid.cpp
 	src/gfx/grid.h
 	src/gfx/markers.cpp

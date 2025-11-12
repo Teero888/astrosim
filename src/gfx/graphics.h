@@ -5,9 +5,9 @@
 #include "grid.h"
 #include "imgui.h"
 #include "markers.h"
-#include "shader.h"
+#include "proceduralmesh.h"
 #include "trajectories.h"
-#include <vector>
+#include <map>
 
 #define DEFAULT_SCALE 100.0
 
@@ -23,10 +23,7 @@ class CGraphics
 	// beautiful nice grid by meine wenigkeit
 	CGrid m_Grid;
 
-	CShader m_BodyShader;
-	void RenderBody(const SBody *pBody, const SBody *pLightBody, CCamera &Camera);
-	void RenderBodies(const std::vector<SBody> &vBodies, CCamera &Camera);
-	glm::vec3 WorldToClip(const Vec3 &WorldPos, const CCamera &Camera);
+	std::map<int, CProceduralMesh *> m_BodyMeshes;
 
 	static void MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double YOffset);
 	static void MouseMotionCallback(GLFWwindow *pWindow, double XPos, double YPos);
@@ -36,13 +33,13 @@ class CGraphics
 
 public:
 	float m_FrameTime = 0.0f;
-	// needs to be public for controls stuff since theyre static
+	// needs to be public for controls stuff since they're static
 	ImGuiIO *m_pImGuiIO;
 	CCamera m_Camera;
 	CTrajectories m_Trajectories;
 	CMarkers m_Markers;
 	bool OnInit(CStarSystem *pStarSystem);
-	void InitGfx();
+	void InitGfx(); // This is now an empty function, but kept for structure
 	void OnRender(CStarSystem &StarSystem);
 	void OnExit();
 
