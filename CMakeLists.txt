@@ -109,3 +109,5 @@ target_include_directories(astrosim PRIVATE
 	${FASTNOISE_DIR}
     ${CMAKE_SOURCE_DIR}/shaders
 )
+
+file(COPY data DESTINATION ${CMAKE_BINARY_DIR})

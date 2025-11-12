@@ -5,11 +5,14 @@
 #include "grid.h"
 #include "imgui.h"
 #include "markers.h"
+#include "shader.h"
 #include "trajectories.h"
+#include <vector>
 
 #define DEFAULT_SCALE 100.0
 
 class CStarSystem;
+struct SBody;
 class GLFWwindow;
 
 class CGraphics
@@ -19,6 +22,11 @@ class CGraphics
 
 	// beautiful nice grid by meine wenigkeit
 	CGrid m_Grid;
+
+	CShader m_BodyShader;
+	void RenderBody(const SBody *pBody, const SBody *pLightBody, CCamera &Camera);
+	void RenderBodies(const std::vector<SBody> &vBodies, CCamera &Camera);
+	glm::vec3 WorldToClip(const Vec3 &WorldPos, const CCamera &Camera);
 
 	static void MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double YOffset);
 	static void MouseMotionCallback(GLFWwindow *pWindow, double XPos, double YPos);
@@ -34,7 +42,8 @@ public:
 	CTrajectories m_Trajectories;
 	CMarkers m_Markers;
 	bool OnInit(CStarSystem *pStarSystem);
-	void OnRender();
+	void InitGfx();
+	void OnRender(CStarSystem &StarSystem);
 	void OnExit();
 
 	inline GLFWwindow *GetWindow() { return m_pWindow; }

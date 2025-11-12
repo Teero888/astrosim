@@ -88,13 +88,13 @@ void CGrid::Render(CStarSystem &System, CCamera &Camera)
 	static const float LOG_STEP = std::log(STEP_FACTOR);
 
 	const float BodyRadius = Camera.m_pFocusedBody->m_RenderParams.m_Radius;
-	const float InitialScale = Camera.m_Radius / BodyRadius;
+	const float InitialScale = Camera.m_ViewDistance / BodyRadius;
 	int QuantizedScale = std::pow(STEP_FACTOR, (int)(std::log(InitialScale) / LOG_STEP));
 
-	const float GridScale = (BodyRadius / Camera.m_Radius) * std::max(QuantizedScale * 10.f, 1.f);
+	const float GridScale = (BodyRadius / Camera.m_ViewDistance) * std::max(QuantizedScale * 10.f, 1.f);
 	m_Shader.SetFloat("GridScale", GridScale);
 
-	const Vec3 GridPos = Camera.m_pFocusedBody->m_SimParams.m_Position / (GridScale * Camera.m_Radius);
+	const Vec3 GridPos = Camera.m_pFocusedBody->m_SimParams.m_Position / (GridScale * Camera.m_ViewDistance);
 	const Vec3 Offset = (GridPos - GridPos.floor()) * GridScale;
 
 	glm::mat4 Model = glm::mat4(1.0f);
@@ -105,11 +105,11 @@ void CGrid::Render(CStarSystem &System, CCamera &Camera)
 	// {
 	// 	auto &Body = System.m_vBodies[i];
 	// 	auto &Info = m_vPlanetInfo[i];
-	// 	Info.Scale = Body.m_Radius / Camera.m_Radius;
+	// 	Info.Scale = Body.m_Radius / Camera.m_ViewDistance;
 	// 	Info.Mass = Body.m_Radius / 1e8;
 	//
 	// 	// Transform positions into the grid's vertex space
-	// 	Vec3 Position = (Body.m_Position - Camera.m_pFocusedBody->m_Position) / (Camera.m_Radius);
+	// 	Vec3 Position = (Body.m_Position - Camera.m_pFocusedBody->m_Position) / (Camera.m_ViewDistance);
 	// 	// Position = Position / (GridPos * GridScale);
 	//
 	// 	// Assign the transformed position to the planet info
@@ -127,9 +127,9 @@ void CGrid::Render(CStarSystem &System, CCamera &Camera)
 	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // Unbind
 	// printf("PlanetDensity: %e\n", (Camera.m_pFocusedBody->m_Mass / BodyRadius));
 	// m_Shader.SetFloat("PlanetMass", BodyRadius / 1e8);
-	// m_Shader.SetFloat("PlanetScale", (BodyRadius / Camera.m_Radius));
+	// m_Shader.SetFloat("PlanetScale", (BodyRadius / Camera.m_ViewDistance));
 
-	m_Shader.SetFloat("CameraScale", BodyRadius / Camera.m_Radius);
+	m_Shader.SetFloat("CameraScale", BodyRadius / Camera.m_ViewDistance);
 	m_Shader.SetFloat("Scale", DEFAULT_SCALE * 2);
 	m_Shader.SetVec3("GridColor", glm::vec3(0.4f));
 	m_Shader.SetMat4("View", Camera.m_View);

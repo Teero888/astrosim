@@ -19,8 +19,8 @@ struct CCamera
 {
 	SBody *m_pFocusedBody = nullptr;
 
-	double m_Radius = 1e8;
-	double m_WantedRadius = 1e8;
+	double m_ViewDistance = 1e8;
+	double m_WantedViewDistance = 1e8;
 
 	glm::vec2 m_ScreenSize; // get only
 	Vec3 m_FocusPoint = Vec3(0, 0, 0);

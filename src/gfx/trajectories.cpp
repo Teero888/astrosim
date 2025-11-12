@@ -40,7 +40,7 @@ void CTrajectories::UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera)
 		auto &Trajectory = m_vPlanetTrajectories[i];
 		for(int i = 0; i < TRAJECTORY_LENGTH; ++i)
 		{
-			Vec3 NewPos = (Trajectory.m_aPositionHistory[i] - Camera.m_pFocusedBody->m_SimParams.m_Position) / Camera.m_Radius;
+			Vec3 NewPos = (Trajectory.m_aPositionHistory[i] - Camera.m_pFocusedBody->m_SimParams.m_Position) / Camera.m_ViewDistance;
 			Trajectory.m_aGLHistory[i] = NewPos;
 			// 0,0,0 is reserved for not rendering so make it some val that is not 0,0,0
 			if(Trajectory.m_aGLHistory[i] == glm::vec3(0.f))
@@ -70,8 +70,8 @@ void CTrajectories::Render(CCamera &Camera)
 		return;
 	m_Shader.Use();
 	auto Model = glm::mat4(1.0f);
-	// Model = glm::translate(Model, -(glm::vec3)(Camera.m_pFocusedBody->m_Position / (double)Camera.m_Radius));
-	// Model = glm::scale(Model, glm::vec3(1.0 / (double)Camera.m_Radius));
+	// Model = glm::translate(Model, -(glm::vec3)(Camera.m_pFocusedBody->m_Position / (double)Camera.m_ViewDistance));
+	// Model = glm::scale(Model, glm::vec3(1.0 / (double)Camera.m_ViewDistance));
 	m_Shader.SetMat4("Model", Model);
 	m_Shader.SetMat4("View", Camera.m_View);
 	m_Shader.SetMat4("Projection", Camera.m_Projection);

@@ -18,12 +18,6 @@ struct CStarSystem
 
 	void OnInit();
 	void UpdateBodies();
-
-	// gfx stuff
-	CShader m_BodyShader;
-	void InitGfx();
-	void RenderBody(SBody *pBody, SBody *pLightBody, CCamera &Camera);
-	void RenderBodies(CCamera &Camera);
 };
 
 #endif // STARTSYSTEM_H

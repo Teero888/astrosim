@@ -2,6 +2,9 @@
 #include "../sim/starsystem.h"
 #include "camera.h"
 #include "shader.h"
+#include "generated/embedded_shaders.h"
+#include "../sim/body.h"
+#include "../sim/vmath.h"
 #include <FastNoiseLite.h>
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -72,12 +75,12 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	m_Grid.Init();
 	m_Trajectories.Init();
 	m_Markers.Init();
-	m_pStarSystem->InitGfx();
+	InitGfx();
 
 	return true;
 }
 
-void CGraphics::OnRender()
+void CGraphics::OnRender(CStarSystem &StarSystem)
 {
 	static auto s_LastFrame = std::chrono::steady_clock::now();
 
@@ -85,7 +88,7 @@ void CGraphics::OnRender()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	if(std::fabs(m_Camera.m_WantedRadius - m_Camera.m_Radius) > 1e-3)
+	if(std::fabs(m_Camera.m_WantedViewDistance - m_Camera.m_ViewDistance) > 1e-3)
 		m_Camera.UpdateViewMatrix();
 
 	// use imgui later xd
@@ -96,14 +99,14 @@ void CGraphics::OnRender()
 	// // Render a simple ImGui window
 
 	ImGui::Begin("Settings");
-	ImGui::SliderInt("Days per second", &m_pStarSystem->m_DPS, 1, 365);
-	static const char *pCurrentItem = m_pStarSystem->m_vBodies.front().m_Name.c_str();
+	ImGui::SliderInt("Days per second", &StarSystem.m_DPS, 1, 365);
+	static const char *pCurrentItem = StarSystem.m_vBodies.front().m_Name.c_str();
 	pCurrentItem = m_Camera.m_pFocusedBody->m_Name.c_str();
 
 	ImGui::Checkbox("Show all trajectories", &m_Trajectories.m_ShowAll);
 	if(ImGui::BeginCombo("Select Focus##focus", pCurrentItem))
 	{
-		for(auto &Body : m_pStarSystem->m_vBodies)
+		for(auto &Body : StarSystem.m_vBodies)
 		{
 			bool IsSelected = (pCurrentItem == Body.m_Name.c_str());
 			if(ImGui::Selectable(Body.m_Name.c_str(), IsSelected))
@@ -121,70 +124,6 @@ void CGraphics::OnRender()
 	ImGui::Text("Velocity: %.4e, %.4e, %.4e", Body.m_SimParams.m_Velocity.x, Body.m_SimParams.m_Velocity.y, Body.m_SimParams.m_Velocity.z);
 	ImGui::Text("Mass: %.4e", Body.m_SimParams.m_Mass);
 	ImGui::Text("Radius: %.4e", Body.m_RenderParams.m_Radius);
-
-	// auto &TP = Body.m_RenderParams.m_TerrainParams;
-	//
-	// // Continent parameters
-	// ImGui::SliderFloat("Continent Base Height", &TP.continentBaseHeight, 0.0f, 2.0f, "%.2f");
-	// ImGui::SliderFloat("Continent Frequency", &TP.continentFrequency, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Continent Amplitude", &TP.continentAmplitude, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Continent Lacunarity", &TP.continentLacunarity, 1.0f, 4.0f, "%.2f");
-	// ImGui::SliderFloat("Continent Gain", &TP.continentGain, 0.0f, 1.0f, "%.2f");
-	// ImGui::SliderInt("Continent Octaves", &TP.continentOctaves, 1, 10);
-	//
-	// // Mountain parameters
-	// ImGui::SliderFloat("Mountain Amplitude", &TP.mountainAmplitude, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Mountain Frequency", &TP.mountainFrequency, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Mountain Vertical Sharpness", &TP.mountainVerticalSharpness, 0.0f, 5.0f, "%.2f");
-	// ImGui::SliderFloat("Mountain Warping Strength", &TP.mountainWarpingStrength, 0.0f, 10.0f, "%.2f");
-	//
-	// // Ridge parameters
-	// ImGui::SliderFloat("Ridge Scale", &TP.ridgeScale, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Ridge Offset", &TP.ridgeOffset, -5.0f, 5.0f, "%.2f");
-	// ImGui::SliderFloat("Ridge Amplitude", &TP.ridgeAmplitude, 0.0f, 10.0f, "%.2f");
-	//
-	// // Canyon parameters
-	// ImGui::SliderFloat("Canyon Depth", &TP.canyonDepth, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Canyon Width", &TP.canyonWidth, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Canyon Frequency", &TP.canyonFrequency, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Canyon Edge Sharpness", &TP.canyonEdgeSharpness, 0.0f, 10.0f, "%.2f");
-	//
-	// // Crater parameters
-	// ImGui::SliderFloat("Crater Density", &TP.craterDensity, 0.0f, 1.0f, "%.2f");
-	// ImGui::SliderFloat("Crater Depth", &TP.craterDepth, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Crater Radius Variation", &TP.craterRadiusVariation, 0.0f, 1.0f, "%.2f");
-	// ImGui::SliderFloat("Crater Smoothness", &TP.craterSmoothness, 0.0f, 10.0f, "%.2f");
-	//
-	// // Noise parameters
-	// ImGui::SliderFloat("Noise Warping Strength", &TP.noiseWarpingStrength, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Detail Scale", &TP.detailScale, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Detail Amplitude", &TP.detailAmplitude, 0.0f, 10.0f, "%.2f");
-	//
-	// // Erosion parameters
-	// ImGui::SliderFloat("Erosion Scale", &TP.erosionScale, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Erosion Intensity", &TP.erosionIntensity, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Sediment Deposit", &TP.sedimentDeposit, 0.0f, 10.0f, "%.2f");
-	//
-	// // Polar parameters
-	// ImGui::SliderFloat("Polar Cap Height", &TP.polarCapHeight, 0.0f, 2.0f, "%.2f");
-	// ImGui::SliderFloat("Polar Cap Sharpness", &TP.polarCapSharpness, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Polar Latitude", &TP.polarLatitude, 0.0f, 90.0f, "%.2f");
-	//
-	// // Advanced parameters
-	// ImGui::SliderFloat("Tectonic Plates", &TP.tectonicPlates, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Volcanic Activity", &TP.volcanicActivity, 0.0f, 10.0f, "%.2f");
-	// ImGui::SliderFloat("Sedimentary Layering", &TP.sedimentaryLayering, 0.0f, 10.0f, "%.2f");
-	//
-	// // Blend controls
-	// ImGui::SliderFloat("Mountain-Continent Blend", &TP.mountainContinentBlend, 0.0f, 1.0f, "%.2f");
-	// ImGui::SliderFloat("Canyon-Mountain Blend", &TP.canyonMountainBlend, 0.0f, 1.0f, "%.2f");
-	// ImGui::SliderFloat("Crater Blend Sharpness", &TP.craterBlendSharpness, 0.0f, 10.0f, "%.2f");
-	//
-	// // Toggles
-	// ImGui::Checkbox("Enable Craters", &TP.enableCraters);
-	// ImGui::Checkbox("Enable Canyons", &TP.enableCanyons);
-	// ImGui::Checkbox("Enable Polar Caps", &TP.enablePolarCaps);
-
 	ImGui::PopTextWrapPos();
 	ImGui::Text("FPS: %.2f", 1.f / m_FrameTime);
 	ImGui::End();
@@ -202,10 +141,10 @@ void CGraphics::OnRender()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_Trajectories.Render(m_Camera);
-	m_pStarSystem->RenderBodies(m_Camera);
-	m_Grid.Render(*m_pStarSystem, m_Camera);
+	RenderBodies(StarSystem.m_vBodies, m_Camera);
+	m_Grid.Render(StarSystem, m_Camera);
 	// draw markers after bodies have been drawn
-	m_Markers.Render(*m_pStarSystem, m_Camera);
+	m_Markers.Render(StarSystem, m_Camera);
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -240,7 +179,7 @@ void CGraphics::MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double 
 	}
 	if(pGraphics->m_pImGuiIO->WantCaptureMouse)
 		return;
-	pGraphics->m_Camera.m_WantedRadius -= (pGraphics->m_Camera.m_WantedRadius / 10.f) * YOffset;
+	pGraphics->m_Camera.m_WantedViewDistance -= (pGraphics->m_Camera.m_WantedViewDistance / 10.f) * YOffset;
 	pGraphics->m_Camera.UpdateViewMatrix();
 }
 
@@ -275,12 +214,12 @@ void CGraphics::KeyActionCallback(GLFWwindow *pWindow, int Key, int Scancode, in
 	{
 		if(Key == GLFW_KEY_W)
 		{
-			pGraphics->m_Camera.m_WantedRadius -= pGraphics->m_Camera.m_WantedRadius / 10.f;
+			pGraphics->m_Camera.m_WantedViewDistance -= pGraphics->m_Camera.m_WantedViewDistance / 10.f;
 			pGraphics->m_Camera.UpdateViewMatrix();
 		}
 		else if(Key == GLFW_KEY_S)
 		{
-			pGraphics->m_Camera.m_WantedRadius += pGraphics->m_Camera.m_WantedRadius / 10.f;
+			pGraphics->m_Camera.m_WantedViewDistance += pGraphics->m_Camera.m_WantedViewDistance / 10.f;
 			pGraphics->m_Camera.UpdateViewMatrix();
 		}
 		else if(Key == GLFW_KEY_LEFT)
@@ -306,3 +245,120 @@ void CGraphics::WindowSizeCallback(GLFWwindow *pWindow, int Width, int Height)
 	pGraphics->m_Camera.m_Projection = glm::perspective(glm::radians(pGraphics->m_Camera.m_FOV), (float)Width / (float)Height, 0.1f, 1e9f);
 	pGraphics->m_Camera.m_ScreenSize = glm::vec2(Width, Height);
 }
+
+struct Vertex
+{
+	glm::vec3 position;
+	glm::vec3 normal;
+};
+
+static void GenerateSphere(float Radius, int Stacks, int Slices, std::vector<Vertex> &vVertices, std::vector<unsigned int> &vIndices)
+{
+	vVertices.clear();
+	vIndices.clear();
+
+	for(int i = 0; i <= Stacks; ++i)
+	{
+		float phi = static_cast<float>(i) / Stacks * glm::pi<float>();
+		for(int j = 0; j <= Slices; ++j)
+		{
+			float theta = static_cast<float>(j) / Slices * 2.0f * glm::pi<float>();
+
+			Vertex v;
+			v.normal.x = std::sin(phi) * std::cos(theta);
+			v.normal.y = std::cos(phi);
+			v.normal.z = std::sin(phi) * std::sin(theta);
+
+			v.position = v.normal * Radius;
+
+			vVertices.push_back(v);
+		}
+	}
+
+	for(int i = 0; i < Stacks; ++i)
+	{
+		for(int j = 0; j < Slices; ++j)
+		{
+			int first = (i * (Slices + 1)) + j;
+			int second = first + Slices + 1;
+
+			vIndices.push_back(first);
+			vIndices.push_back(second);
+			vIndices.push_back(first + 1);
+
+			vIndices.push_back(second);
+			vIndices.push_back(second + 1);
+			vIndices.push_back(first + 1);
+		}
+	}
+}
+
+void CGraphics::InitGfx()
+{
+	m_BodyShader.CompileShader(Shaders::VERT_BODY, Shaders::FRAG_BODY);
+
+	std::vector<Vertex> vVertices;
+	std::vector<unsigned int> vIndices;
+	GenerateSphere(1.0f, 32, 32, vVertices, vIndices);
+	m_BodyShader.m_NumIndices = vIndices.size();
+
+	// Set up VBO, VAO, and EBO
+	glGenVertexArrays(1, &m_BodyShader.VAO);
+	glGenBuffers(1, &m_BodyShader.VBO);
+	glGenBuffers(1, &m_BodyShader.EBO);
+
+	glBindVertexArray(m_BodyShader.VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_BodyShader.VBO);
+	glBufferData(GL_ARRAY_BUFFER, vVertices.size() * sizeof(Vertex), vVertices.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_BodyShader.EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vIndices.size() * sizeof(unsigned int), vIndices.data(), GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)0);
+	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, normal));
+	glEnableVertexAttribArray(1);
+}
+
+glm::vec3 CGraphics::WorldToClip(const Vec3 &WorldPos, const CCamera &Camera)
+{
+    Vec3 NewPos = (WorldPos - Camera.m_pFocusedBody->m_SimParams.m_Position) / Camera.m_ViewDistance;
+    return (glm::vec3)NewPos;
+}
+
+void CGraphics::RenderBody(const SBody *pBody, const SBody *pLightBody, CCamera &Camera)
+{
+	// set transformation matrices
+	glm::mat4 Model = glm::mat4(1.0f);
+	Model = glm::translate(Model, WorldToClip(pBody->m_SimParams.m_Position, Camera));
+
+	m_BodyShader.SetBool("uSource", pBody == pLightBody);
+	m_BodyShader.SetFloat("uRadius", pBody->m_RenderParams.m_Radius / Camera.m_ViewDistance);
+	m_BodyShader.SetMat4("uModel", Model);
+	m_BodyShader.SetMat4("uView", Camera.m_View);
+	m_BodyShader.SetMat4("uProjection", Camera.m_Projection);
+
+	// set light properties
+	Vec3 NewLightDir = (pLightBody->m_SimParams.m_Position - Camera.m_pFocusedBody->m_SimParams.m_Position).normalize();
+	m_BodyShader.SetVec3("uLightDir", (glm::vec3)NewLightDir);
+	m_BodyShader.SetVec3("uLightColor", pLightBody->m_RenderParams.m_Color);
+	m_BodyShader.SetVec3("uObjectColor", pBody->m_RenderParams.m_Color);
+
+	// bind the vao and draw the sphere
+	glBindVertexArray(m_BodyShader.VAO);
+	glDrawElements(GL_TRIANGLES, m_BodyShader.m_NumIndices, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
+
+void CGraphics::RenderBodies(const std::vector<SBody> &vBodies, CCamera &Camera)
+{
+	if (vBodies.empty())
+		return;
+
+	m_BodyShader.Use();
+	for(const auto &Body : vBodies)
+		RenderBody(&Body, &vBodies.front(), Camera);
+}
+

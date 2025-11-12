@@ -16,7 +16,7 @@ void CCamera::UpdateViewMatrix()
 	{
 	case MODE_FOCUS:
 	{
-		m_Radius += (m_WantedRadius - m_Radius) / ZOOM_FACTOR;
+		m_ViewDistance += (m_WantedViewDistance - m_ViewDistance) / ZOOM_FACTOR;
 
 		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 

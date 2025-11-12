@@ -53,7 +53,7 @@ int main()
 		GfxEngine.m_Camera.UpdateViewMatrix();
 		GfxEngine.m_Trajectories.UpdateBuffers(PredictedStarSystem, GfxEngine.m_Camera);
 
-		GfxEngine.OnRender();
+		GfxEngine.OnRender(StarSystem);
 	}
 	GfxEngine.OnExit();
 	return 0;
