@@ -16,62 +16,6 @@
 #include <iostream>
 #include <vector>
 
-struct Vertex
-{
-	glm::vec3 position;
-	glm::vec3 normal;
-};
-
-// static void GenerateSphere(float Radius, int Stacks, int Slices, std::vector<Vertex> &vVertices, std::vector<unsigned int> &vIndices)
-// {
-// 	FastNoiseLite Noise;
-// 	Noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-// 	Noise.SetFrequency(1.f);
-//
-// 	vVertices.clear();
-// 	vIndices.clear();
-//
-// 	for(int i = 0; i <= Stacks; ++i)
-// 	{
-// 		float phi = static_cast<float>(i) / Stacks * glm::pi<float>();
-// 		for(int j = 0; j <= Slices; ++j)
-// 		{
-// 			float theta = static_cast<float>(j) / Slices * 2.0f * glm::pi<float>();
-//
-// 			Vertex v;
-// 			v.position.x = Radius * std::sin(phi) * std::cos(theta);
-// 			v.position.y = Radius * std::cos(phi);
-// 			v.position.z = Radius * std::sin(phi) * std::sin(theta);
-//
-// 			// float Mod = (Noise.GetNoise(v.position.x, v.position.y, v.position.z) + 1.f) / 4.f;
-// 			// v.position.x *= Mod;
-// 			// v.position.y *= Mod;
-// 			// v.position.z *= Mod;
-//
-// 			v.normal = glm::normalize(v.position);
-//
-// 			vVertices.push_back(v);
-// 		}
-// 	}
-//
-// 	for(int i = 0; i < Stacks; ++i)
-// 	{
-// 		for(int j = 0; j < Slices; ++j)
-// 		{
-// 			int first = (i * (Slices + 1)) + j;
-// 			int second = first + Slices + 1;
-//
-// 			vIndices.push_back(first);
-// 			vIndices.push_back(second);
-// 			vIndices.push_back(first + 1);
-//
-// 			vIndices.push_back(second);
-// 			vIndices.push_back(second + 1);
-// 			vIndices.push_back(first + 1);
-// 		}
-// 	}
-// }
-
 bool CGraphics::OnInit(CStarSystem *pStarSystem)
 {
 	m_pStarSystem = pStarSystem;
@@ -257,10 +201,9 @@ void CGraphics::OnRender()
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	m_Grid.Render(*m_pStarSystem, m_Camera);
 	m_Trajectories.Render(m_Camera);
-	// draw bodies
 	m_pStarSystem->RenderBodies(m_Camera);
+	m_Grid.Render(*m_pStarSystem, m_Camera);
 	// draw markers after bodies have been drawn
 	m_Markers.Render(*m_pStarSystem, m_Camera);
 
@@ -360,6 +303,6 @@ void CGraphics::WindowSizeCallback(GLFWwindow *pWindow, int Width, int Height)
 		return;
 	}
 	glViewport(0, 0, Width, Height);
-	pGraphics->m_Camera.m_Projection = glm::perspective(glm::radians(70.0f), (float)Width / (float)Height, 0.1f, 1e9f);
+	pGraphics->m_Camera.m_Projection = glm::perspective(glm::radians(pGraphics->m_Camera.m_FOV), (float)Width / (float)Height, 0.1f, 1e9f);
 	pGraphics->m_Camera.m_ScreenSize = glm::vec2(Width, Height);
 }

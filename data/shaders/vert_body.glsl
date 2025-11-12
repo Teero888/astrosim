@@ -1,13 +1,19 @@
 #version 330 core
-layout(location = 0) in vec2 aPos;
 
-uniform float Scale;
-uniform vec2 Offset;
-uniform float ScreenRatio;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
 
-out vec2 uv;
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProjection;
+uniform float uRadius;
 
-void main() {
-	uv = aPos;
-    gl_Position = vec4((vec2(aPos.x / ScreenRatio, aPos.y) * Scale + Offset), 1.0, 1.0);
+out vec3 FragPos;
+out vec3 Normal;
+
+void main()
+{
+	FragPos = vec3(uModel * vec4(aPos * uRadius, 1.0));
+	Normal = mat3(transpose(inverse(uModel))) * aNormal;
+	gl_Position = uProjection * uView * uModel * vec4(aPos * uRadius, 1.0);
 }

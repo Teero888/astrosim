@@ -35,8 +35,9 @@ struct CCamera
 	float m_Speed = 2.5f; // Movement speed
 	float m_Sensitivity = 0.1f; // Mouse sensitivity
 
+	float m_FOV = 70.f;
 	glm::mat4 m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
-	glm::mat4 m_Projection = glm::perspective(glm::radians(70.0f), 1600.0f / 1000.0f, 0.1f, 1e9f);
+	glm::mat4 m_Projection = glm::perspective(glm::radians(m_FOV), 1600.0f / 1000.0f, 0.1f, 1e9f);
 
 	void SetBody(SBody *pBody);
 	void UpdateViewMatrix();

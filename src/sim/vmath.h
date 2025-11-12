@@ -1,6 +1,7 @@
 #ifndef VMATH_H
 #define VMATH_H
 #include "glm/ext/vector_float3.hpp"
+#include "glm/trigonometric.hpp"
 #include <cmath>
 #include <glm/glm.hpp>
 
@@ -68,8 +69,28 @@ struct Vec3
 	}
 
 	inline double length() const { return std::sqrt(x * x + y * y + z * z); }
+	inline Vec3 normalize() const { return *this / this->length(); }
 	inline Vec3 floor() const { return Vec3((int)x, (int)y, (int)z); }
+	inline Vec3 rotate(double Pitch, double Yaw) const
+	{
+		double p = glm::radians(Pitch), y = glm::radians(Yaw);
+		double cp = cos(p), sp = sin(p), cy = cos(y), sy = sin(y);
+		double y1 = y * cp - z * sp, z1 = y * sp + z * cp;
+		return Vec3(x * cy + z1 * sy, y1, -x * sy + z1 * cy);
+	}
+	inline Vec3 cross(const Vec3 &other) const
+	{
+		return Vec3(
+			y * other.z - z * other.y,
+			z * other.x - x * other.z,
+			x * other.y - y * other.x);
+	}
 };
+
+inline double distance(Vec3 a, Vec3 b)
+{
+	return (b - a).length();
+}
 
 inline glm::vec2 WorldToScreenCoordinates(glm::vec3 WorldPos, glm::mat4 Model, glm::mat4 View, glm::mat4 Projection, int ScreenWidth, int ScreenHeight)
 {

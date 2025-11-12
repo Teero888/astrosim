@@ -21,7 +21,8 @@ struct SBody
 
 	struct SRenderParams
 	{
-		double m_Radius; // Planetary radius [meters] (Earth ≈ 6.371e6 m)
+		double m_Radius;	// Planetary radius [meters]
+		glm::vec3 m_Color;	// Rgb color
 	} m_RenderParams;
 	// clang-format on
 
