@@ -110,9 +110,10 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	static const char *pCurrentItem = StarSystem.m_vBodies.front().m_Name.c_str();
 	pCurrentItem = m_Camera.m_pFocusedBody->m_Name.c_str();
 
-	ImGui::SliderInt("LOD", &m_Camera.m_LOD, 0, 5);
+	ImGui::SliderInt("LOD", &m_Camera.m_LOD, 0, COctreeNode::MAX_LOD_LEVEL);
 	ImGui::Checkbox("Show all trajectories", &m_Trajectories.m_ShowAll);
 	ImGui::Checkbox("Show markers", &m_Markers.m_ShowMarkers);
+	ImGui::Checkbox("Show Wireframe", &m_bShowWireframe);
 	if(ImGui::BeginCombo("Select Focus##focus", pCurrentItem))
 	{
 		for(auto &Body : StarSystem.m_vBodies)
@@ -150,8 +151,12 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_Trajectories.Render(m_Camera);
+	if(m_bShowWireframe)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	// Render all bodies using the procedural system
+	m_Camera.m_LowestDist = FLT_MAX;
+	m_Camera.m_HighestDist = 0;
+
 	for(size_t i = 0; i < StarSystem.m_vBodies.size(); ++i)
 	{
 		auto &Body = StarSystem.m_vBodies[i];
@@ -164,7 +169,10 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 			mesh->Render(m_Camera, &StarSystem.m_vBodies.front());
 		}
 	}
+	// printf("min: %.7f, max: %.4f\n", m_Camera.m_LowestDist, m_Camera.m_HighestDist);
 
+	if(m_bShowWireframe)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	m_Grid.Render(StarSystem, m_Camera);
 	// draw markers after bodies have been drawn
 	m_Markers.Render(StarSystem, m_Camera);
@@ -210,7 +218,7 @@ void CGraphics::MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double 
 	}
 	if(pGraphics->m_pImGuiIO->WantCaptureMouse)
 		return;
-	pGraphics->m_Camera.m_WantedViewDistance -= (pGraphics->m_Camera.m_WantedViewDistance / 10.f) * YOffset;
+	pGraphics->m_Camera.m_WantedViewDistance -= (pGraphics->m_Camera.m_WantedViewDistance / 10.f) * YOffset - pGraphics->m_Camera.m_pFocusedBody->m_RenderParams.m_Radius / 1000.f;
 	pGraphics->m_Camera.UpdateViewMatrix();
 }
 
@@ -245,12 +253,12 @@ void CGraphics::KeyActionCallback(GLFWwindow *pWindow, int Key, int Scancode, in
 	{
 		if(Key == GLFW_KEY_W)
 		{
-			pGraphics->m_Camera.m_WantedViewDistance -= pGraphics->m_Camera.m_WantedViewDistance / 10.f;
+			MouseScrollCallback(pGraphics->m_pWindow, 0, 1);
 			pGraphics->m_Camera.UpdateViewMatrix();
 		}
 		else if(Key == GLFW_KEY_S)
 		{
-			pGraphics->m_Camera.m_WantedViewDistance += pGraphics->m_Camera.m_WantedViewDistance / 10.f;
+			MouseScrollCallback(pGraphics->m_pWindow, 0, -1);
 			pGraphics->m_Camera.UpdateViewMatrix();
 		}
 		else if(Key == GLFW_KEY_LEFT)

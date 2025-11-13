@@ -1,6 +1,7 @@
 #include "proceduralmesh.h"
 #include "generated/embedded_shaders.h"
 #include "marchingcubes.h"
+#include <cstdio>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/norm.hpp>
@@ -49,22 +50,21 @@ void CProceduralMesh::Init(SBody *pBody)
 	m_pMountainNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
 	m_pMountainNoise->SetFractalOctaves(6);
 
-	float rootSize = (float)m_pBody->m_RenderParams.m_Radius * 2.0f;
-	m_pRootNode = std::make_shared<COctreeNode>(this, std::weak_ptr<COctreeNode>(), glm::vec3(0.0f), rootSize, 0);
+	float RootSize = (float)m_pBody->m_RenderParams.m_Radius * 2.0f;
+	m_pRootNode = std::make_shared<COctreeNode>(this, std::weak_ptr<COctreeNode>(), glm::vec3(0.0f), RootSize, 0);
 
-	unsigned int numThreads = std::thread::hardware_concurrency();
+	unsigned int NumThreads = std::thread::hardware_concurrency();
 	// Use all but one core for workers, leave one for main thread/etc.
-	numThreads = (numThreads > 1) ? numThreads - 1 : 1;
+	NumThreads = (NumThreads > 1) ? NumThreads - 1 : 1;
 
-	for(unsigned int i = 0; i < numThreads; ++i)
+	for(unsigned int i = 0; i < NumThreads; ++i)
 		m_vWorkerThreads.emplace_back(&CProceduralMesh::GenerationWorkerLoop, this);
 }
 
-void CProceduralMesh::Update(const CCamera &Camera)
+void CProceduralMesh::Update(CCamera &Camera)
 {
 	CheckApplyQueue();
 
-	// Update the single root node
 	if(m_pRootNode)
 		m_pRootNode->Update(Camera);
 }
@@ -123,19 +123,19 @@ void CProceduralMesh::AddToGenerationQueue(std::shared_ptr<COctreeNode> pNode)
 void CProceduralMesh::CheckApplyQueue()
 {
 	std::shared_ptr<COctreeNode> pNode = nullptr;
+	while(true)
 	{
 		std::lock_guard<std::mutex> lock(m_ApplyQueueMutex);
-		if(!m_ApplyQueue.empty())
-		{
-			pNode = m_ApplyQueue.front();
-			m_ApplyQueue.pop();
-		}
-	}
+		if(m_ApplyQueue.empty())
+			break;
+		pNode = m_ApplyQueue.front();
+		m_ApplyQueue.pop();
 
-	if(pNode)
-	{
-		pNode->ApplyMeshBuffers();
-		m_ApplyQueueCV.notify_one(); // Notify one waiting worker that space is available
+		if(pNode)
+		{
+			pNode->ApplyMeshBuffers();
+			m_ApplyQueueCV.notify_one(); // Notify one waiting worker that space is available
+		}
 	}
 }
 
@@ -190,7 +190,8 @@ COctreeNode::COctreeNode(CProceduralMesh *pOwnerMesh, std::weak_ptr<COctreeNode>
 	m_Center(center),
 	m_Size(size),
 	m_bIsGenerating(false),
-	m_bHasGeneratedData(false)
+	m_bHasGeneratedData(false),
+	m_bGenerationAttempted(false)
 {
 	// All children are null by default
 }
@@ -219,7 +220,7 @@ void COctreeNode::GenerateMesh()
 	std::vector<float> vDensityGrid(numGridPoints);
 	std::vector<glm::vec3> vGradientGrid(numGridPoints);
 
-	float stepSize = m_Size / res;
+	float StepSize = m_Size / res;
 	glm::vec3 StartCorner = m_Center - glm::vec3(m_Size * 0.5f); // Min corner of the cube
 
 	for(int z = 0; z <= res; ++z)
@@ -229,7 +230,7 @@ void COctreeNode::GenerateMesh()
 			for(int x = 0; x <= res; ++x)
 			{
 				// Calculate the world position in the planar grid
-				glm::vec3 world_pos = StartCorner + glm::vec3(x * stepSize, y * stepSize, z * stepSize);
+				glm::vec3 world_pos = StartCorner + glm::vec3(x * StepSize, y * StepSize, z * StepSize);
 
 				int idx = x + y * res1 + z * res1 * res1;
 				// Get density from the planar world position
@@ -271,7 +272,7 @@ void COctreeNode::GenerateMesh()
 					int dz = aaCornerOffsets[i][2];
 					int idx = (x + dx) + (y + dy) * res1 + (z + dz) * res1 * res1;
 
-					Corners[i] = StartCorner + glm::vec3((x + dx) * stepSize, (y + dy) * stepSize, (z + dz) * stepSize);
+					Corners[i] = StartCorner + glm::vec3((x + dx) * StepSize, (y + dy) * StepSize, (z + dz) * StepSize);
 					Densities[i] = vDensityGrid[idx];
 					Gradients[i] = vGradientGrid[idx];
 					CornerGlobalIndices[i] = idx;
@@ -357,6 +358,7 @@ void COctreeNode::ApplyMeshBuffers()
 		m_VBO = 0;
 		m_EBO = 0;
 		m_bHasGeneratedData = false;
+		m_bGenerationAttempted = true;
 		return;
 	}
 
@@ -384,66 +386,82 @@ void COctreeNode::ApplyMeshBuffers()
 	m_vGeneratedVertices.clear();
 	m_vGeneratedIndices.clear();
 	m_bHasGeneratedData = false;
+	m_bGenerationAttempted = true;
 }
 
-void COctreeNode::Update(const CCamera &Camera)
+void COctreeNode::Update(CCamera &Camera)
 {
-	// Vec3 nodeAbsWorldPos = m_pOwnerMesh->m_pBody->m_SimParams.m_Position + Vec3(m_Center);
-	// const double DEFAULT_SCALE = 100.0f;
-	// Vec3 camRelativeWorldPos = (Vec3(Camera.m_Position) / DEFAULT_SCALE) * Camera.m_ViewDistance;
-	// Vec3 camAbsWorldPos = Camera.m_pFocusedBody->m_SimParams.m_Position + camRelativeWorldPos;
+	Vec3 NodeAbsWorldPos = m_pOwnerMesh->m_pBody->m_SimParams.m_Position + (Vec3(m_Center) / 1000.f);
+	Vec3 CamRelativeWorldPos = (Vec3(Camera.m_Position) / DEFAULT_SCALE) * Camera.m_ViewDistance;
+	Vec3 CamAbsWorldPos = Camera.m_pFocusedBody->m_SimParams.m_Position + CamRelativeWorldPos;
 
-	int64_t WantedLevel = Camera.m_LOD; // fmax(0.f, MAX_LOD_LEVEL - Camera.m_ViewDistance / (m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius * 0.01f)); // Keep this fix
+	double DistanceToNode = (NodeAbsWorldPos - CamAbsWorldPos).length();
 
-	// if(m_pOwnerMesh->m_pBody->m_Id == Camera.m_pFocusedBody->m_Id)
-	// {
-	// 	// printf("Camera Distance: %f | Planet Radius: %f\n",
-	// 	// 	Camera.m_ViewDistance,
-	// 	// 	(float)m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius);
-	// 	printf("Wanted LOD = %zu | LOD = %d\n", WantedLevel, m_Level);
-	// 	// printf("%f\n", (float)Vec3(nodeAbsWorldPos - camAbsWorldPos).length());
-	// }
-	if(m_bIsLeaf)
+	Vec3 PlanetToCamVec = (CamAbsWorldPos - Camera.m_pFocusedBody->m_SimParams.m_Position);
+	Vec3 PlanetToNodeVec = (NodeAbsWorldPos - Camera.m_pFocusedBody->m_SimParams.m_Position);
+
+	double Dot = glm::dot(
+		glm::normalize(glm::vec3(PlanetToCamVec)),
+		glm::normalize(glm::vec3(PlanetToNodeVec)));
+
+	double lodPenalty = 1.0;
+	if(Dot < 0.0)
+		lodPenalty = 100.0;
+	else if(Dot < 1.0)
 	{
-		if(WantedLevel > m_Level && m_Level < MAX_LOD_LEVEL)
-		{
-			// Camera is close, we want to subdivide.
-			if(m_VAO != 0)
-				Subdivide();
-			else if(!m_bIsGenerating && !m_bHasGeneratedData)
-			{
-				m_bIsGenerating = true;
-				m_pOwnerMesh->AddToGenerationQueue(shared_from_this());
-				return;
-			}
-			return;
-		}
-		else // Camera is far away, or we're at max level.
-		{
-			// We are a leaf and should stay a leaf.
-			// Just make sure our mesh is generated.
-			if(m_VAO == 0 && !m_bIsGenerating && !m_bHasGeneratedData)
-			{
-				m_bIsGenerating = true;
-				m_pOwnerMesh->AddToGenerationQueue(shared_from_this());
-			}
-			return; // We are a leaf and staying one. Stop here.
-		}
+		double Multiplier = ((Camera.m_pFocusedBody->m_RenderParams.m_Radius - Camera.m_ViewDistance) / (Camera.m_pFocusedBody->m_RenderParams.m_Radius * 0.01));
+		// printf("Mulitplier: %.2f\n", Multiplier);
+		lodPenalty = 1.0 + (1.0 - Dot) * Multiplier;
 	}
 
-	if(WantedLevel < m_Level || m_Level == MAX_LOD_LEVEL)
+	double Score = (DistanceToNode / m_Size) * lodPenalty;
+	double LODMetric = Score;
+	const double LOD_SPLIT_THRESHOLD = 0.5;
+	const double LOD_MERGE_THRESHOLD = 2.0;
+
+	// Debugging values
+	if(m_pOwnerMesh->m_pBody->m_Id == Camera.m_pFocusedBody->m_Id)
 	{
-		Merge();
-		// After merging, we are a leaf. Ensure our mesh is generated.
-		if(m_VAO == 0 && !m_bIsGenerating && !m_bHasGeneratedData)
+		double val = LODMetric;
+		if(val < Camera.m_LowestDist)
+			Camera.m_LowestDist = val;
+		if(val > Camera.m_HighestDist)
+			Camera.m_HighestDist = val;
+	}
+
+	if(m_bIsLeaf)
+	{
+		if(LODMetric < LOD_SPLIT_THRESHOLD && m_Level < MAX_LOD_LEVEL)
+		{
+			printf("metric:%.6f | vao:%d, gen:%d, data:%d, att:%d\n", LODMetric, m_VAO, (bool)m_bIsGenerating, (bool)m_bHasGeneratedData, (bool)m_bGenerationAttempted);
+			if(m_VAO != 0)
+			{
+				Subdivide();
+				for(int i = 0; i < 8; ++i)
+					m_pChildren[i]->Update(Camera);
+			}
+			else if(!m_bIsGenerating && !m_bHasGeneratedData && !m_bGenerationAttempted)
+			{
+				m_bIsGenerating = true;
+				m_bGenerationAttempted = false;
+				m_pOwnerMesh->AddToGenerationQueue(shared_from_this());
+			}
+		}
+		else if(m_VAO == 0 && !m_bIsGenerating && !m_bHasGeneratedData && !m_bGenerationAttempted)
 		{
 			m_bIsGenerating = true;
+			m_bGenerationAttempted = false;
 			m_pOwnerMesh->AddToGenerationQueue(shared_from_this());
 		}
 	}
-	else // We are a parent and should stay a parent
-		for(int i = 0; i < 8; ++i) // Update all 8 children
-			m_pChildren[i]->Update(Camera);
+	else
+	{
+		if(LODMetric > LOD_MERGE_THRESHOLD && m_Level > 0)
+			Merge();
+		else
+			for(int i = 0; i < 8; ++i)
+				m_pChildren[i]->Update(Camera);
+	}
 }
 
 void COctreeNode::Render(CShader &Shader)
@@ -460,9 +478,9 @@ void COctreeNode::Render(CShader &Shader)
 	else
 	{
 		bool bChildrenReady = true;
-		for(int i = 0; i < 8; ++i) // Check all 8 children
+		for(int i = 0; i < 8; ++i)
 		{
-			if(m_pChildren[i] && m_pChildren[i]->m_bIsLeaf && m_pChildren[i]->m_VAO == 0)
+			if(m_pChildren[i] && m_pChildren[i]->m_bIsLeaf && m_pChildren[i]->m_VAO == 0 && !m_pChildren[i]->m_bGenerationAttempted)
 			{
 				bChildrenReady = false;
 				break;
@@ -498,6 +516,7 @@ void COctreeNode::Subdivide()
 	float newSize = m_Size * 0.5f;
 	float offset = m_Size * 0.25f; // Offset from parent center to child center
 
+	// printf("Creating new children at distance: %.2f\n", glm::length(glm::vec2(m_Center.x + offset, m_Center.y + offset)));
 	// Create 8 new child nodes
 	m_pChildren[0] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(-offset, -offset, -offset), newSize, m_Level + 1); // ---
 	m_pChildren[1] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(+offset, -offset, -offset), newSize, m_Level + 1); // +--
@@ -519,9 +538,11 @@ void COctreeNode::Merge()
 	m_bIsLeaf = true;
 
 	// Request mesh generation for this node (the new leaf)
-	if(m_VAO == 0 && !m_bIsGenerating && !m_bHasGeneratedData)
+	if(m_VAO == 0 && !m_bIsGenerating)
 	{
 		m_bIsGenerating = true;
+		m_bGenerationAttempted = false;
+		m_bHasGeneratedData = false;
 		m_pOwnerMesh->AddToGenerationQueue(shared_from_this());
 	}
 }
