@@ -21,6 +21,7 @@ enum ECameraMode
 struct CCamera
 {
 	SBody *m_pFocusedBody = nullptr;
+	Vec3 m_AbsolutePosition; // double precision absolute world position
 
 	double m_ViewDistance = 1e4 * DEFAULT_SCALE;
 	double m_WantedViewDistance = 1e4 * DEFAULT_SCALE;
@@ -32,7 +33,7 @@ struct CCamera
 	glm::vec2 m_ScreenSize; // get only
 	Vec3 m_FocusPoint = Vec3(0, 0, 0);
 	ECameraMode m_CameraMode = MODE_FOCUS;
-	glm::vec3 m_Position = glm::vec3(0.0f, 0.0f, 10.0f);
+	glm::vec3 m_Position = glm::vec3(0.0f, 0.0f, 1.0f);
 	glm::vec3 m_Front = glm::vec3(0.0f, 0.0f, -1.0f);
 	glm::vec3 m_Up = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::vec3 m_Right = glm::normalize(glm::cross(m_Front, m_Up));

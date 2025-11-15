@@ -42,7 +42,7 @@ void CMarkers::Init()
 
 void CMarkers::Render(CStarSystem &System, CCamera &Camera)
 {
-	if (!m_ShowMarkers)
+	if(!m_ShowMarkers)
 		return;
 
 	m_Shader.Use();
@@ -50,21 +50,23 @@ void CMarkers::Render(CStarSystem &System, CCamera &Camera)
 	for(auto &Body : System.m_vBodies)
 	{
 		// Calculate screen position
-		glm::vec3 WorldPos = (glm::vec3)((Body.m_SimParams.m_Position - Camera.m_pFocusedBody->m_SimParams.m_Position) / Camera.m_ViewDistance);
+		Vec3 relativePos_d = Body.m_SimParams.m_Position - Camera.m_AbsolutePosition;
+		glm::vec3 WorldPos = (glm::vec3)relativePos_d;
 		glm::vec2 ScreenPos = WorldToScreenCoordinates(WorldPos, glm::mat4(1.f), Camera.m_View, Camera.m_Projection, Camera.m_ScreenSize.x, Camera.m_ScreenSize.y);
 
 		// Check if marker is on screen
 		if(ScreenPos.x < 0 || ScreenPos.y < 0 ||
 			ScreenPos.x > Camera.m_ScreenSize.x || ScreenPos.y > Camera.m_ScreenSize.y)
 			continue;
-		
+
 		// Calculate screen size
 		// Project a point at the edge of the body to screen coordinates
 		// Use the camera's right vector to find a point on the edge
 		Vec3 WorldEdgeOffset = (Vec3)Camera.m_Right * Body.m_RenderParams.m_Radius;
-		glm::vec3 WorldEdgePos = (glm::vec3)(((Body.m_SimParams.m_Position + WorldEdgeOffset) - Camera.m_pFocusedBody->m_SimParams.m_Position) / Camera.m_ViewDistance);
+		Vec3 WorldEdgePos_d = (Body.m_SimParams.m_Position + WorldEdgeOffset) - Camera.m_AbsolutePosition;
+		glm::vec3 WorldEdgePos = (glm::vec3)WorldEdgePos_d;
 		glm::vec2 ScreenEdgePos = WorldToScreenCoordinates(WorldEdgePos, glm::mat4(1.f), Camera.m_View, Camera.m_Projection, Camera.m_ScreenSize.x, Camera.m_ScreenSize.y);
-		
+
 		float ScreenRadius = glm::distance(ScreenPos, ScreenEdgePos);
 		float MinScale = (5.0f * 2.0f) / Camera.m_ScreenSize.x; // 5 pixels diameter in NDC
 		float Scale = glm::max(MinScale, (ScreenRadius * 2.0f) / Camera.m_ScreenSize.x); // Convert to NDC diameter

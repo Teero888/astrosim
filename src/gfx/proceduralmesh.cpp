@@ -75,26 +75,19 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody)
 {
 	m_Shader.Use();
 
-	Vec3 relativePos = (m_pBody->m_SimParams.m_Position - Camera.m_pFocusedBody->m_SimParams.m_Position);
-
-	glm::mat4 ScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(1.0 / Camera.m_ViewDistance));
-	glm::mat4 TransMat = glm::translate(glm::mat4(1.0f), (glm::vec3)relativePos);
-	glm::mat4 Model = ScaleMat * TransMat;
-
 	m_Shader.SetBool("uSource", m_pBody == pLightBody);
 
-	m_Shader.SetMat4("uModel", Model);
 	m_Shader.SetMat4("uView", Camera.m_View);
 	m_Shader.SetMat4("uProjection", Camera.m_Projection);
 
-	Vec3 NewLightDir = (pLightBody->m_SimParams.m_Position - Camera.m_pFocusedBody->m_SimParams.m_Position).normalize();
-	m_Shader.SetVec3("uLightDir", (glm::vec3)NewLightDir);
+	Vec3 LightDir = (pLightBody->m_SimParams.m_Position - m_pBody->m_SimParams.m_Position).normalize();
+	m_Shader.SetVec3("uLightDir", (glm::vec3)LightDir);
 	m_Shader.SetVec3("uLightColor", pLightBody->m_RenderParams.m_Color);
 	m_Shader.SetVec3("uObjectColor", m_pBody->m_RenderParams.m_Color);
 
 	// Render the single root node
 	if(m_pRootNode)
-		m_pRootNode->Render(m_Shader);
+		m_pRootNode->Render(m_Shader, Camera.m_AbsolutePosition, m_pBody->m_SimParams.m_Position);
 }
 
 void CProceduralMesh::Destroy()
@@ -315,7 +308,7 @@ void COctreeNode::GenerateMesh()
 							glm::vec3 norm = glm::normalize(glm::mix(g1, g2, t));
 
 							SProceduralVertex vert;
-							vert.position = pos;
+							vert.position = pos - m_Center; // Store position relative to the node's center
 							vert.normal = norm;
 							vert.texCoord = glm::vec2(pos.x, pos.z) / 1000.0f;
 
@@ -393,7 +386,7 @@ void COctreeNode::ApplyMeshBuffers()
 
 void COctreeNode::Update(CCamera &Camera)
 {
-	Vec3 CamAbsWorldPos = Camera.m_pFocusedBody->m_SimParams.m_Position + (Vec3(Camera.m_Position) / DEFAULT_SCALE) * Camera.m_ViewDistance * DEFAULT_SCALE;
+	Vec3 CamAbsWorldPos = Camera.m_AbsolutePosition;
 	Vec3 PlanetCenter = m_pOwnerMesh->m_pBody->m_SimParams.m_Position;
 	double PlanetRadius = m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius;
 
@@ -463,12 +456,17 @@ void COctreeNode::Update(CCamera &Camera)
 	}
 }
 
-void COctreeNode::Render(CShader &Shader)
+void COctreeNode::Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const Vec3 &PlanetAbsolutePos)
 {
+	Vec3 nodeAbsolutePos_d = PlanetAbsolutePos + Vec3(m_Center);
+	Vec3 nodeCamRelativePos_d = nodeAbsolutePos_d - CameraAbsolutePos;
+	glm::mat4 NodeModel = glm::translate(glm::mat4(1.0f), (glm::vec3)nodeCamRelativePos_d);
+
 	if(m_bIsLeaf)
 	{
 		if(m_VAO != 0 && m_NumIndices > 0)
 		{
+			Shader.SetMat4("uModel", NodeModel);
 			glBindVertexArray(m_VAO);
 			glDrawElements(GL_TRIANGLES, m_NumIndices, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
@@ -488,15 +486,16 @@ void COctreeNode::Render(CShader &Shader)
 
 		if(bChildrenReady)
 		{
-			for(int i = 0; i < 8; ++i) // Render all 8 children
+			for(int i = 0; i < 8; ++i)
 				if(m_pChildren[i])
-					m_pChildren[i]->Render(Shader);
+					m_pChildren[i]->Render(Shader, CameraAbsolutePos, PlanetAbsolutePos);
 		}
 		else
 		{
 			// Children not ready, render self
 			if(m_VAO != 0 && m_NumIndices > 0)
 			{
+				Shader.SetMat4("uModel", NodeModel);
 				glBindVertexArray(m_VAO);
 				glDrawElements(GL_TRIANGLES, m_NumIndices, GL_UNSIGNED_INT, 0);
 				glBindVertexArray(0);

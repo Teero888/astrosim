@@ -22,21 +22,28 @@ void CCamera::UpdateViewMatrix()
 
 		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 
-		m_Position.x = DEFAULT_SCALE * cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
-		m_Position.y = DEFAULT_SCALE * sin(glm::radians(m_Pitch));
-		m_Position.z = DEFAULT_SCALE * sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
+		m_Position.x = cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
+		m_Position.y = sin(glm::radians(m_Pitch));
+		m_Position.z = sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
 
 		m_Front = glm::normalize(-m_Position);
 		m_Right = glm::normalize(glm::cross(m_Front, m_Up));
 
-		m_View = glm::lookAt(m_Position, {0, 0, 0}, m_Up);
+		Vec3 orbitOffset = Vec3(m_Position) * m_ViewDistance;
+		m_AbsolutePosition = m_pFocusedBody->m_SimParams.m_Position + orbitOffset;
+
+		glm::mat4 rotation = glm::lookAt(glm::vec3(0.0f), m_Front, m_Up);
+		glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3((float)(DEFAULT_SCALE / m_ViewDistance)));
+		m_View = rotation * scale;
 		break;
 	}
 
 	// TODO: this mode doesn't actually work lol fix this once i need it
 	case MODE_FREEVIEW:
 	{
-		m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
+		glm::mat4 rotation = glm::lookAt(glm::vec3(0.0f), m_Front, m_Up);
+		glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3((float)(DEFAULT_SCALE / m_ViewDistance)));
+		m_View = rotation * scale;
 		break;
 	}
 	}
@@ -60,7 +67,7 @@ void CCamera::ProcessKeyboard(int direction, float deltaTime)
 
 void CCamera::ProcessMouse(float xoffset, float yoffset)
 {
-	m_Sensitivity = fmin((m_ViewDistance * DEFAULT_SCALE - m_pFocusedBody->m_RenderParams.m_Radius) / m_pFocusedBody->m_RenderParams.m_Radius, 0.1);
+	m_Sensitivity = fmin((m_ViewDistance - m_pFocusedBody->m_RenderParams.m_Radius) / m_pFocusedBody->m_RenderParams.m_Radius, 0.1); // [NEW]
 	// printf("sens: %f\n", m_Sensitivity);
 
 	xoffset *= m_Sensitivity;
