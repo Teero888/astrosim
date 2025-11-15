@@ -1,7 +1,9 @@
 #include "proceduralmesh.h"
+#include "camera.h"
 #include "generated/embedded_shaders.h"
+#include "glm/geometric.hpp"
 #include "marchingcubes.h"
-#include <cstdio>
+#include <algorithm>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/norm.hpp>
@@ -391,37 +393,35 @@ void COctreeNode::ApplyMeshBuffers()
 
 void COctreeNode::Update(CCamera &Camera)
 {
-	Vec3 NodeAbsWorldPos = m_pOwnerMesh->m_pBody->m_SimParams.m_Position + (Vec3(m_Center) / 1000.f);
-	Vec3 CamRelativeWorldPos = (Vec3(Camera.m_Position) / DEFAULT_SCALE) * Camera.m_ViewDistance;
-	Vec3 CamAbsWorldPos = Camera.m_pFocusedBody->m_SimParams.m_Position + CamRelativeWorldPos;
+	Vec3 CamAbsWorldPos = Camera.m_pFocusedBody->m_SimParams.m_Position + (Vec3(Camera.m_Position) / DEFAULT_SCALE) * Camera.m_ViewDistance * DEFAULT_SCALE;
+	Vec3 PlanetCenter = m_pOwnerMesh->m_pBody->m_SimParams.m_Position;
+	double PlanetRadius = m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius;
 
-	double DistanceToNode = (NodeAbsWorldPos - CamAbsWorldPos).length();
-
-	Vec3 PlanetToCamVec = (CamAbsWorldPos - Camera.m_pFocusedBody->m_SimParams.m_Position);
-	Vec3 PlanetToNodeVec = (NodeAbsWorldPos - Camera.m_pFocusedBody->m_SimParams.m_Position);
-
-	double Dot = glm::dot(
-		glm::normalize(glm::vec3(PlanetToCamVec)),
-		glm::normalize(glm::vec3(PlanetToNodeVec)));
-
-	double lodPenalty = 1.0;
-	if(Dot < 0.0)
-		lodPenalty = 100.0;
-	else if(Dot < 1.0)
+	double Distance;
+	if(m_Center.x == 0.0 && m_Center.y == 0.0 && m_Center.z == 0.0)
 	{
-		double ZoomFactor = Camera.m_pFocusedBody->m_RenderParams.m_Radius - Camera.m_ViewDistance;
-		double Multiplier = std::max(0.0, ZoomFactor) / (Camera.m_pFocusedBody->m_RenderParams.m_Radius * 0.1);
-		lodPenalty = 1.0 + (1.0 - Dot) * Multiplier;
+		double distToPlanetCenter = (CamAbsWorldPos - PlanetCenter).length();
+		Distance = std::max(0.0, distToPlanetCenter - PlanetRadius);
 	}
-
-	double Score = (DistanceToNode / m_Size) * lodPenalty;
-	double LODMetric = Score;
-	const double LOD_SPLIT_THRESHOLD = 0.5;
+	else
+	{
+		Vec3 Direction = Vec3(m_Center).normalize();
+		Vec3 PointOnSurface = PlanetCenter + Direction * PlanetRadius;
+		Distance = (PointOnSurface - CamAbsWorldPos).length();
+	}
+	Vec3 NodeAbsWorldPos = m_pOwnerMesh->m_pBody->m_SimParams.m_Position + Vec3(m_Center);
+	Vec3 PlanetToNodeVec = NodeAbsWorldPos - m_pOwnerMesh->m_pBody->m_SimParams.m_Position;
+	Vec3 PlanetToCamVec = CamAbsWorldPos - m_pOwnerMesh->m_pBody->m_SimParams.m_Position;
+	double Dot = glm::dot(glm::normalize(glm::vec3(PlanetToCamVec)), glm::normalize(glm::vec3(PlanetToNodeVec)));
+	double LODPenalty = Dot < 0.0 ? 100.0 : 1.0;
+	double LODMetric = (Distance / m_Size) * LODPenalty * 0.1;
+	const double LOD_SPLIT_THRESHOLD = 1.2;
 	const double LOD_MERGE_THRESHOLD = 2.0;
 
-	// Debugging values
 	if(m_pOwnerMesh->m_pBody->m_Id == Camera.m_pFocusedBody->m_Id)
 	{
+		// printf("Score: %f\n", Camera.m_ViewDistance);
+		// printf("center: %f %f %f\n", NodeSurfacePos.x, NodeSurfacePos.y, NodeSurfacePos.z);
 		double val = LODMetric;
 		if(val < Camera.m_LowestDist)
 			Camera.m_LowestDist = val;
@@ -433,7 +433,7 @@ void COctreeNode::Update(CCamera &Camera)
 	{
 		if(LODMetric < LOD_SPLIT_THRESHOLD && m_Level < MAX_LOD_LEVEL)
 		{
-			printf("metric:%.6f | vao:%d, gen:%d, data:%d, att:%d\n", LODMetric, m_VAO, (bool)m_bIsGenerating, (bool)m_bHasGeneratedData, (bool)m_bGenerationAttempted);
+			// printf("metric:%.6f | vao:%d, gen:%d, data:%d, att:%d\n", LODMetric, m_VAO, (bool)m_bIsGenerating, (bool)m_bHasGeneratedData, (bool)m_bGenerationAttempted);
 			if(m_VAO != 0)
 			{
 				Subdivide();
@@ -443,14 +443,12 @@ void COctreeNode::Update(CCamera &Camera)
 			else if(!m_bIsGenerating && !m_bHasGeneratedData && !m_bGenerationAttempted)
 			{
 				m_bIsGenerating = true;
-				m_bGenerationAttempted = false;
 				m_pOwnerMesh->AddToGenerationQueue(shared_from_this());
 			}
 		}
 		else if(m_VAO == 0 && !m_bIsGenerating && !m_bHasGeneratedData && !m_bGenerationAttempted)
 		{
 			m_bIsGenerating = true;
-			m_bGenerationAttempted = false;
 			m_pOwnerMesh->AddToGenerationQueue(shared_from_this());
 		}
 	}

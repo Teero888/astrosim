@@ -2,6 +2,8 @@
 #include "glm/common.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "graphics.h"
+#include <cmath>
+#include <cstdio>
 
 void CCamera::SetBody(SBody *pBody)
 {
@@ -58,6 +60,9 @@ void CCamera::ProcessKeyboard(int direction, float deltaTime)
 
 void CCamera::ProcessMouse(float xoffset, float yoffset)
 {
+	m_Sensitivity = fmin((m_ViewDistance * DEFAULT_SCALE - m_pFocusedBody->m_RenderParams.m_Radius) / m_pFocusedBody->m_RenderParams.m_Radius, 0.1);
+	// printf("sens: %f\n", m_Sensitivity);
+
 	xoffset *= m_Sensitivity;
 	yoffset *= m_Sensitivity;
 

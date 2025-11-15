@@ -154,13 +154,12 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	if(m_bShowWireframe)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	m_Camera.m_LowestDist = FLT_MAX;
-	m_Camera.m_HighestDist = 0;
+	m_Camera.m_LowestDist = DBL_MAX;
+	m_Camera.m_HighestDist = -DBL_MAX;
 
 	for(size_t i = 0; i < StarSystem.m_vBodies.size(); ++i)
 	{
 		auto &Body = StarSystem.m_vBodies[i];
-		// Find the procedural mesh for this body
 		if(m_BodyMeshes.count(Body.m_Id))
 		{
 			auto mesh = m_BodyMeshes[Body.m_Id];

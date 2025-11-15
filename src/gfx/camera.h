@@ -23,8 +23,8 @@ struct CCamera
 	double m_ViewDistance = 1e8;
 	double m_WantedViewDistance = 1e8;
 
-	double m_LowestDist = FLT_MAX;
-	double m_HighestDist = 0;
+	double m_LowestDist;
+	double m_HighestDist;
 
 	glm::vec2 m_ScreenSize; // get only
 	Vec3 m_FocusPoint = Vec3(0, 0, 0);
