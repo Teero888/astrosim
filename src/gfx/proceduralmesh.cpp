@@ -409,8 +409,8 @@ void COctreeNode::Update(CCamera &Camera)
 		lodPenalty = 100.0;
 	else if(Dot < 1.0)
 	{
-		double Multiplier = ((Camera.m_pFocusedBody->m_RenderParams.m_Radius - Camera.m_ViewDistance) / (Camera.m_pFocusedBody->m_RenderParams.m_Radius * 0.01));
-		// printf("Mulitplier: %.2f\n", Multiplier);
+		double ZoomFactor = Camera.m_pFocusedBody->m_RenderParams.m_Radius - Camera.m_ViewDistance;
+		double Multiplier = std::max(0.0, ZoomFactor) / (Camera.m_pFocusedBody->m_RenderParams.m_Radius * 0.1);
 		lodPenalty = 1.0 + (1.0 - Dot) * Multiplier;
 	}
 
