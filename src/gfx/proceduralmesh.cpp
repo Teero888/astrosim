@@ -415,19 +415,20 @@ void COctreeNode::Update(CCamera &Camera)
 	double Dot = glm::dot(glm::normalize(glm::vec3(PlanetToCamVec)), glm::normalize(glm::vec3(PlanetToNodeVec)));
 	double LODPenalty = Dot < 0.0 ? 100.0 : 1.0;
 	double LODMetric = (Distance / m_Size) * LODPenalty * 0.1;
+	// minimum LOD level
+	if(m_Level <= 1)
+		LODMetric = 0;
 	const double LOD_SPLIT_THRESHOLD = 1.2;
 	const double LOD_MERGE_THRESHOLD = 2.0;
 
-	if(m_pOwnerMesh->m_pBody->m_Id == Camera.m_pFocusedBody->m_Id)
-	{
-		// printf("Score: %f\n", Camera.m_ViewDistance);
-		// printf("center: %f %f %f\n", NodeSurfacePos.x, NodeSurfacePos.y, NodeSurfacePos.z);
-		double val = LODMetric;
-		if(val < Camera.m_LowestDist)
-			Camera.m_LowestDist = val;
-		if(val > Camera.m_HighestDist)
-			Camera.m_HighestDist = val;
-	}
+	// if(m_pOwnerMesh->m_pBody->m_Id == Camera.m_pFocusedBody->m_Id)
+	// {
+	// 	double val = LODMetric;
+	// 	if(val < Camera.m_LowestDist)
+	// 		Camera.m_LowestDist = val;
+	// 	if(val > Camera.m_HighestDist)
+	// 		Camera.m_HighestDist = val;
+	// }
 
 	if(m_bIsLeaf)
 	{

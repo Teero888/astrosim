@@ -7,7 +7,9 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #define ZOOM_FACTOR 1.0
-#define DEFAULT_SCALE 100.0
+
+// This exists to prevent geometry getting too small to properly render if you zoom in a lot
+#define DEFAULT_SCALE 1000.f
 
 enum ECameraMode
 {
@@ -20,11 +22,12 @@ struct CCamera
 {
 	SBody *m_pFocusedBody = nullptr;
 
-	double m_ViewDistance = 1e8;
-	double m_WantedViewDistance = 1e8;
+	double m_ViewDistance = 1e4 * DEFAULT_SCALE;
+	double m_WantedViewDistance = 1e4 * DEFAULT_SCALE;
 
-	double m_LowestDist;
-	double m_HighestDist;
+	// for debugging
+	// double m_LowestDist;
+	// double m_HighestDist;
 
 	glm::vec2 m_ScreenSize; // get only
 	Vec3 m_FocusPoint = Vec3(0, 0, 0);
@@ -41,7 +44,7 @@ struct CCamera
 
 	float m_FOV = 70.f;
 	glm::mat4 m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
-	glm::mat4 m_Projection = glm::perspective(glm::radians(m_FOV), 1600.0f / 1000.0f, 0.1f, 1e9f);
+	glm::mat4 m_Projection = glm::perspective(glm::radians(m_FOV), 1600.0f / 1000.0f, 0.001f, 10000.f);
 
 	int m_LOD = 0;
 

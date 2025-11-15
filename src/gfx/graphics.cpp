@@ -136,6 +136,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	ImGui::Text("Radius: %.4e", Body.m_RenderParams.m_Radius);
 	ImGui::PopTextWrapPos();
 	ImGui::Text("FPS: %.2f", 1.f / m_FrameTime);
+	ImGui::Text("Meters above planet: %.2f", m_Camera.m_ViewDistance * DEFAULT_SCALE - Body.m_RenderParams.m_Radius);
 	ImGui::End();
 
 	// ImGui::ShowDemoWindow();
@@ -154,8 +155,8 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	if(m_bShowWireframe)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	m_Camera.m_LowestDist = DBL_MAX;
-	m_Camera.m_HighestDist = -DBL_MAX;
+	// m_Camera.m_LowestDist = DBL_MAX;
+	// m_Camera.m_HighestDist = -DBL_MAX;
 
 	for(size_t i = 0; i < StarSystem.m_vBodies.size(); ++i)
 	{
@@ -217,7 +218,7 @@ void CGraphics::MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double 
 	}
 	if(pGraphics->m_pImGuiIO->WantCaptureMouse)
 		return;
-	pGraphics->m_Camera.m_WantedViewDistance -= (pGraphics->m_Camera.m_WantedViewDistance / 10.f) * YOffset - pGraphics->m_Camera.m_pFocusedBody->m_RenderParams.m_Radius / 1000.f;
+	pGraphics->m_Camera.m_WantedViewDistance -= (pGraphics->m_Camera.m_WantedViewDistance / 10.f) * YOffset - (pGraphics->m_Camera.m_pFocusedBody->m_RenderParams.m_Radius / (10.f * DEFAULT_SCALE));
 	pGraphics->m_Camera.UpdateViewMatrix();
 }
 
@@ -280,7 +281,7 @@ void CGraphics::WindowSizeCallback(GLFWwindow *pWindow, int Width, int Height)
 		return;
 	}
 	glViewport(0, 0, Width, Height);
-	pGraphics->m_Camera.m_Projection = glm::perspective(glm::radians(pGraphics->m_Camera.m_FOV), (float)Width / (float)Height, 0.1f, 1e9f);
+	pGraphics->m_Camera.m_Projection = glm::perspective(glm::radians(pGraphics->m_Camera.m_FOV), (float)Width / (float)Height, 0.001f, 10000.f);
 	pGraphics->m_Camera.m_ScreenSize = glm::vec2(Width, Height);
 }
 

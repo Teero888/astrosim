@@ -95,7 +95,7 @@ public:
 		// Density = (Sphere SDF) + (Terrain Height) - (Cave Pockets)
 		// - Adding terrain_offset pushes the surface (density=0) outwards (a mountain).
 		// - Subtracting cave_effect pulls the surface (density=0) inwards (a cave).
-		return base_density + terrain_offset - cave_effect;
+		return base_density; // + terrain_offset - cave_effect;
 	}
 
 	glm::vec3 CalculateDensityGradient(glm::vec3 p)
