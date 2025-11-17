@@ -7,8 +7,9 @@ uniform float ScreenRatio;
 
 out vec2 FragPos;
 
-void main() {
+void main()
+{
 	FragPos = aPos;
-    vec2 scaledPos = vec2(aPos.x * Scale, aPos.y * Scale * ScreenRatio);
-    gl_Position = vec4(scaledPos + Offset, 1.0, 1.0);
+	vec2 scaledPos = vec2(aPos.x * Scale, aPos.y * Scale * ScreenRatio);
+	gl_Position = vec4(scaledPos + Offset, 1.0, 1.0);
 }

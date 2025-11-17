@@ -5,11 +5,19 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
 
-enum EBodyType
+enum class EBodyType
 {
 	STAR,
 	TERRESTRIAL,
 	GAS_GIANT,
+};
+
+enum class ETerrainType
+{
+	TERRESTRIAL = 0,
+	VOLCANIC = 1,
+	ICE = 2,
+	BARREN = 3,
 };
 
 struct STerrainParameters
@@ -53,7 +61,8 @@ struct SBody
 	{
 		double m_Radius;	// Planetary radius [meters]
 		glm::vec3 m_Color;	// Rgb color for stars or fallbacks
-		EBodyType m_BodyType = TERRESTRIAL;
+		EBodyType m_BodyType = EBodyType::TERRESTRIAL;
+		ETerrainType m_TerrainType = ETerrainType::TERRESTRIAL;
 		STerrainParameters m_Terrain;
 		SColorPalette m_Colors;
 	} m_RenderParams;

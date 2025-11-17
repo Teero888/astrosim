@@ -39,14 +39,14 @@ void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution
 	m_Shader.CompileShader(Shaders::VERT_BODY, Shaders::FRAG_BODY);
 
 	// Only initialize terrain generator for terrestrial bodies
-	if(m_BodyType == TERRESTRIAL)
-		m_TerrainGenerator.Init(pBody->m_Id, pBody->m_RenderParams.m_Terrain);
+	if(m_BodyType == EBodyType::TERRESTRIAL)
+		m_TerrainGenerator.Init(pBody->m_Id, pBody->m_RenderParams.m_Terrain, pBody->m_RenderParams.m_TerrainType);
 
 	// Create an octree root for all renderable types (Stars, Planets)
 	// For Stars, the terrain generator will just use default noise,
 	// but the shader will override the color to be emissive.
 	// TODO: Add GAS_GIANT when supported
-	if(m_BodyType == TERRESTRIAL || m_BodyType == STAR)
+	if(m_BodyType == EBodyType::TERRESTRIAL || m_BodyType == EBodyType::STAR)
 	{
 		float RootSize = (float)m_pBody->m_RenderParams.m_Radius * 2.0f;
 		m_pRootNode = std::make_shared<COctreeNode>(this, std::weak_ptr<COctreeNode>(), glm::vec3(0.0f), RootSize, 0, voxelResolution);
@@ -70,6 +70,7 @@ void CProceduralMesh::Update(CCamera &Camera)
 
 void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody)
 {
+	// Render if we have a root node. (i.e., we are a renderable type)
 	if(!m_pRootNode)
 		return;
 
@@ -88,6 +89,8 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody)
 	m_Shader.SetVec3("uLightDir", (glm::vec3)LightDir);
 	m_Shader.SetVec3("uLightColor", pLightBody->m_RenderParams.m_Color);
 	m_Shader.SetVec3("uObjectColor", m_pBody->m_RenderParams.m_Color); // This is the base color for non-terrestrial or stars
+
+	m_Shader.SetInt("uTerrainType", (int)m_pBody->m_RenderParams.m_TerrainType);
 
 	// Set color palette uniforms
 	m_Shader.SetVec3("DEEP_OCEAN_COLOR", m_pBody->m_RenderParams.m_Colors.deepOcean);
@@ -449,7 +452,7 @@ void COctreeNode::Update(CCamera &Camera)
 	{
 		if(LODMetric < LOD_SPLIT_THRESHOLD && m_Level < MAX_LOD_LEVEL)
 		{
-			// printf("metric:%.6f | vao:%d, gen:%d, data:%d, att:%d\n", LODMetric, m_VAO, (bool)m_bIsGenerating, (bool)m_bHasGeneratedData, (bool)m_bGenerationAttempted);
+			// printf("metric:%.6f | vao:%d, gen:%d, data:%d, att:%d\n", LODMetric, m_VAO, (bool)m_bIsGenerating, (bool)m_bHasGeneratedData, (bool)m_Lead_GenerationAttempted);
 			if(m_VAO != 0)
 			{
 				Subdivide();

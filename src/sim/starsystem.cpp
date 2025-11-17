@@ -57,9 +57,9 @@ void CStarSystem::LoadBodies(const std::string &filename)
 			m_vBodies.emplace_back(id_counter++, name, sim_params, render_params);
 			// Reset for next body
 			sim_params = {};
-			render_params = {}; // Re-initialize to default
+			render_params = {};
 			name = "";
-			current_section = ""; // Reset section
+			current_section = "";
 		}
 	};
 
@@ -67,10 +67,7 @@ void CStarSystem::LoadBodies(const std::string &filename)
 	{
 		line = trim(line);
 		if(line.empty())
-		{
-			// Ignore empty lines, logic is now driven by 'name='
 			continue;
-		}
 
 		if(line[0] == '[' && line.back() == ']')
 		{
@@ -85,12 +82,10 @@ void CStarSystem::LoadBodies(const std::string &filename)
 		key = trim(key);
 		value = trim(value);
 
-		if(key == "name")
+		if(key == "Name")
 		{
-			// Found new body, add the previous one first
 			add_body();
-			// Start new body
-			current_section = ""; // Reset to base section
+			current_section = "";
 			name = value;
 			continue; // Move to next line
 		}
@@ -101,36 +96,44 @@ void CStarSystem::LoadBodies(const std::string &filename)
 
 		if(current_section.empty()) // Base parameters
 		{
-			if(key == "type")
+			if(key == "Type")
 			{
 				if(value == "STAR")
-					render_params.m_BodyType = STAR;
+					render_params.m_BodyType = EBodyType::STAR;
 				else if(value == "TERRESTRIAL")
-					render_params.m_BodyType = TERRESTRIAL;
+					render_params.m_BodyType = EBodyType::TERRESTRIAL;
 				else if(value == "GAS_GIANT")
-					render_params.m_BodyType = GAS_GIANT;
+					render_params.m_BodyType = EBodyType::GAS_GIANT;
 			}
-			else if(key == "mass")
+			else if(key == "TerrainType")
 			{
+				// Convert string to enum
+				if(value == "volcanic")
+					render_params.m_TerrainType = ETerrainType::VOLCANIC;
+				else if(value == "ice")
+					render_params.m_TerrainType = ETerrainType::ICE;
+				else if(value == "barren")
+					render_params.m_TerrainType = ETerrainType::BARREN;
+				else // Default
+					render_params.m_TerrainType = ETerrainType::TERRESTRIAL;
+			}
+			else if(key == "Mass")
 				sim_params.m_Mass = std::stod(value);
-			}
-			else if(key == "radius")
-			{
+			else if(key == "Radius")
 				render_params.m_Radius = std::stod(value);
-			}
-			else if(key == "position")
+			else if(key == "Position")
 			{
 				std::stringstream ssv(value);
 				char comma;
 				ssv >> sim_params.m_Position.x >> comma >> sim_params.m_Position.y >> comma >> sim_params.m_Position.z;
 			}
-			else if(key == "velocity")
+			else if(key == "Velocity")
 			{
 				std::stringstream ssv(value);
 				char comma;
 				ssv >> sim_params.m_Velocity.x >> comma >> sim_params.m_Velocity.y >> comma >> sim_params.m_Velocity.z;
 			}
-			else if(key == "color")
+			else if(key == "Color")
 			{
 				std::stringstream ssv(value);
 				char comma;
@@ -140,21 +143,21 @@ void CStarSystem::LoadBodies(const std::string &filename)
 		else if(current_section == "colors")
 		{
 			glm::vec3 *color_ptr = nullptr;
-			if(key == "deepOcean")
+			if(key == "DeepOcean")
 				color_ptr = &render_params.m_Colors.deepOcean;
-			else if(key == "shallowOcean")
+			else if(key == "ShallowOcean")
 				color_ptr = &render_params.m_Colors.shallowOcean;
-			else if(key == "beach")
+			else if(key == "Beach")
 				color_ptr = &render_params.m_Colors.beach;
-			else if(key == "landLow")
+			else if(key == "LandLow")
 				color_ptr = &render_params.m_Colors.landLow;
-			else if(key == "landHigh")
+			else if(key == "LandHigh")
 				color_ptr = &render_params.m_Colors.landHigh;
-			else if(key == "mountainLow")
+			else if(key == "MountainLow")
 				color_ptr = &render_params.m_Colors.mountainLow;
-			else if(key == "mountainHigh")
+			else if(key == "MountainHigh")
 				color_ptr = &render_params.m_Colors.mountainHigh;
-			else if(key == "snow")
+			else if(key == "Snow")
 				color_ptr = &render_params.m_Colors.snow;
 
 			if(color_ptr)
@@ -166,17 +169,17 @@ void CStarSystem::LoadBodies(const std::string &filename)
 		}
 		else if(current_section == "terrain")
 		{
-			if(key == "continentFrequency")
+			if(key == "ContinentFrequency")
 				render_params.m_Terrain.continentFrequency = std::stof(value);
-			else if(key == "continentOctaves")
+			else if(key == "ContinentOctaves")
 				render_params.m_Terrain.continentOctaves = std::stoi(value);
-			else if(key == "mountainFrequency")
+			else if(key == "MountainFrequency")
 				render_params.m_Terrain.mountainFrequency = std::stof(value);
-			else if(key == "mountainOctaves")
+			else if(key == "MountainOctaves")
 				render_params.m_Terrain.mountainOctaves = std::stoi(value);
-			else if(key == "hillsFrequency")
+			else if(key == "HillsFrequency")
 				render_params.m_Terrain.hillsFrequency = std::stof(value);
-			else if(key == "hillsOctaves")
+			else if(key == "HillsOctaves")
 				render_params.m_Terrain.hillsOctaves = std::stoi(value);
 		}
 	}
@@ -188,7 +191,7 @@ void CStarSystem::LoadBodies(const std::string &filename)
 		m_pSunBody = nullptr;
 		for(auto &body : m_vBodies)
 		{
-			if(body.m_RenderParams.m_BodyType == STAR)
+			if(body.m_RenderParams.m_BodyType == EBodyType::STAR)
 			{
 				m_pSunBody = &body;
 				break;
@@ -196,9 +199,7 @@ void CStarSystem::LoadBodies(const std::string &filename)
 		}
 		// Fallback if no star
 		if(!m_pSunBody)
-		{
 			m_pSunBody = &m_vBodies.front();
-		}
 	}
 	else
 	{

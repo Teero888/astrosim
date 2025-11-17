@@ -76,8 +76,6 @@ target_link_libraries(imgui
 add_executable(astrosim 
 	src/gfx/camera.cpp
 	src/gfx/camera.h
-	src/gfx/cmath.cpp
-	src/gfx/cmath.h
 	src/gfx/graphics.cpp
 	src/gfx/graphics.h
 	src/gfx/marchingcubes.cpp

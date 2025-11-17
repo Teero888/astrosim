@@ -1,6 +1,5 @@
 #include "terrain.h"
 #include <FastNoiseLite.h>
-#include <cmath>
 #include <glm/gtc/noise.hpp>
 
 CTerrainGenerator::CTerrainGenerator() :
@@ -19,8 +18,10 @@ CTerrainGenerator::~CTerrainGenerator()
 	delete m_pCaveNoise;
 }
 
-void CTerrainGenerator::Init(int seed, const STerrainParameters &params)
+void CTerrainGenerator::Init(int seed, const STerrainParameters &params, ETerrainType terrainType)
 {
+	m_TerrainType = terrainType;
+
 	// Continent Noise (large scale features)
 	m_pContinentNoise->SetSeed(seed);
 	m_pContinentNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
@@ -60,41 +61,89 @@ float CTerrainGenerator::GetTerrainDensity(glm::vec3 worldPosition, float planet
 {
 	float distance_from_center = glm::length(worldPosition);
 	float base_density = planetRadius - distance_from_center;
-
-	// Normalize worldPosition for consistent noise sampling across planets of different sizes
 	glm::vec3 normalized_pos = glm::normalize(worldPosition);
 
-	// Continent Generation
+	// Noise values
 	float continent_noise = m_pContinentNoise->GetNoise(normalized_pos.x, normalized_pos.y, normalized_pos.z);
-	// Remap noise from [-1, 1] to [0, 1] to create landmasses and oceans
-	float land_factor = (continent_noise + 1.0f) * 0.5f;
-	// Sharpen the transition between land and sea
-	land_factor = pow(land_factor, 1.5f);
-	float continent_offset = 0;
-	float sea_level = 0.4f;
-	if(land_factor > sea_level)
-		continent_offset = (land_factor - sea_level) * (planetRadius * 0.005f); // Continents are up to 0.5% of radius higher
-	else
-		continent_offset = (land_factor - sea_level) * (planetRadius * 0.01f); // Oceans are up to 1% of radius deeper
-
-	// Mountain Generation (only on land)
-	float mountain_noise = 0;
-	if(land_factor > sea_level)
-	{
-		float mountain_raw_noise = m_pMountainNoise->GetNoise(normalized_pos.x * 4, normalized_pos.y * 4, normalized_pos.z * 4);
-		// Make mountains more sparse by squaring the noise
-		mountain_raw_noise = (mountain_raw_noise + 1.0f) * 0.5f; // to [0,1]
-		mountain_raw_noise = pow(mountain_raw_noise, 2.0f);
-		// Scale mountains by how high the land is, preventing mountains from rising from the ocean floor
-		mountain_noise = mountain_raw_noise * (planetRadius * 0.015f) * (land_factor - sea_level);
-	}
-
-	// Hills and Plains
+	float mountain_raw_noise = m_pMountainNoise->GetNoise(normalized_pos.x * 4, normalized_pos.y * 4, normalized_pos.z * 4);
 	float hills_raw_noise = m_pHillsNoise->GetNoise(normalized_pos.x * 16, normalized_pos.y * 16, normalized_pos.z * 16);
-	float hills_noise = hills_raw_noise * (planetRadius * 0.001f); // Hills are small, 0.1% of radius
 
-	// Total terrain offset
-	float terrain_offset = continent_offset + mountain_noise + hills_noise;
+	float terrain_offset = 0.0f;
+
+	// Select generation logic based on type
+	switch(m_TerrainType)
+	{
+	case ETerrainType::TERRESTRIAL:
+	default:
+	{
+		// Terrestrial Logic
+		float land_factor = (continent_noise + 1.0f) * 0.5f;
+		land_factor = pow(land_factor, 1.5f);
+		float continent_offset = 0;
+		float sea_level = 0.4f;
+		if(land_factor > sea_level)
+			continent_offset = (land_factor - sea_level) * (planetRadius * 0.005f); // Continents are up to 0.5% of radius higher
+		else
+			continent_offset = (land_factor - sea_level) * (planetRadius * 0.01f); // Oceans are up to 1% of radius deeper
+
+		float mountain_noise = 0;
+		if(land_factor > sea_level)
+		{
+			mountain_raw_noise = (mountain_raw_noise + 1.0f) * 0.5f; // to [0,1]
+			mountain_raw_noise = pow(mountain_raw_noise, 2.0f);
+			// Scale mountains by how high the land is, preventing mountains from rising from the ocean floor
+			mountain_noise = mountain_raw_noise * (planetRadius * 0.015f) * (land_factor - sea_level);
+		}
+		float hills_noise = hills_raw_noise * (planetRadius * 0.001f); // Hills are small, 0.1% of radius
+		terrain_offset = continent_offset + mountain_noise + hills_noise;
+		break;
+	}
+	case ETerrainType::BARREN:
+	{
+		// Barren Logic
+		// No sea level, just apply noise
+		float continent_offset = continent_noise * (planetRadius * 0.005f);
+		float mountain_noise = 0;
+		mountain_raw_noise = (mountain_raw_noise + 1.0f) * 0.5f;
+		mountain_raw_noise = pow(mountain_raw_noise, 2.0f);
+		mountain_noise = mountain_raw_noise * (planetRadius * 0.01f);
+		float hills_noise = hills_raw_noise * (planetRadius * 0.001f);
+		terrain_offset = continent_offset + mountain_noise + hills_noise;
+		break;
+	}
+	case ETerrainType::VOLCANIC:
+	{
+		// Volcanic Logic
+		// No sea level, very rugged
+		float continent_offset = continent_noise * (planetRadius * 0.008f); // More pronounced continents
+		float mountain_noise = 0;
+		mountain_raw_noise = (mountain_raw_noise + 1.0f) * 0.5f;
+		mountain_raw_noise = pow(mountain_raw_noise, 3.0f); // Sharper peaks
+		mountain_noise = mountain_raw_noise * (planetRadius * 0.02f);
+		float hills_noise = hills_raw_noise * (planetRadius * 0.002f);
+		terrain_offset = continent_offset + mountain_noise + hills_noise;
+		break;
+	}
+	case ETerrainType::ICE:
+	{
+		// Ice Logic
+		// Mostly flat, with sharp crevasses
+		float land_factor = (continent_noise + 1.0f) * 0.5f;
+		float continent_offset = (land_factor - 0.9f) * (planetRadius * 0.01f); // Mostly "ocean" (water under ice)
+
+		// Re-purpose mountain noise as "crevasses" (negative)
+		float crevasse_noise = 0;
+		mountain_raw_noise = (mountain_raw_noise + 1.0f) * 0.5f; // to [0,1]
+		if(mountain_raw_noise > 0.7f) // Create sharp cracks
+		{
+			crevasse_noise = (mountain_raw_noise - 0.7f) / 0.3f;
+			crevasse_noise = crevasse_noise * (planetRadius * -0.005f); // Carve down
+		}
+		float hills_noise = hills_raw_noise * (planetRadius * 0.0005f); // Very small bumps
+		terrain_offset = continent_offset + crevasse_noise + hills_noise;
+		break;
+	}
+	}
 
 	// Cave Generation (mostly underground)
 	float cave_effect = 0.0f;
@@ -127,31 +176,79 @@ STerrainColorData CTerrainGenerator::GetTerrainColorData(glm::vec3 worldPosition
 
 	// Re-calculate noise values needed for color
 	float continent_noise = m_pContinentNoise->GetNoise(normalized_pos.x, normalized_pos.y, normalized_pos.z);
-	float land_factor = (continent_noise + 1.0f) * 0.5f;
-	land_factor = pow(land_factor, 1.5f);
+	float mountain_raw_noise = m_pMountainNoise->GetNoise(normalized_pos.x * 4, normalized_pos.y * 4, normalized_pos.z * 4);
+	float hills_raw_noise = m_pHillsNoise->GetNoise(normalized_pos.x * 16, normalized_pos.y * 16, normalized_pos.z * 16);
 
-	float sea_level = 0.4f;
-	float continent_offset;
-	if(land_factor > sea_level)
-		continent_offset = (land_factor - sea_level) * (planetRadius * 0.005f);
-	else
-		continent_offset = (land_factor - sea_level) * (planetRadius * 0.01f);
+	float elevation = 0.0f;
+	float special_noise = 0.0f; // Re-use mountain_noise for different purposes
 
-	float mountain_noise = 0;
-	if(land_factor > sea_level)
+	switch(m_TerrainType)
 	{
-		float mountain_raw_noise = m_pMountainNoise->GetNoise(normalized_pos.x * 4, normalized_pos.y * 4, normalized_pos.z * 4);
-		mountain_raw_noise = (mountain_raw_noise + 1.0f) * 0.5f;
-		mountain_raw_noise = pow(mountain_raw_noise, 2.0f);
-		mountain_noise = mountain_raw_noise * (planetRadius * 0.015f) * (land_factor - sea_level);
+	case ETerrainType::TERRESTRIAL:
+	default:
+	{
+		float land_factor = (continent_noise + 1.0f) * 0.5f;
+		land_factor = pow(land_factor, 1.5f);
+		float sea_level = 0.4f;
+		float continent_offset;
+		if(land_factor > sea_level)
+			continent_offset = (land_factor - sea_level) * (planetRadius * 0.005f);
+		else
+			continent_offset = (land_factor - sea_level) * (planetRadius * 0.01f);
+
+		float mountain_noise = 0;
+		if(land_factor > sea_level)
+		{
+			float m_raw = (mountain_raw_noise + 1.0f) * 0.5f;
+			m_raw = pow(m_raw, 2.0f);
+			mountain_noise = m_raw * (planetRadius * 0.015f) * (land_factor - sea_level);
+			special_noise = mountain_noise; // Pass through
+		}
+		float hills_noise = hills_raw_noise * (planetRadius * 0.001f);
+		elevation = continent_offset + mountain_noise + hills_noise;
+		break;
+	}
+	case ETerrainType::BARREN:
+	{
+		float continent_offset = continent_noise * (planetRadius * 0.005f);
+		float m_raw = (mountain_raw_noise + 1.0f) * 0.5f;
+		m_raw = pow(m_raw, 2.0f);
+		float mountain_noise = m_raw * (planetRadius * 0.01f);
+		float hills_noise = hills_raw_noise * (planetRadius * 0.001f);
+		elevation = continent_offset + mountain_noise + hills_noise;
+		special_noise = m_raw; // Pass raw mountain noise [0, 1]
+		break;
+	}
+	case ETerrainType::VOLCANIC:
+	{
+		float continent_offset = continent_noise * (planetRadius * 0.008f);
+		float m_raw = (mountain_raw_noise + 1.0f) * 0.5f;
+		m_raw = pow(m_raw, 3.0f);
+		float mountain_noise = m_raw * (planetRadius * 0.02f);
+		float hills_noise = hills_raw_noise * (planetRadius * 0.002f);
+		elevation = continent_offset + mountain_noise + hills_noise;
+		special_noise = m_raw; // Pass raw mountain noise [0, 1] for lava
+		break;
+	}
+	case ETerrainType::ICE:
+	{
+		float land_factor = (continent_noise + 1.0f) * 0.5f;
+		float continent_offset = (land_factor - 0.9f) * (planetRadius * 0.01f);
+		float crevasse_noise = 0;
+		float m_raw = (mountain_raw_noise + 1.0f) * 0.5f; // to [0,1]
+		if(m_raw > 0.7f)
+		{
+			crevasse_noise = (m_raw - 0.7f) / 0.3f;
+			special_noise = crevasse_noise; // Pass crevasse strength [0, 1]
+			crevasse_noise = crevasse_noise * (planetRadius * -0.005f);
+		}
+		float hills_noise = hills_raw_noise * (planetRadius * 0.0005f);
+		elevation = continent_offset + crevasse_noise + hills_noise;
+		break;
+	}
 	}
 
-	float hills_raw_noise = m_pHillsNoise->GetNoise(normalized_pos.x * 16, normalized_pos.y * 16, normalized_pos.z * 16);
-	float hills_noise = hills_raw_noise * (planetRadius * 0.001f);
-
-	float elevation = continent_offset + mountain_noise + hills_noise;
-
-	return {elevation, mountain_noise};
+	return {elevation, special_noise};
 }
 
 glm::vec3 CTerrainGenerator::CalculateDensityGradient(glm::vec3 p, float planetRadius)

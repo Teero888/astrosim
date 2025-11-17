@@ -44,7 +44,7 @@ public:
 	void GenerationWorkerLoop();
 
 	EBodyType m_BodyType;
-	static const int VOXEL_RESOLUTION_DEFAULT = 8;
+	static const int VOXEL_RESOLUTION_DEFAULT = 4;
 
 private:
 	SBody *m_pBody = nullptr;
