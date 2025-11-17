@@ -3,7 +3,6 @@
 #include "glm/ext/vector_float3.hpp"
 #include "graphics.h"
 #include <cmath>
-#include <cstdio>
 
 void CCamera::SetBody(SBody *pBody)
 {

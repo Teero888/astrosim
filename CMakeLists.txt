@@ -6,16 +6,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Shader embedding
 set(SHADER_FILES
-    data/shaders/frag_solid.glsl
-    data/shaders/vert_solid.glsl
-    data/shaders/frag_body.glsl
-    data/shaders/vert_body.glsl
-    data/shaders/frag_grid.glsl
-    data/shaders/vert_grid.glsl
-    data/shaders/frag_trajectory.glsl
-    data/shaders/vert_trajectory.glsl
-    data/shaders/frag_marker.glsl
-    data/shaders/vert_marker.glsl
+	data/shaders/frag_solid.glsl
+	data/shaders/vert_solid.glsl
+	data/shaders/frag_body.glsl
+	data/shaders/vert_body.glsl
+	data/shaders/frag_grid.glsl
+	data/shaders/vert_grid.glsl
+	data/shaders/frag_trajectory.glsl
+	data/shaders/vert_trajectory.glsl
+	data/shaders/frag_marker.glsl
+	data/shaders/vert_marker.glsl
 )
 
 # create a header file with the shader source code as strings
@@ -26,10 +26,10 @@ file(APPEND ${EMBEDDED_SHADERS_HEADER} "#define EMBEDDED_SHADERS_H\n\n")
 file(APPEND ${EMBEDDED_SHADERS_HEADER} "namespace Shaders {\n\n")
 
 foreach(SHADER_FILE ${SHADER_FILES})
-    file(READ ${SHADER_FILE} SHADER_CONTENT)
-    get_filename_component(SHADER_NAME ${SHADER_FILE} NAME_WE)
-    string(TOUPPER ${SHADER_NAME} SHADER_NAME_UPPER)
-    file(APPEND ${EMBEDDED_SHADERS_HEADER} "inline const char* ${SHADER_NAME_UPPER} = R\"(${SHADER_CONTENT})\";\n\n")
+	file(READ ${SHADER_FILE} SHADER_CONTENT)
+	get_filename_component(SHADER_NAME ${SHADER_FILE} NAME_WE)
+	string(TOUPPER ${SHADER_NAME} SHADER_NAME_UPPER)
+	file(APPEND ${EMBEDDED_SHADERS_HEADER} "inline const char* ${SHADER_NAME_UPPER} = R\"(${SHADER_CONTENT})\";\n\n")
 endforeach()
 
 file(APPEND ${EMBEDDED_SHADERS_HEADER} "} // namespace Shaders\n\n")
@@ -53,9 +53,9 @@ set(FASTNOISE_DIR ${CMAKE_SOURCE_DIR}/libs/FastNoiseLite/Cpp)
 
 # add imgui sources
 file(GLOB IMGUI_SOURCES
-    ${IMGUI_DIR}/*.cpp
-    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
-    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+	${IMGUI_DIR}/*.cpp
+	${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+	${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
 # create a library for imgui
@@ -63,14 +63,14 @@ add_library(imgui STATIC ${IMGUI_SOURCES})
 
 # include imgui headers
 target_include_directories(imgui PUBLIC
-    ${IMGUI_DIR}
-    ${IMGUI_DIR}/backends
+	${IMGUI_DIR}
+	${IMGUI_DIR}/backends
 )
 
 target_link_libraries(imgui
-    OpenGL::GL
-    glfw
-    GLEW::GLEW
+	OpenGL::GL
+	glfw
+	GLEW::GLEW
 )
 
 add_executable(astrosim 
@@ -80,10 +80,10 @@ add_executable(astrosim
 	src/gfx/cmath.h
 	src/gfx/graphics.cpp
 	src/gfx/graphics.h
-    src/gfx/marchingcubes.cpp
-    src/gfx/marchingcubes.h
-    src/gfx/proceduralmesh.cpp
-    src/gfx/proceduralmesh.h
+	src/gfx/marchingcubes.cpp
+	src/gfx/marchingcubes.h
+	src/gfx/proceduralmesh.cpp
+	src/gfx/proceduralmesh.h
 	src/gfx/grid.cpp
 	src/gfx/grid.h
 	src/gfx/markers.cpp
@@ -100,18 +100,27 @@ add_executable(astrosim
 )
 
 target_link_libraries(astrosim
-    imgui
-    OpenGL::GL
-    glfw
-    GLEW::GLEW
+	imgui
+	OpenGL::GL
+	glfw
+	GLEW::GLEW
 )
 
 target_include_directories(astrosim PRIVATE
-    ${IMGUI_DIR}
-    ${IMGUI_DIR}/backends
-    ${GLM_DIR}
+	${IMGUI_DIR}
+	${IMGUI_DIR}/backends
+	${GLM_DIR}
 	${FASTNOISE_DIR}
-    ${CMAKE_SOURCE_DIR}/shaders
+	${CMAKE_SOURCE_DIR}/shaders
 )
 
-file(COPY data DESTINATION ${CMAKE_BINARY_DIR})
+# Copy data files to build directory on every build
+add_custom_target(copy_data ALL
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+		${CMAKE_SOURCE_DIR}/data
+		${CMAKE_BINARY_DIR}/data
+	COMMENT "Copying data files to build directory"
+)
+
+add_dependencies(astrosim copy_data)
+

@@ -1,47 +1,21 @@
 #version 460 core
-layout(location = 0) in vec3 aPos;
+layout(location = 0) in vec2 aPos; // Vertices for a -1 to 1 quad
 
-uniform float Scale;
-uniform mat4 Model;
-uniform mat4 View;
-uniform mat4 Projection;
+uniform mat4 u_invView;
+uniform mat4 u_invProjection;
 
-// Define a struct for planet data
-// struct PlanetInfo {
-// 	float Scale;
-// 	float Mass;
-// 	vec3 Position;
-// };
-
-// Declare an SSBO for the planet array
-// layout(std430, binding = 0) buffer PlanetData {
-// 	PlanetInfo Planets[];
-// };
-
-out vec3 FragWorldPos;
-out vec3 FragPos;
+out vec3 v_rayDirection;
 
 void main()
 {
-	vec3 NewPos = aPos;
+	// We are rendering a full-screen quad, so we calculate a view ray
+	// for each corner that will be interpolated for each fragment.
+	vec4 ray_clip = vec4(aPos.xy, -1.0, 1.0);
+	vec4 ray_eye = u_invProjection * ray_clip;
+	ray_eye = vec4(ray_eye.xy, -1.0, 0.0);
 
-	vec4 WorldPos = vec4(NewPos * Scale, 1.0);
-	FragWorldPos = (Model * WorldPos).xyz;
-	FragPos = NewPos * Scale;
+	v_rayDirection = (u_invView * ray_eye).xyz;
 
-	// for (int i = 0; i < Planets.length(); i++) {
-	// 	float PlanetScale = Planets[i].Scale;
-	// 	float PlanetMass = Planets[i].Mass;
-	// 	vec3 PlanetPosition = Planets[i].Position;
-	//
-	// 	float DistanceToPlanet = length(WorldPos - PlanetPosition);
-	//
-	// 	NewPos.y -= smoothstep(PlanetMass, 0.0, (DistanceToPlanet * PlanetMass) / PlanetScale) * PlanetScale;
-	// 	break;
-	// }
-	//
-	// WorldPos = vec4(NewPos * Scale, 1.0);
-	// FragWorldPos = (Model * WorldPos).xyz;
-	// FragPos = NewPos * Scale;
-	gl_Position = Projection * View * WorldPos;
+	// Output a full-screen quad that is at the very back of the clipping volume.
+	gl_Position = vec4(aPos.xy, 1.0, 1.0);
 }

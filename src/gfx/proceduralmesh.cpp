@@ -75,6 +75,10 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody)
 {
 	m_Shader.Use();
 
+	// Pass constant needed for logarithmic depth calculation
+	float F = 2.0f / log2(10000.0f + 1.0f); // far plane is 10000.0f
+	m_Shader.SetFloat("u_logDepthF", F);
+
 	m_Shader.SetBool("uSource", m_pBody == pLightBody);
 
 	m_Shader.SetMat4("uView", Camera.m_View);

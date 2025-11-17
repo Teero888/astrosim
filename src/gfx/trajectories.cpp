@@ -69,6 +69,11 @@ void CTrajectories::Render(CCamera &Camera)
 	if(m_vPlanetTrajectories.empty())
 		return;
 	m_Shader.Use();
+
+	// Pass constant needed for logarithmic depth calculation
+	float F = 2.0f / log2(10000.0f + 1.0f); // far plane is 10000.0f
+	m_Shader.SetFloat("u_logDepthF", F);
+
 	auto Model = glm::mat4(1.0f);
 	m_Shader.SetMat4("Model", Model);
 	m_Shader.SetMat4("View", Camera.m_View);
