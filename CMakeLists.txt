@@ -84,6 +84,8 @@ add_executable(astrosim
 	src/gfx/marchingcubes.h
 	src/gfx/proceduralmesh.cpp
 	src/gfx/proceduralmesh.h
+	src/gfx/terrain/terrain.cpp
+	src/gfx/terrain/terrain.h
 	src/gfx/grid.cpp
 	src/gfx/grid.h
 	src/gfx/markers.cpp

@@ -263,7 +263,8 @@ void CGraphics::KeyActionCallback(GLFWwindow *pWindow, int Key, int Scancode, in
 		}
 		else if(Key == GLFW_KEY_LEFT)
 		{
-			pGraphics->m_Camera.SetBody(&pGraphics->m_pStarSystem->m_vBodies[(pGraphics->m_Camera.m_pFocusedBody->m_Id - 1) % pGraphics->m_pStarSystem->m_vBodies.size()]);
+			size_t BodyCount = pGraphics->m_pStarSystem->m_vBodies.size();
+			pGraphics->m_Camera.SetBody(&pGraphics->m_pStarSystem->m_vBodies[(pGraphics->m_Camera.m_pFocusedBody->m_Id - 1 + BodyCount) % BodyCount]);
 		}
 		else if(Key == GLFW_KEY_RIGHT)
 		{

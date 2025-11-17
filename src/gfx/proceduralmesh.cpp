@@ -22,16 +22,12 @@ static glm::vec3 InterpolateVertex(glm::vec3 p1, glm::vec3 p2, float d1, float d
 
 CProceduralMesh::CProceduralMesh()
 {
-	m_pCaveNoise = new FastNoiseLite();
-	m_pMountainNoise = new FastNoiseLite();
 	m_bRunWorker = true;
 }
 
 CProceduralMesh::~CProceduralMesh()
 {
 	Destroy();
-	delete m_pCaveNoise;
-	delete m_pMountainNoise;
 }
 
 void CProceduralMesh::Init(SBody *pBody)
@@ -40,17 +36,7 @@ void CProceduralMesh::Init(SBody *pBody)
 
 	m_Shader.CompileShader(Shaders::VERT_BODY, Shaders::FRAG_BODY);
 
-	m_pCaveNoise->SetSeed(m_pBody->m_Id);
-	m_pCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	m_pCaveNoise->SetFrequency(0.1f);
-	m_pCaveNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-	m_pCaveNoise->SetFractalOctaves(3);
-
-	m_pMountainNoise->SetSeed(m_pBody->m_Id + 1);
-	m_pMountainNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	m_pMountainNoise->SetFrequency(0.05f);
-	m_pMountainNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-	m_pMountainNoise->SetFractalOctaves(6);
+	m_TerrainGenerator.Init(pBody->m_Id);
 
 	float RootSize = (float)m_pBody->m_RenderParams.m_Radius * 2.0f;
 	m_pRootNode = std::make_shared<COctreeNode>(this, std::weak_ptr<COctreeNode>(), glm::vec3(0.0f), RootSize, 0);
@@ -233,8 +219,9 @@ void COctreeNode::GenerateMesh()
 
 				int idx = x + y * res1 + z * res1 * res1;
 				// Get density from the planar world position
-				vDensityGrid[idx] = m_pOwnerMesh->GetTerrainDensity(world_pos);
-				vGradientGrid[idx] = m_pOwnerMesh->CalculateDensityGradient(world_pos);
+				float radius = (float)m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius;
+				vDensityGrid[idx] = m_pOwnerMesh->m_TerrainGenerator.GetTerrainDensity(world_pos, radius);
+				vGradientGrid[idx] = m_pOwnerMesh->m_TerrainGenerator.CalculateDensityGradient(world_pos, radius);
 			}
 		}
 	}
