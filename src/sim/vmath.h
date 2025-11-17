@@ -23,7 +23,17 @@ struct Vec3
 		return Vec3(x + other.x, y + other.y, z + other.z);
 	}
 
+	Vec3 operator+=(const Vec3 &other) const
+	{
+		return Vec3(x + other.x, y + other.y, z + other.z);
+	}
+
 	Vec3 operator-(const Vec3 &other) const
+	{
+		return Vec3(x - other.x, y - other.y, z - other.z);
+	}
+
+	Vec3 operator-=(const Vec3 &other) const
 	{
 		return Vec3(x - other.x, y - other.y, z - other.z);
 	}
@@ -33,7 +43,17 @@ struct Vec3
 		return Vec3(x / other.x, y / other.y, z / other.z);
 	}
 
+	Vec3 operator/=(const Vec3 &other) const
+	{
+		return Vec3(x / other.x, y / other.y, z / other.z);
+	}
+
 	Vec3 operator*(const Vec3 &other) const
+	{
+		return Vec3(x * other.x, y * other.y, z * other.z);
+	}
+
+	Vec3 operator*=(const Vec3 &other) const
 	{
 		return Vec3(x * other.x, y * other.y, z * other.z);
 	}
@@ -43,7 +63,22 @@ struct Vec3
 		return Vec3(x - sub, y - sub, z - sub);
 	}
 
+	Vec3 operator-=(double sub) const
+	{
+		return Vec3(x - sub, y - sub, z - sub);
+	}
+
+	Vec3 operator-() const
+	{
+		return Vec3(-x, -y, -z);
+	}
+
 	Vec3 operator+(double add) const
+	{
+		return Vec3(x - add, y - add, z - add);
+	}
+
+	Vec3 operator+=(double add) const
 	{
 		return Vec3(x - add, y - add, z - add);
 	}
@@ -53,7 +88,17 @@ struct Vec3
 		return Vec3(x * scalar, y * scalar, z * scalar);
 	}
 
+	Vec3 operator*=(double scalar) const
+	{
+		return Vec3(x * scalar, y * scalar, z * scalar);
+	}
+
 	Vec3 operator/(double scalar) const
+	{
+		return Vec3(x / scalar, y / scalar, z / scalar);
+	}
+
+	Vec3 operator/=(double scalar) const
 	{
 		return Vec3(x / scalar, y / scalar, z / scalar);
 	}

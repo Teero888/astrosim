@@ -33,18 +33,18 @@ struct CCamera
 	glm::vec2 m_ScreenSize; // get only
 	Vec3 m_FocusPoint = Vec3(0, 0, 0);
 	ECameraMode m_CameraMode = MODE_FOCUS;
-	glm::vec3 m_Position = glm::vec3(0.0f, 0.0f, 1.0f);
-	glm::vec3 m_Front = glm::vec3(0.0f, 0.0f, -1.0f);
-	glm::vec3 m_Up = glm::vec3(0.0f, 1.0f, 0.0f);
-	glm::vec3 m_Right = glm::normalize(glm::cross(m_Front, m_Up));
+	Vec3 m_Position = Vec3(0.0f, 0.0f, 1.0f);
+	Vec3 m_Front = Vec3(0.0f, 0.0f, -1.0f);
+	Vec3 m_Up = Vec3(0.0f, 1.0f, 0.0f);
+	Vec3 m_Right = m_Front.cross(m_Up).normalize();
 
-	float m_Yaw = 45.0f; // Yaw angle (left/right rotation)
-	float m_Pitch = 30.0f; // Pitch angle (up/down rotation)
-	float m_Speed = 2.5f; // Movement speed
-	float m_Sensitivity = 0.1f; // Mouse sensitivity
+	double m_Yaw = 45.0f; // Yaw angle (left/right rotation)
+	double m_Pitch = 30.0f; // Pitch angle (up/down rotation)
+	double m_Speed = 2.5f; // Movement speed
+	double m_Sensitivity = 0.1f; // Mouse sensitivity
 
 	float m_FOV = 70.f;
-	glm::mat4 m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
+	glm::mat4 m_View = glm::lookAt((glm::vec3)m_Position, (glm::vec3)m_Position + (glm::vec3)m_Front, (glm::vec3)m_Up);
 	glm::mat4 m_Projection = glm::perspective(glm::radians(m_FOV), 1600.0f / 1000.0f, 0.001f, 10000.f);
 
 	int m_LOD = 0;

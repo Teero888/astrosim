@@ -1,4 +1,5 @@
 #include "camera.h"
+#include "../sim/vmath.h"
 #include "glm/common.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "graphics.h"
@@ -19,19 +20,19 @@ void CCamera::UpdateViewMatrix()
 	{
 		m_ViewDistance += (m_WantedViewDistance - m_ViewDistance) / ZOOM_FACTOR;
 
-		m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
+		m_Pitch = glm::clamp(m_Pitch, -89.0, 89.0);
 
 		m_Position.x = cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
 		m_Position.y = sin(glm::radians(m_Pitch));
 		m_Position.z = sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
 
-		m_Front = glm::normalize(-m_Position);
-		m_Right = glm::normalize(glm::cross(m_Front, m_Up));
+		m_Front = -m_Position.normalize();
+		m_Right = m_Front.cross(m_Up).normalize();
 
-		Vec3 orbitOffset = Vec3(m_Position) * m_ViewDistance;
+		Vec3 orbitOffset = m_Position * m_ViewDistance;
 		m_AbsolutePosition = m_pFocusedBody->m_SimParams.m_Position + orbitOffset;
 
-		glm::mat4 rotation = glm::lookAt(glm::vec3(0.0f), m_Front, m_Up);
+		glm::mat4 rotation = glm::lookAt(glm::vec3(0.0f), (glm::vec3)m_Front, (glm::vec3)m_Up);
 		glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3((float)(DEFAULT_SCALE / m_ViewDistance)));
 		m_View = rotation * scale;
 		break;
@@ -40,7 +41,7 @@ void CCamera::UpdateViewMatrix()
 	// TODO: this mode doesn't actually work lol fix this once i need it
 	case MODE_FREEVIEW:
 	{
-		glm::mat4 rotation = glm::lookAt(glm::vec3(0.0f), m_Front, m_Up);
+		glm::mat4 rotation = glm::lookAt(glm::vec3(0.0f), (glm::vec3)m_Front, (glm::vec3)m_Up);
 		glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3((float)(DEFAULT_SCALE / m_ViewDistance)));
 		m_View = rotation * scale;
 		break;
@@ -66,8 +67,7 @@ void CCamera::ProcessKeyboard(int direction, float deltaTime)
 
 void CCamera::ProcessMouse(float xoffset, float yoffset)
 {
-	m_Sensitivity = fmin((m_ViewDistance - m_pFocusedBody->m_RenderParams.m_Radius) / m_pFocusedBody->m_RenderParams.m_Radius, 0.1); // [NEW]
-	// printf("sens: %f\n", m_Sensitivity);
+	m_Sensitivity = fmin((m_ViewDistance - m_pFocusedBody->m_RenderParams.m_Radius) / m_pFocusedBody->m_RenderParams.m_Radius, 0.1);
 
 	xoffset *= m_Sensitivity;
 	yoffset *= m_Sensitivity;

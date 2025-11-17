@@ -5,7 +5,6 @@
 #include "glm/ext/vector_float3.hpp"
 #include "graphics.h"
 #include <cmath>
-#include <cstdio>
 
 #define GRID_RESOLUTION 1
 
@@ -51,7 +50,7 @@ void CGrid::Render(CStarSystem &System, CCamera &Camera)
 	m_Shader.SetFloat("u_logDepthF", F);
 
 	// A view matrix without translation or zoom scaling, for calculating the ray direction.
-	glm::mat4 gridView = glm::lookAt(glm::vec3(0.0f), Camera.m_Front, Camera.m_Up);
+	glm::mat4 gridView = glm::lookAt(glm::vec3(0.0f), (glm::vec3)Camera.m_Front, (glm::vec3)Camera.m_Up);
 
 	m_Shader.SetMat4("u_invView", glm::inverse(gridView));
 	m_Shader.SetMat4("u_invProjection", glm::inverse(Camera.m_Projection));

@@ -136,7 +136,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	ImGui::Text("Radius: %.4e", Body.m_RenderParams.m_Radius);
 	ImGui::PopTextWrapPos();
 	ImGui::Text("FPS: %.2f", 1.f / m_FrameTime);
-	ImGui::Text("Meters above planet: %.2f", m_Camera.m_ViewDistance * DEFAULT_SCALE - Body.m_RenderParams.m_Radius);
+	ImGui::Text("Meters above planet: %.2f", m_Camera.m_ViewDistance - Body.m_RenderParams.m_Radius);
 	ImGui::End();
 
 	// ImGui::ShowDemoWindow();
@@ -218,7 +218,7 @@ void CGraphics::MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double 
 	}
 	if(pGraphics->m_pImGuiIO->WantCaptureMouse)
 		return;
-	pGraphics->m_Camera.m_WantedViewDistance -= (pGraphics->m_Camera.m_WantedViewDistance / 10.f) * YOffset - (pGraphics->m_Camera.m_pFocusedBody->m_RenderParams.m_Radius / (10.f * DEFAULT_SCALE));
+	pGraphics->m_Camera.m_WantedViewDistance -= (pGraphics->m_Camera.m_WantedViewDistance / 10.f) * YOffset - (pGraphics->m_Camera.m_pFocusedBody->m_RenderParams.m_Radius / (10.f));
 	pGraphics->m_Camera.UpdateViewMatrix();
 }
 
