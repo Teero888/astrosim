@@ -30,16 +30,27 @@ CProceduralMesh::~CProceduralMesh()
 	Destroy();
 }
 
-void CProceduralMesh::Init(SBody *pBody)
+void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution)
 {
 	m_pBody = pBody;
+	m_BodyType = bodyType;
 
+	// Compile shader for all renderable types
 	m_Shader.CompileShader(Shaders::VERT_BODY, Shaders::FRAG_BODY);
 
-	m_TerrainGenerator.Init(pBody->m_Id);
+	// Only initialize terrain generator for terrestrial bodies
+	if(m_BodyType == TERRESTRIAL)
+		m_TerrainGenerator.Init(pBody->m_Id, pBody->m_RenderParams.m_Terrain);
 
-	float RootSize = (float)m_pBody->m_RenderParams.m_Radius * 2.0f;
-	m_pRootNode = std::make_shared<COctreeNode>(this, std::weak_ptr<COctreeNode>(), glm::vec3(0.0f), RootSize, 0);
+	// Create an octree root for all renderable types (Stars, Planets)
+	// For Stars, the terrain generator will just use default noise,
+	// but the shader will override the color to be emissive.
+	// TODO: Add GAS_GIANT when supported
+	if(m_BodyType == TERRESTRIAL || m_BodyType == STAR)
+	{
+		float RootSize = (float)m_pBody->m_RenderParams.m_Radius * 2.0f;
+		m_pRootNode = std::make_shared<COctreeNode>(this, std::weak_ptr<COctreeNode>(), glm::vec3(0.0f), RootSize, 0, voxelResolution);
+	}
 
 	unsigned int NumThreads = std::thread::hardware_concurrency();
 	// Use all but one core for workers, leave one for main thread/etc.
@@ -59,6 +70,9 @@ void CProceduralMesh::Update(CCamera &Camera)
 
 void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody)
 {
+	if(!m_pRootNode)
+		return;
+
 	m_Shader.Use();
 
 	// Pass constant needed for logarithmic depth calculation
@@ -73,7 +87,19 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody)
 	Vec3 LightDir = (pLightBody->m_SimParams.m_Position - m_pBody->m_SimParams.m_Position).normalize();
 	m_Shader.SetVec3("uLightDir", (glm::vec3)LightDir);
 	m_Shader.SetVec3("uLightColor", pLightBody->m_RenderParams.m_Color);
-	m_Shader.SetVec3("uObjectColor", m_pBody->m_RenderParams.m_Color);
+	m_Shader.SetVec3("uObjectColor", m_pBody->m_RenderParams.m_Color); // This is the base color for non-terrestrial or stars
+
+	// Set color palette uniforms
+	m_Shader.SetVec3("DEEP_OCEAN_COLOR", m_pBody->m_RenderParams.m_Colors.deepOcean);
+	m_Shader.SetVec3("SHALLOW_OCEAN_COLOR", m_pBody->m_RenderParams.m_Colors.shallowOcean);
+	m_Shader.SetVec3("BEACH_COLOR", m_pBody->m_RenderParams.m_Colors.beach);
+	m_Shader.SetVec3("LAND_LOW_COLOR", m_pBody->m_RenderParams.m_Colors.landLow);
+	m_Shader.SetVec3("LAND_HIGH_COLOR", m_pBody->m_RenderParams.m_Colors.landHigh);
+	m_Shader.SetVec3("MOUNTAIN_LOW_COLOR", m_pBody->m_RenderParams.m_Colors.mountainLow);
+	m_Shader.SetVec3("MOUNTAIN_HIGH_COLOR", m_pBody->m_RenderParams.m_Colors.mountainHigh);
+	m_Shader.SetVec3("SNOW_COLOR", m_pBody->m_RenderParams.m_Colors.snow);
+
+	m_Shader.SetFloat("uPlanetRadius", (float)m_pBody->m_RenderParams.m_Radius);
 
 	// Render the single root node
 	if(m_pRootNode)
@@ -168,10 +194,11 @@ void CProceduralMesh::GenerationWorkerLoop()
 	}
 }
 
-COctreeNode::COctreeNode(CProceduralMesh *pOwnerMesh, std::weak_ptr<COctreeNode> pParent, glm::vec3 center, float size, int level) :
+COctreeNode::COctreeNode(CProceduralMesh *pOwnerMesh, std::weak_ptr<COctreeNode> pParent, glm::vec3 center, float size, int level, int voxelResolution) :
 	m_pOwnerMesh(pOwnerMesh),
 	m_pParent(pParent),
 	m_Level(level),
+	m_VoxelResolution(voxelResolution),
 	m_Center(center),
 	m_Size(size),
 	m_bIsGenerating(false),
@@ -198,7 +225,7 @@ COctreeNode::~COctreeNode()
 void COctreeNode::GenerateMesh()
 {
 	// printf("Generating mesh for node level %d\n", m_Level);
-	const int res = VOXEL_RESOLUTION;
+	const int res = m_VoxelResolution;
 	const int numGridPoints = (res + 1) * (res + 1) * (res + 1);
 	const int res1 = res + 1;
 
@@ -302,6 +329,8 @@ void COctreeNode::GenerateMesh()
 							vert.position = pos - m_Center; // Store position relative to the node's center
 							vert.normal = norm;
 							vert.texCoord = glm::vec2(pos.x, pos.z) / 1000.0f;
+							STerrainColorData colorData = m_pOwnerMesh->m_TerrainGenerator.GetTerrainColorData(pos, (float)m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius);
+							vert.color_data = glm::vec2(colorData.elevation, colorData.mountain_noise);
 
 							m_vGeneratedVertices.push_back(vert);
 							unsigned int newIndex = m_vGeneratedVertices.size() - 1;
@@ -366,6 +395,8 @@ void COctreeNode::ApplyMeshBuffers()
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(SProceduralVertex), (void *)offsetof(SProceduralVertex, texCoord));
 	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(SProceduralVertex), (void *)offsetof(SProceduralVertex, color_data));
+	glEnableVertexAttribArray(3);
 
 	glBindVertexArray(0);
 
@@ -507,14 +538,14 @@ void COctreeNode::Subdivide()
 
 	// printf("Creating new children at distance: %.2f\n", glm::length(glm::vec2(m_Center.x + offset, m_Center.y + offset)));
 	// Create 8 new child nodes
-	m_pChildren[0] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(-offset, -offset, -offset), newSize, m_Level + 1); // ---
-	m_pChildren[1] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(+offset, -offset, -offset), newSize, m_Level + 1); // +--
-	m_pChildren[2] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(+offset, +offset, -offset), newSize, m_Level + 1); // ++-
-	m_pChildren[3] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(-offset, +offset, -offset), newSize, m_Level + 1); // -+-
-	m_pChildren[4] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(-offset, -offset, +offset), newSize, m_Level + 1); // --+
-	m_pChildren[5] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(+offset, -offset, +offset), newSize, m_Level + 1); // +-+
-	m_pChildren[6] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(+offset, +offset, +offset), newSize, m_Level + 1); // +++
-	m_pChildren[7] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(-offset, +offset, +offset), newSize, m_Level + 1); // -++
+	m_pChildren[0] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(-offset, -offset, -offset), newSize, m_Level + 1, m_VoxelResolution); // ---
+	m_pChildren[1] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(+offset, -offset, -offset), newSize, m_Level + 1, m_VoxelResolution); // +--
+	m_pChildren[2] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(+offset, +offset, -offset), newSize, m_Level + 1, m_VoxelResolution); // ++-
+	m_pChildren[3] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(-offset, +offset, -offset), newSize, m_Level + 1, m_VoxelResolution); // -+-
+	m_pChildren[4] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(-offset, -offset, +offset), newSize, m_Level + 1, m_VoxelResolution); // --+
+	m_pChildren[5] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(+offset, -offset, +offset), newSize, m_Level + 1, m_VoxelResolution); // +-+
+	m_pChildren[6] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(+offset, +offset, +offset), newSize, m_Level + 1, m_VoxelResolution); // +++
+	m_pChildren[7] = std::make_shared<COctreeNode>(m_pOwnerMesh, shared_from_this(), m_Center + glm::vec3(-offset, +offset, +offset), newSize, m_Level + 1, m_VoxelResolution); // -++
 }
 
 void COctreeNode::Merge()

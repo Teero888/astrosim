@@ -69,7 +69,7 @@ void CMarkers::Render(CStarSystem &System, CCamera &Camera)
 
 		float ScreenRadius = glm::distance(ScreenPos, ScreenEdgePos);
 		float MinScale = (10.0f * 2.0f) / Camera.m_ScreenSize.x; // 5 pixels diameter in NDC
-		float Scale = glm::max(MinScale, (ScreenRadius * 4.0f) / Camera.m_ScreenSize.x); // Convert to NDC diameter
+		float Scale = glm::max(MinScale, (ScreenRadius * 2.0f) / Camera.m_ScreenSize.x); // Convert to NDC diameter
 
 		glm::vec2 Pos;
 		Pos.x = (ScreenPos.x / Camera.m_ScreenSize.x) * 2.0f - 1.0f; // converts x to [-1, 1]

@@ -2,22 +2,23 @@
 #include "../sim/body.h"
 #include "../sim/starsystem.h"
 #include "../sim/vmath.h"
-#include "camera.h"
-#include "shader.h"
-#include <FastNoiseLite.h>
 #include <GLFW/glfw3.h>
+
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
+#include <map>
+#include <string>
+#include <vector>
+
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
+
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-#include <iostream>
-#include <map>
-#include <vector>
 
 bool CGraphics::OnInit(CStarSystem *pStarSystem)
 {
@@ -75,16 +76,73 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	m_Grid.Init();
 	m_Trajectories.Init();
 	m_Markers.Init();
-	InitGfx(); // This is now empty, but we call it for consistency
+	InitGfx();
 
-	// Initialize procedural meshes for ALL bodies
+	OnBodiesReloaded(pStarSystem);
+
+	return true;
+}
+
+void CGraphics::OnBodiesReloaded(CStarSystem *pStarSystem)
+{
+	// Clean up old procedural meshes
+	for(auto &[id, mesh] : m_BodyMeshes)
+	{
+		mesh->Destroy();
+		delete mesh;
+	}
+	m_BodyMeshes.clear();
+
+	// Initialize procedural meshes for ALL new bodies
 	for(auto &Body : pStarSystem->m_vBodies)
 	{
 		m_BodyMeshes[Body.m_Id] = new CProceduralMesh();
-		m_BodyMeshes[Body.m_Id]->Init(&Body);
+		m_BodyMeshes[Body.m_Id]->Init(&Body, Body.m_RenderParams.m_BodyType, CProceduralMesh::VOXEL_RESOLUTION_DEFAULT);
 	}
 
-	return true;
+	m_Trajectories.ClearTrajectories();
+
+	ResetCamera(pStarSystem);
+}
+
+void CGraphics::ReloadSimulation()
+{
+	printf("Hot-reloading simulation data...\n");
+	m_pStarSystem->LoadBodies("data/bodies.dat");
+	OnBodiesReloaded(m_pStarSystem);
+}
+
+void CGraphics::ResetCamera(CStarSystem *pStarSystem)
+{
+	std::string previouslyFocusedBody = "";
+	if(m_Camera.m_pFocusedBody)
+	{
+		previouslyFocusedBody = m_Camera.m_pFocusedBody->m_Name;
+	}
+
+	m_Camera.m_pFocusedBody = nullptr;
+
+	if(!pStarSystem->m_vBodies.empty())
+	{
+		// Try to find the same body to focus on
+		if(!previouslyFocusedBody.empty())
+		{
+			for(auto &body : pStarSystem->m_vBodies)
+			{
+				if(body.m_Name == previouslyFocusedBody)
+				{
+					m_Camera.SetBody(&body);
+					break;
+				}
+			}
+		}
+
+		// If not found or was not set, default to the first body
+		if(!m_Camera.m_pFocusedBody)
+		{
+			m_Camera.SetBody(&pStarSystem->m_vBodies.front());
+		}
+	}
 }
 
 void CGraphics::OnRender(CStarSystem &StarSystem)
@@ -98,45 +156,40 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	if(std::fabs(m_Camera.m_WantedViewDistance - m_Camera.m_ViewDistance) > 1e-3)
 		m_Camera.UpdateViewMatrix();
 
-	// use imgui later xd
-	// ImGui::Begin("Style Editor");
-	// ImGui::ShowStyleEditor();
-	// ImGui::End();
-	//
-	// // Render a simple ImGui window
-
 	ImGui::Begin("Settings");
 	ImGui::SliderInt("Days per second", &StarSystem.m_DPS, 1, 365);
-	static const char *pCurrentItem = StarSystem.m_vBodies.front().m_Name.c_str();
-	pCurrentItem = m_Camera.m_pFocusedBody->m_Name.c_str();
-
-	ImGui::SliderInt("LOD", &m_Camera.m_LOD, 0, COctreeNode::MAX_LOD_LEVEL);
-	ImGui::Checkbox("Show all trajectories", &m_Trajectories.m_ShowAll);
-	ImGui::Checkbox("Show markers", &m_Markers.m_ShowMarkers);
-	ImGui::Checkbox("Show Wireframe", &m_bShowWireframe);
-	if(ImGui::BeginCombo("Select Focus##focus", pCurrentItem))
+	if(m_Camera.m_pFocusedBody && !StarSystem.m_vBodies.empty())
 	{
-		for(auto &Body : StarSystem.m_vBodies)
-		{
-			bool IsSelected = (pCurrentItem == Body.m_Name.c_str());
-			if(ImGui::Selectable(Body.m_Name.c_str(), IsSelected))
-				m_Camera.SetBody(&Body);
-			if(IsSelected)
-				ImGui::SetItemDefaultFocus();
-		}
-		ImGui::EndCombo();
-	}
+		const char *pCurrentItem = m_Camera.m_pFocusedBody->m_Name.c_str();
 
-	ImGui::PushTextWrapPos(5000.f);
-	auto &Body = *m_Camera.m_pFocusedBody;
-	ImGui::Text("Name: %s", Body.m_Name.c_str());
-	ImGui::Text("Position: %.4e, %.4e, %.4e", Body.m_SimParams.m_Position.x, Body.m_SimParams.m_Position.y, Body.m_SimParams.m_Position.z);
-	ImGui::Text("Velocity: %.4e, %.4e, %.4e", Body.m_SimParams.m_Velocity.x, Body.m_SimParams.m_Velocity.y, Body.m_SimParams.m_Velocity.z);
-	ImGui::Text("Mass: %.4e", Body.m_SimParams.m_Mass);
-	ImGui::Text("Radius: %.4e", Body.m_RenderParams.m_Radius);
-	ImGui::PopTextWrapPos();
-	ImGui::Text("FPS: %.2f", 1.f / m_FrameTime);
-	ImGui::Text("Meters above planet: %.2f", m_Camera.m_ViewDistance - Body.m_RenderParams.m_Radius);
+		ImGui::SliderInt("LOD", &m_Camera.m_LOD, 0, COctreeNode::MAX_LOD_LEVEL);
+		ImGui::Checkbox("Show all trajectories", &m_Trajectories.m_ShowAll);
+		ImGui::Checkbox("Show markers", &m_Markers.m_ShowMarkers);
+		ImGui::Checkbox("Show Wireframe", &m_bShowWireframe);
+		if(ImGui::BeginCombo("Select Focus##focus", pCurrentItem))
+		{
+			for(auto &Body : StarSystem.m_vBodies)
+			{
+				bool IsSelected = (pCurrentItem == Body.m_Name.c_str());
+				if(ImGui::Selectable(Body.m_Name.c_str(), IsSelected))
+					m_Camera.SetBody(&Body);
+				if(IsSelected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+
+		ImGui::PushTextWrapPos(5000.f);
+		auto &Body = *m_Camera.m_pFocusedBody;
+		ImGui::Text("Name: %s", Body.m_Name.c_str());
+		ImGui::Text("Position: %.4e, %.4e, %.4e", Body.m_SimParams.m_Position.x, Body.m_SimParams.m_Position.y, Body.m_SimParams.m_Position.z);
+		ImGui::Text("Velocity: %.4e, %.4e, %.4e", Body.m_SimParams.m_Velocity.x, Body.m_SimParams.m_Velocity.y, Body.m_SimParams.m_Velocity.z);
+		ImGui::Text("Mass: %.4e", Body.m_SimParams.m_Mass);
+		ImGui::Text("Radius: %.4e", Body.m_RenderParams.m_Radius);
+		ImGui::PopTextWrapPos();
+		ImGui::Text("FPS: %.2f", 1.f / m_FrameTime);
+		ImGui::Text("Meters above planet: %.2f", m_Camera.m_ViewDistance - Body.m_RenderParams.m_Radius);
+	}
 	ImGui::End();
 
 	// ImGui::ShowDemoWindow();
@@ -158,15 +211,18 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	// m_Camera.m_LowestDist = DBL_MAX;
 	// m_Camera.m_HighestDist = -DBL_MAX;
 
-	for(size_t i = 0; i < StarSystem.m_vBodies.size(); ++i)
+	if(!StarSystem.m_vBodies.empty())
 	{
-		auto &Body = StarSystem.m_vBodies[i];
-		if(m_BodyMeshes.count(Body.m_Id))
+		for(size_t i = 0; i < StarSystem.m_vBodies.size(); ++i)
 		{
-			auto mesh = m_BodyMeshes[Body.m_Id];
-			mesh->Update(m_Camera); // Update LOD
-			// Render, using the Sun (body 0) as the light source
-			mesh->Render(m_Camera, &StarSystem.m_vBodies.front());
+			auto &Body = StarSystem.m_vBodies[i];
+			if(m_BodyMeshes.count(Body.m_Id))
+			{
+				auto mesh = m_BodyMeshes[Body.m_Id];
+				mesh->Update(m_Camera); // Update LOD
+				// Render, using the Sun (body 0) as the light source
+				mesh->Render(m_Camera, m_pStarSystem->m_pSunBody);
+			}
 		}
 	}
 	// printf("min: %.7f, max: %.4f\n", m_Camera.m_LowestDist, m_Camera.m_HighestDist);
@@ -218,8 +274,11 @@ void CGraphics::MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double 
 	}
 	if(pGraphics->m_pImGuiIO->WantCaptureMouse)
 		return;
-	pGraphics->m_Camera.m_WantedViewDistance -= (pGraphics->m_Camera.m_WantedViewDistance / 10.f) * YOffset - (pGraphics->m_Camera.m_pFocusedBody->m_RenderParams.m_Radius / (10.f));
-	pGraphics->m_Camera.UpdateViewMatrix();
+	if(pGraphics->m_Camera.m_pFocusedBody)
+	{
+		pGraphics->m_Camera.m_WantedViewDistance -= (pGraphics->m_Camera.m_WantedViewDistance / 10.f) * YOffset - (pGraphics->m_Camera.m_pFocusedBody->m_RenderParams.m_Radius / (10.f));
+		pGraphics->m_Camera.UpdateViewMatrix();
+	}
 }
 
 void CGraphics::MouseMotionCallback(GLFWwindow *pWindow, double XPos, double YPos)
@@ -249,27 +308,29 @@ void CGraphics::KeyActionCallback(GLFWwindow *pWindow, int Key, int Scancode, in
 		printf("Window pointer does not exist in scroll callback. very very bad\n");
 		return;
 	}
-	if(Action > 0)
+	if(Action == GLFW_PRESS || Action == GLFW_REPEAT)
 	{
 		if(Key == GLFW_KEY_W)
-		{
 			MouseScrollCallback(pGraphics->m_pWindow, 0, 1);
-			pGraphics->m_Camera.UpdateViewMatrix();
-		}
 		else if(Key == GLFW_KEY_S)
-		{
 			MouseScrollCallback(pGraphics->m_pWindow, 0, -1);
-			pGraphics->m_Camera.UpdateViewMatrix();
-		}
 		else if(Key == GLFW_KEY_LEFT)
 		{
-			size_t BodyCount = pGraphics->m_pStarSystem->m_vBodies.size();
-			pGraphics->m_Camera.SetBody(&pGraphics->m_pStarSystem->m_vBodies[(pGraphics->m_Camera.m_pFocusedBody->m_Id - 1 + BodyCount) % BodyCount]);
+			if(pGraphics->m_Camera.m_pFocusedBody)
+			{
+				size_t BodyCount = pGraphics->m_pStarSystem->m_vBodies.size();
+				pGraphics->m_Camera.SetBody(&pGraphics->m_pStarSystem->m_vBodies[(pGraphics->m_Camera.m_pFocusedBody->m_Id - 1 + BodyCount) % BodyCount]);
+			}
 		}
 		else if(Key == GLFW_KEY_RIGHT)
 		{
-			pGraphics->m_Camera.SetBody(&pGraphics->m_pStarSystem->m_vBodies[(pGraphics->m_Camera.m_pFocusedBody->m_Id + 1) % pGraphics->m_pStarSystem->m_vBodies.size()]);
+			if(pGraphics->m_Camera.m_pFocusedBody)
+			{
+				pGraphics->m_Camera.SetBody(&pGraphics->m_pStarSystem->m_vBodies[(pGraphics->m_Camera.m_pFocusedBody->m_Id + 1) % pGraphics->m_pStarSystem->m_vBodies.size()]);
+			}
 		}
+		else if(Key == GLFW_KEY_F5)
+			pGraphics->ReloadSimulation();
 	}
 }
 

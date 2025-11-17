@@ -114,10 +114,14 @@ target_include_directories(astrosim PRIVATE
 	${GLM_DIR}
 	${FASTNOISE_DIR}
 	${CMAKE_SOURCE_DIR}/shaders
+	${CMAKE_SOURCE_DIR}/src
+	${CMAKE_SOURCE_DIR}/src/sim
 )
 
 # Copy data files to build directory on every build
 add_custom_target(copy_data ALL
+	COMMAND ${CMAKE_COMMAND} -E remove_directory
+		${CMAKE_BINARY_DIR}/data
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
 		${CMAKE_SOURCE_DIR}/data
 		${CMAKE_BINARY_DIR}/data

@@ -35,6 +35,7 @@ public:
 	void UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera);
 	void Render(CCamera &Camera);
 	void Destroy();
+	void ClearTrajectories();
 };
 
 #endif // TRAJECTORIES_H

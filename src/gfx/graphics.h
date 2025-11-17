@@ -40,8 +40,13 @@ public:
 	void InitGfx(); // This is now an empty function, but kept for structure
 	void OnRender(CStarSystem &StarSystem);
 	void OnExit();
+	void ReloadSimulation();
+	void OnBodiesReloaded(CStarSystem *pStarSystem);
 
 	inline GLFWwindow *GetWindow() { return m_pWindow; }
+
+private:
+	void ResetCamera(CStarSystem *pStarSystem);
 };
 
 #endif // GRAPHICS_H

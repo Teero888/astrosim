@@ -21,6 +21,7 @@ struct SProceduralVertex
 	glm::vec3 position;
 	glm::vec3 normal;
 	glm::vec2 texCoord;
+	glm::vec2 color_data;
 };
 
 class COctreeNode; // Forward declare
@@ -33,7 +34,7 @@ public:
 	CProceduralMesh();
 	~CProceduralMesh();
 
-	void Init(SBody *pBody);
+	void Init(SBody *pBody, EBodyType bodyType, int voxelResolution);
 	void Update(CCamera &Camera);
 	void Render(const CCamera &Camera, const SBody *pLightBody);
 	void Destroy();
@@ -41,6 +42,9 @@ public:
 	void AddToGenerationQueue(std::shared_ptr<COctreeNode> pNode);
 	void CheckApplyQueue();
 	void GenerationWorkerLoop();
+
+	EBodyType m_BodyType;
+	static const int VOXEL_RESOLUTION_DEFAULT = 8;
 
 private:
 	SBody *m_pBody = nullptr;
@@ -65,10 +69,9 @@ private:
 class COctreeNode : public std::enable_shared_from_this<COctreeNode>
 {
 public:
-	static const int VOXEL_RESOLUTION = 2;
 	static const int MAX_LOD_LEVEL = 25;
 
-	COctreeNode(CProceduralMesh *pOwnerMesh, std::weak_ptr<COctreeNode> pParent, glm::vec3 center, float size, int level);
+	COctreeNode(CProceduralMesh *pOwnerMesh, std::weak_ptr<COctreeNode> pParent, glm::vec3 center, float size, int level, int voxelResolution);
 	~COctreeNode();
 
 	void Update(CCamera &Camera);
@@ -86,6 +89,7 @@ private:
 
 	bool m_bIsLeaf = true;
 	int m_Level;
+	int m_VoxelResolution;
 
 	glm::vec3 m_Center;
 	float m_Size;

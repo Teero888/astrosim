@@ -1,6 +1,7 @@
 #include "terrain.h"
 #include <FastNoiseLite.h>
 #include <cmath>
+#include <glm/gtc/noise.hpp>
 
 CTerrainGenerator::CTerrainGenerator() :
 	m_pContinentNoise(new FastNoiseLite()),
@@ -18,41 +19,41 @@ CTerrainGenerator::~CTerrainGenerator()
 	delete m_pCaveNoise;
 }
 
-void CTerrainGenerator::Init(int seed)
+void CTerrainGenerator::Init(int seed, const STerrainParameters &params)
 {
 	// Continent Noise (large scale features)
 	m_pContinentNoise->SetSeed(seed);
 	m_pContinentNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	m_pContinentNoise->SetFrequency(0.02f);
+	m_pContinentNoise->SetFrequency(params.continentFrequency);
 	m_pContinentNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-	m_pContinentNoise->SetFractalOctaves(4);
+	m_pContinentNoise->SetFractalOctaves(params.continentOctaves);
 	m_pContinentNoise->SetFractalLacunarity(2.0f);
 	m_pContinentNoise->SetFractalGain(0.5f);
 
 	// Mountain Noise (mid scale features)
 	m_pMountainNoise->SetSeed(seed + 1);
 	m_pMountainNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	m_pMountainNoise->SetFrequency(0.08f);
+	m_pMountainNoise->SetFrequency(params.mountainFrequency);
 	m_pMountainNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-	m_pMountainNoise->SetFractalOctaves(6);
+	m_pMountainNoise->SetFractalOctaves(params.mountainOctaves);
 	m_pMountainNoise->SetFractalLacunarity(2.0f);
 	m_pMountainNoise->SetFractalGain(0.5f);
 
 	// Hills/Plains Noise (small scale detail)
 	m_pHillsNoise->SetSeed(seed + 2);
 	m_pHillsNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	m_pHillsNoise->SetFrequency(0.3f);
+	m_pHillsNoise->SetFrequency(params.hillsFrequency);
 	m_pHillsNoise->SetFractalType(FastNoiseLite::FractalType_Ridged); // Ridged gives more interesting plains
-	m_pHillsNoise->SetFractalOctaves(3);
+	m_pHillsNoise->SetFractalOctaves(params.hillsOctaves);
 	m_pHillsNoise->SetFractalLacunarity(2.0f);
 	m_pHillsNoise->SetFractalGain(0.5f);
 
 	// Cave Noise (3D internal features)
 	m_pCaveNoise->SetSeed(seed + 3);
 	m_pCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	m_pCaveNoise->SetFrequency(0.1f);
+	m_pCaveNoise->SetFrequency(0.1f); // Using default for now
 	m_pCaveNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-	m_pCaveNoise->SetFractalOctaves(3);
+	m_pCaveNoise->SetFractalOctaves(3); // Using default for now
 }
 
 float CTerrainGenerator::GetTerrainDensity(glm::vec3 worldPosition, float planetRadius)
@@ -118,6 +119,39 @@ float CTerrainGenerator::GetTerrainDensity(glm::vec3 worldPosition, float planet
 	// Final Combination
 	// Density = (Sphere SDF) + (Terrain Height) - (Cave Pockets)
 	return base_density + terrain_offset - cave_effect;
+}
+
+STerrainColorData CTerrainGenerator::GetTerrainColorData(glm::vec3 worldPosition, float planetRadius)
+{
+	glm::vec3 normalized_pos = glm::normalize(worldPosition);
+
+	// Re-calculate noise values needed for color
+	float continent_noise = m_pContinentNoise->GetNoise(normalized_pos.x, normalized_pos.y, normalized_pos.z);
+	float land_factor = (continent_noise + 1.0f) * 0.5f;
+	land_factor = pow(land_factor, 1.5f);
+
+	float sea_level = 0.4f;
+	float continent_offset;
+	if(land_factor > sea_level)
+		continent_offset = (land_factor - sea_level) * (planetRadius * 0.005f);
+	else
+		continent_offset = (land_factor - sea_level) * (planetRadius * 0.01f);
+
+	float mountain_noise = 0;
+	if(land_factor > sea_level)
+	{
+		float mountain_raw_noise = m_pMountainNoise->GetNoise(normalized_pos.x * 4, normalized_pos.y * 4, normalized_pos.z * 4);
+		mountain_raw_noise = (mountain_raw_noise + 1.0f) * 0.5f;
+		mountain_raw_noise = pow(mountain_raw_noise, 2.0f);
+		mountain_noise = mountain_raw_noise * (planetRadius * 0.015f) * (land_factor - sea_level);
+	}
+
+	float hills_raw_noise = m_pHillsNoise->GetNoise(normalized_pos.x * 16, normalized_pos.y * 16, normalized_pos.z * 16);
+	float hills_noise = hills_raw_noise * (planetRadius * 0.001f);
+
+	float elevation = continent_offset + mountain_noise + hills_noise;
+
+	return {elevation, mountain_noise};
 }
 
 glm::vec3 CTerrainGenerator::CalculateDensityGradient(glm::vec3 p, float planetRadius)

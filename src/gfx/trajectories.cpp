@@ -103,3 +103,13 @@ void CTrajectories::Destroy()
 	}
 	m_Shader.Destroy();
 }
+
+void CTrajectories::ClearTrajectories()
+{
+	for(auto &trajectory : m_vPlanetTrajectories)
+	{
+		glDeleteVertexArrays(1, &trajectory.VAO);
+		glDeleteBuffers(1, &trajectory.VBO);
+	}
+	m_vPlanetTrajectories.clear();
+}
