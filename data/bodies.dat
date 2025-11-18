@@ -35,19 +35,22 @@ SnowLineStart=4500.0
 SnowLineEnd=6000.0
 
 [terrain]
-ContinentFrequency=0.02
-ContinentOctaves=4
+ContinentFrequency=0.025
+ContinentOctaves=6
 MountainFrequency=0.08
-MountainOctaves=6
+MountainOctaves=8
 HillsFrequency=0.3
-HillsOctaves=3
-WarpFrequency=0.03
-WarpStrength=0.8
-SeaLevel=0.4
-OceanDepth=0.01
-ContinentHeight=0.005
-MountainHeight=0.015
-HillsHeight=0.001
+HillsOctaves=6
+DetailFrequency=0.9
+DetailOctaves=4
+WarpFrequency=0.02
+WarpStrength=1.0
+SeaLevel=0.48
+OceanDepth=0.003
+ContinentHeight=0.0025
+MountainHeight=0.006
+HillsHeight=0.0005
+DetailHeight=0.00003
 MountainStartMin=1500.0
 
 Name=Mars
@@ -74,14 +77,20 @@ BarrenLandMax=2000.0
 BarrenMountainMax=3000.0
 
 [terrain]
-ContinentFrequency=0.05
+ContinentFrequency=0.03
 ContinentOctaves=6
 MountainFrequency=0.1
 MountainOctaves=8
-HillsFrequency=0.4
+HillsFrequency=0.5
 HillsOctaves=4
-WarpFrequency=0.05
-WarpStrength=0.5
+DetailFrequency=1.5
+DetailOctaves=4
+WarpFrequency=0.03
+WarpStrength=0.6
+ContinentHeight=0.002
+MountainHeight=0.004
+HillsHeight=0.0003
+DetailHeight=0.00002
 
 Name=Volcanis
 Type=TERRESTRIAL
@@ -111,14 +120,20 @@ LavaPeakHeight=4000.0
 LavaHotspotHeight=5000.0
 
 [terrain]
-ContinentFrequency=0.08
+ContinentFrequency=0.05
 ContinentOctaves=6
 MountainFrequency=0.15
-MountainOctaves=6
-HillsFrequency=0.5
+MountainOctaves=8
+HillsFrequency=0.6
 HillsOctaves=4
-WarpFrequency=0.1
-WarpStrength=1.2
+DetailFrequency=1.8
+DetailOctaves=4
+WarpFrequency=0.08
+WarpStrength=1.5
+ContinentHeight=0.004
+MountainHeight=0.008
+HillsHeight=0.0006
+DetailHeight=0.00004
 
 Name=Glacies
 Type=TERRESTRIAL
@@ -147,11 +162,17 @@ CrevasseMaskEnd=1.0
 CrevasseColorMix=0.7
 
 [terrain]
-ContinentFrequency=0.05
+ContinentFrequency=0.03
 ContinentOctaves=2
-MountainFrequency=0.1
+MountainFrequency=0.15
 MountainOctaves=4
-HillsFrequency=0.8
+HillsFrequency=0.5
 HillsOctaves=2
-WarpFrequency=0.02
+DetailFrequency=1.2
+DetailOctaves=4
+WarpFrequency=0.01
 WarpStrength=0.4
+ContinentHeight=0.001
+MountainHeight=0.0015
+HillsHeight=0.0001
+DetailHeight=0.00002

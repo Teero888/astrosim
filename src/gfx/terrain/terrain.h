@@ -32,6 +32,7 @@ private:
 	FastNoiseLite *m_pMountainNoise;
 	FastNoiseLite *m_pHillsNoise;
 	FastNoiseLite *m_pCaveNoise;
+	FastNoiseLite *m_pDetailNoise;
 	FastNoiseLite *m_pWarpNoise;
 	ETerrainType m_TerrainType;
 	STerrainParameters m_Params; // Store params for use in GetTerrainOutput

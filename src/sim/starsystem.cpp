@@ -228,6 +228,10 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 				RenderParams.m_Terrain.HillsFrequency = std::stof(value);
 			else if(Key == "HillsOctaves")
 				RenderParams.m_Terrain.HillsOctaves = std::stoi(value);
+			else if(Key == "DetailFrequency")
+				RenderParams.m_Terrain.DetailFrequency = std::stof(value);
+			else if(Key == "DetailOctaves")
+				RenderParams.m_Terrain.DetailOctaves = std::stoi(value);
 			// Load new parameters
 			else if(Key == "WarpFrequency")
 				RenderParams.m_Terrain.WarpFrequency = std::stof(value);
@@ -243,6 +247,8 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 				RenderParams.m_Terrain.MountainHeight = std::stof(value);
 			else if(Key == "HillsHeight")
 				RenderParams.m_Terrain.HillsHeight = std::stof(value);
+			else if(Key == "DetailHeight")
+				RenderParams.m_Terrain.DetailHeight = std::stof(value);
 			// Add parser for the new mountain-start value
 			else if(Key == "MountainStartMin")
 				RenderParams.m_Terrain.MountainStartMin = std::stof(value);

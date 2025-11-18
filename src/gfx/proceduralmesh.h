@@ -24,7 +24,7 @@ struct SProceduralVertex
 	glm::vec2 color_data;
 };
 
-class COctreeNode; // Forward declare
+class COctreeNode;
 
 class CProceduralMesh
 {
@@ -44,7 +44,7 @@ public:
 	void GenerationWorkerLoop();
 
 	EBodyType m_BodyType;
-	static const int VOXEL_RESOLUTION_DEFAULT = 4;
+	static const int VOXEL_RESOLUTION_DEFAULT = 16;
 
 private:
 	SBody *m_pBody = nullptr;

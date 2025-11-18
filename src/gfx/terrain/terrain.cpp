@@ -7,6 +7,7 @@ CTerrainGenerator::CTerrainGenerator() :
 	m_pMountainNoise(new FastNoiseLite()),
 	m_pHillsNoise(new FastNoiseLite()),
 	m_pCaveNoise(new FastNoiseLite()),
+	m_pDetailNoise(new FastNoiseLite()),
 	m_pWarpNoise(new FastNoiseLite())
 {
 }
@@ -17,6 +18,7 @@ CTerrainGenerator::~CTerrainGenerator()
 	delete m_pMountainNoise;
 	delete m_pHillsNoise;
 	delete m_pCaveNoise;
+	delete m_pDetailNoise;
 	delete m_pWarpNoise;
 }
 
@@ -45,7 +47,7 @@ void CTerrainGenerator::Init(int seed, const STerrainParameters &params, ETerrai
 	m_pMountainNoise->SetSeed(seed + 1);
 	m_pMountainNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
 	m_pMountainNoise->SetFrequency(params.MountainFrequency);
-	m_pMountainNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+	m_pMountainNoise->SetFractalType(FastNoiseLite::FractalType_Ridged);
 	m_pMountainNoise->SetFractalOctaves(params.MountainOctaves);
 	m_pMountainNoise->SetFractalLacunarity(2.0f);
 	m_pMountainNoise->SetFractalGain(0.5f);
@@ -59,6 +61,15 @@ void CTerrainGenerator::Init(int seed, const STerrainParameters &params, ETerrai
 	m_pHillsNoise->SetFractalOctaves(params.HillsOctaves);
 	m_pHillsNoise->SetFractalLacunarity(2.0f);
 	m_pHillsNoise->SetFractalGain(0.5f);
+
+	// Detail Noise (high frequency surface detail)
+	m_pDetailNoise->SetSeed(seed + 4); // Use a new seed
+	m_pDetailNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+	m_pDetailNoise->SetFrequency(params.DetailFrequency);
+	m_pDetailNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+	m_pDetailNoise->SetFractalOctaves(params.DetailOctaves);
+	m_pDetailNoise->SetFractalLacunarity(2.0f);
+	m_pDetailNoise->SetFractalGain(0.5f);
 
 	// Cave Noise (3D internal features)
 	m_pCaveNoise->SetSeed(seed + 3);
@@ -86,9 +97,9 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(glm::vec3 worldPosition, floa
 	warped_pos = glm::normalize(warped_pos); // Re-normalize to stay on sphere
 
 	float continent_noise = m_pContinentNoise->GetNoise(warped_pos.x, warped_pos.y, warped_pos.z);
-	float mountain_raw_noise = m_pMountainNoise->GetNoise(warped_pos.x * 4, warped_pos.y * 4, warped_pos.z * 4);
-	float hills_raw_noise = m_pHillsNoise->GetNoise(warped_pos.x * 16, warped_pos.y * 16, warped_pos.z * 16);
-
+	float mountain_raw_noise = m_pMountainNoise->GetNoise(warped_pos.x * 4.0f, warped_pos.y * 4.0f, warped_pos.z * 4.0f);
+	float hills_raw_noise = m_pHillsNoise->GetNoise(warped_pos.x * 16.0f, warped_pos.y * 16.0f, warped_pos.z * 16.0f);
+	float detail_raw_noise = m_pDetailNoise->GetNoise(warped_pos.x * 64.0f, warped_pos.y * 64.0f, warped_pos.z * 64.0f);
 	float terrain_offset = 0.0f;
 	float elevation = 0.0f; // This will be the value for the shader
 	float special_noise = 0.0f; // This will be the second value for the shader
@@ -100,9 +111,7 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(glm::vec3 worldPosition, floa
 	{
 		// Terrestrial Logic
 		float land_factor = (continent_noise + 1.0f) * 0.5f;
-		land_factor = pow(land_factor, 1.5f);
-		float continent_offset = 0;
-		// Use parameters from m_Params
+		float continent_offset = 0;		// Use parameters from m_Params
 		if(land_factor > m_Params.SeaLevel)
 			continent_offset = (land_factor - m_Params.SeaLevel) * (planetRadius * m_Params.ContinentHeight);
 		else
@@ -112,19 +121,21 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(glm::vec3 worldPosition, floa
 		float mountain_noise_raw_01 = 0.0f;
 		if(land_factor > m_Params.SeaLevel)
 		{
-			mountain_noise_raw_01 = (mountain_raw_noise + 1.0f) * 0.5f; // to [0,1]
+			// With Ridged noise, values are in [-1, 1]. We want sharp ridges. 1.0 - abs() gives us ridges at 1.0 and valleys at 0.0.
+			mountain_noise_raw_01 = 1.0f - std::abs(mountain_raw_noise);
 			mountain_noise_raw_01 = pow(mountain_noise_raw_01, 2.0f);
 			// Scale mountains by how high the land is
 			mountain_noise = mountain_noise_raw_01 * (planetRadius * m_Params.MountainHeight) * (land_factor - m_Params.SeaLevel);
 		}
 
-		// Modulate hills by mountain steepness.
 		// Hills are flat (dampening = 1.0) on plains and flat (dampening = 0.0) on peaks.
 		float hill_dampening = 1.0f - mountain_noise_raw_01;
 		float hills_noise = hills_raw_noise * (planetRadius * m_Params.HillsHeight) * hill_dampening;
 
-		terrain_offset = continent_offset + mountain_noise + hills_noise;
+		// Add fine detail, also dampened on steep mountain slopes to keep them sharp
+		float detail_noise = detail_raw_noise * (planetRadius * m_Params.DetailHeight) * hill_dampening;
 
+		terrain_offset = continent_offset + mountain_noise + hills_noise + detail_noise;
 		// Set shader values
 		elevation = terrain_offset;
 		special_noise = mountain_noise; // Pass mountain height
@@ -133,13 +144,14 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(glm::vec3 worldPosition, floa
 	case ETerrainType::BARREN:
 	{
 		// Barren Logic
-		float continent_offset = continent_noise * (planetRadius * 0.005f);
-		float m_raw = (mountain_raw_noise + 1.0f) * 0.5f;
+		float continent_offset = continent_noise * (planetRadius * m_Params.ContinentHeight);
+		float m_raw = 1.0f - std::abs(mountain_raw_noise); // Ridged noise
 		m_raw = pow(m_raw, 2.0f);
-		float mountain_noise = m_raw * (planetRadius * 0.01f);
-		float hills_noise = hills_raw_noise * (planetRadius * 0.001f);
+		float mountain_noise = m_raw * (planetRadius * m_Params.MountainHeight);
+		float hills_noise = hills_raw_noise * (planetRadius * m_Params.HillsHeight);
+		float detail_noise = detail_raw_noise * (planetRadius * m_Params.DetailHeight);
 
-		terrain_offset = continent_offset + mountain_noise + hills_noise;
+		terrain_offset = continent_offset + mountain_noise + hills_noise + detail_noise;
 		elevation = terrain_offset;
 		special_noise = m_raw; // Pass raw mountain noise [0, 1]
 		break;
@@ -147,13 +159,14 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(glm::vec3 worldPosition, floa
 	case ETerrainType::VOLCANIC:
 	{
 		// Volcanic Logic
-		float continent_offset = continent_noise * (planetRadius * 0.008f);
-		float m_raw = (mountain_raw_noise + 1.0f) * 0.5f;
+		float continent_offset = continent_noise * (planetRadius * m_Params.ContinentHeight);
+		float m_raw = 1.0f - std::abs(mountain_raw_noise);
 		m_raw = pow(m_raw, 3.0f); // Sharper peaks
-		float mountain_noise = m_raw * (planetRadius * 0.02f);
-		float hills_noise = hills_raw_noise * (planetRadius * 0.002f);
+		float mountain_noise = m_raw * (planetRadius * m_Params.MountainHeight);
+		float hills_noise = hills_raw_noise * (planetRadius * m_Params.HillsHeight);
+		float detail_noise = detail_raw_noise * (planetRadius * m_Params.DetailHeight);
 
-		terrain_offset = continent_offset + mountain_noise + hills_noise;
+		terrain_offset = continent_offset + mountain_noise + hills_noise + detail_noise;
 		elevation = terrain_offset;
 		special_noise = m_raw; // Pass raw mountain noise [0, 1] for lava
 		break;
@@ -162,18 +175,19 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(glm::vec3 worldPosition, floa
 	{
 		// Ice Logic
 		float land_factor = (continent_noise + 1.0f) * 0.5f;
-		float continent_offset = (land_factor - 0.9f) * (planetRadius * 0.01f);
+		float continent_offset = (land_factor - 0.9f) * (planetRadius * m_Params.ContinentHeight); // Ice sheets are mostly flat, so high threshold
 		float crevasse_noise = 0;
-		float m_raw = (mountain_raw_noise + 1.0f) * 0.5f; // to [0,1]
+		float m_raw = std::abs(mountain_raw_noise);
 		if(m_raw > 0.7f) // Create sharp cracks
 		{
 			crevasse_noise = (m_raw - 0.7f) / 0.3f;
 			special_noise = crevasse_noise; // Pass crevasse strength [0, 1]
-			crevasse_noise = crevasse_noise * (planetRadius * -0.005f); // Carve down
+			crevasse_noise = crevasse_noise * (planetRadius * -m_Params.MountainHeight); // Carve down using mountain height scale
 		}
-		float hills_noise = hills_raw_noise * (planetRadius * 0.0005f); // Very small bumps
+		float hills_noise = hills_raw_noise * (planetRadius * m_Params.HillsHeight); // Very small bumps
+		float detail_noise = detail_raw_noise * (planetRadius * m_Params.DetailHeight);
 
-		terrain_offset = continent_offset + crevasse_noise + hills_noise;
+		terrain_offset = continent_offset + crevasse_noise + hills_noise + detail_noise;
 		elevation = terrain_offset;
 		break;
 	}

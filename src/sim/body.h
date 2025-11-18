@@ -29,17 +29,20 @@ struct STerrainParameters
 	int MountainOctaves = 6;
 	float HillsFrequency = 0.3f;
 	int HillsOctaves = 3;
+	float DetailFrequency = 0.8f;
+	int DetailOctaves = 4;
 
 	// Domain Warp
 	float WarpFrequency = 0.05f; // Frequency of the warp noise
 	float WarpStrength = 0.5f; // How much to distort the coordinates
 
 	// Terrain shape
-	float SeaLevel = 0.4f; // [0, 1] percentage of continent_noise
-	float OceanDepth = 0.01f; // % of planetRadius
-	float ContinentHeight = 0.005f; // % of planetRadius
-	float MountainHeight = 0.015f; // % of planetRadius
-	float HillsHeight = 0.001f; // % of planetRadius
+	float SeaLevel = 0.4f; // [0, 1] percentage of continent noise
+	float OceanDepth = 0.01f; // % of PlanetRadius
+	float ContinentHeight = 0.005f; // % of PlanetRadius
+	float MountainHeight = 0.015f; // % of PlanetRadius
+	float HillsHeight = 0.001f; // % of PlanetRadius
+	float DetailHeight = 0.0001f; // % of PlanetRadius
 
 	// Min *mountain component* (in meters) to be colored as a mountain
 	float MountainStartMin = 1500.0f;
