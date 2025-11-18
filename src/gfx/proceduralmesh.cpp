@@ -8,7 +8,22 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include <map>
+#include <unordered_map>
+
+// Custom hash for std::pair
+namespace std {
+template<typename T, typename U>
+struct hash<pair<T, U>>
+{
+	size_t operator()(const pair<T, U> &p) const
+	{
+		auto h1 = hash<T>{}(p.first);
+		auto h2 = hash<U>{}(p.second);
+		// A simple way to combine hashes.
+		return h1 ^ (h2 << 1);
+	}
+};
+} // namespace std
 
 static glm::vec3 InterpolateVertex(glm::vec3 p1, glm::vec3 p2, float d1, float d2)
 {
@@ -48,7 +63,11 @@ void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution
 	// TODO: Add GAS_GIANT when supported
 	if(m_BodyType == EBodyType::TERRESTRIAL || m_BodyType == EBodyType::STAR)
 	{
-		float RootSize = (float)m_pBody->m_RenderParams.m_Radius * 2.0f;
+		const auto &terrainParams = m_pBody->m_RenderParams.m_Terrain;
+		float max_displacement_factor = terrainParams.ContinentHeight + terrainParams.MountainHeight + terrainParams.HillsHeight + terrainParams.DetailHeight;
+		float scale_factor = 1.0f + max_displacement_factor * 1.2f; // Add a 20% safety margin
+
+		float RootSize = (float)m_pBody->m_RenderParams.m_Radius * 2.0f * scale_factor;
 		m_pRootNode = std::make_shared<COctreeNode>(this, std::weak_ptr<COctreeNode>(), glm::vec3(0.0f), RootSize, 0, voxelResolution);
 	}
 
@@ -255,39 +274,103 @@ COctreeNode::~COctreeNode()
 
 void COctreeNode::GenerateMesh()
 {
-	// printf("Generating mesh for node level %d\n", m_Level);
 	const int res = m_VoxelResolution;
-	const int NumGridPoints = (res + 1) * (res + 1) * (res + 1);
-	const int res1 = res + 1;
+	const int Padding = 1;
+	const int PaddedRes = res + Padding * 2;
+	const int PaddedRes1 = PaddedRes + 1;
+	const int NumGridPoints = PaddedRes1 * PaddedRes1 * PaddedRes1;
 
 	// Store the full STerrainOutput
 	std::vector<STerrainOutput> vTerrainGrid(NumGridPoints);
 	std::vector<glm::vec3> vGradientGrid(NumGridPoints);
 
 	float StepSize = m_Size / res;
-	glm::vec3 StartCorner = m_Center - glm::vec3(m_Size * 0.5f); // Min corner of the cube
+	glm::vec3 StartCorner = m_Center - glm::vec3(m_Size * 0.5f);
+	glm::vec3 SamplingStartCorner = StartCorner - glm::vec3(Padding * StepSize);
+	float radius = (float)m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius;
 
-	for(int z = 0; z <= res; ++z)
+	for(int z = 0; z <= PaddedRes; ++z)
 	{
-		for(int y = 0; y <= res; ++y)
+		for(int y = 0; y <= PaddedRes; ++y)
 		{
-			for(int x = 0; x <= res; ++x)
+			for(int x = 0; x <= PaddedRes; ++x)
 			{
-				// Calculate the world position in the planar grid
-				glm::vec3 world_pos = StartCorner + glm::vec3(x * StepSize, y * StepSize, z * StepSize);
-
-				int idx = x + y * res1 + z * res1 * res1;
-				float radius = (float)m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius;
-
+				glm::vec3 world_pos = SamplingStartCorner + glm::vec3(x * StepSize, y * StepSize, z * StepSize);
+				int idx = x + y * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
 				vTerrainGrid[idx] = m_pOwnerMesh->m_TerrainGenerator.GetTerrainOutput(world_pos, radius);
-				vGradientGrid[idx] = m_pOwnerMesh->m_TerrainGenerator.CalculateDensityGradient(world_pos, radius);
+			}
+		}
+	}
+
+	for(int z = 0; z <= PaddedRes; ++z)
+	{
+		for(int y = 0; y <= PaddedRes; ++y)
+		{
+			for(int x = 0; x <= PaddedRes; ++x)
+			{
+				int idx = x + y * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
+
+				float dx, dy, dz;
+
+				if(x > 0 && x < PaddedRes)
+				{
+					int idx_xp = (x + 1) + y * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
+					int idx_xm = (x - 1) + y * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
+					dx = vTerrainGrid[idx_xp].density - vTerrainGrid[idx_xm].density;
+				}
+				else if(x == 0)
+				{
+					int idx_xp = (x + 1) + y * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
+					dx = (vTerrainGrid[idx_xp].density - vTerrainGrid[idx].density) * 2.0f;
+				}
+				else
+				{ // x == padded_res
+					int idx_xm = (x - 1) + y * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
+					dx = (vTerrainGrid[idx].density - vTerrainGrid[idx_xm].density) * 2.0f;
+				}
+
+				if(y > 0 && y < PaddedRes)
+				{
+					int idx_yp = x + (y + 1) * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
+					int idx_ym = x + (y - 1) * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
+					dy = vTerrainGrid[idx_yp].density - vTerrainGrid[idx_ym].density;
+				}
+				else if(y == 0)
+				{
+					int idx_yp = x + (y + 1) * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
+					dy = (vTerrainGrid[idx_yp].density - vTerrainGrid[idx].density) * 2.0f;
+				}
+				else
+				{ // y == padded_res
+					int idx_ym = x + (y - 1) * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
+					dy = (vTerrainGrid[idx].density - vTerrainGrid[idx_ym].density) * 2.0f;
+				}
+
+				if(z > 0 && z < PaddedRes)
+				{
+					int idx_zp = x + y * PaddedRes1 + (z + 1) * PaddedRes1 * PaddedRes1;
+					int idx_zm = x + y * PaddedRes1 + (z - 1) * PaddedRes1 * PaddedRes1;
+					dz = vTerrainGrid[idx_zp].density - vTerrainGrid[idx_zm].density;
+				}
+				else if(z == 0)
+				{
+					int idx_zp = x + y * PaddedRes1 + (z + 1) * PaddedRes1 * PaddedRes1;
+					dz = (vTerrainGrid[idx_zp].density - vTerrainGrid[idx].density) * 2.0f;
+				}
+				else
+				{ // z == padded_res
+					int idx_zm = x + y * PaddedRes1 + (z - 1) * PaddedRes1 * PaddedRes1;
+					dz = (vTerrainGrid[idx].density - vTerrainGrid[idx_zm].density) * 2.0f;
+				}
+
+				vGradientGrid[idx] = -glm::normalize(glm::vec3(dx, dy, dz));
 			}
 		}
 	}
 
 	m_vGeneratedVertices.clear();
 	m_vGeneratedIndices.clear();
-	std::map<std::pair<int, int>, unsigned int> mVertexMap;
+	std::unordered_map<std::pair<int, int>, unsigned int> mVertexMap;
 
 	const int aaCornerOffsets[8][3] = {
 		{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0},
@@ -298,11 +381,11 @@ void COctreeNode::GenerateMesh()
 		{4, 5}, {5, 6}, {6, 7}, {7, 4},
 		{0, 4}, {1, 5}, {2, 6}, {3, 7}};
 
-	for(int z = 0; z < res; ++z)
+	for(int z = Padding; z < Padding + res; ++z)
 	{
-		for(int y = 0; y < res; ++y)
+		for(int y = Padding; y < Padding + res; ++y)
 		{
-			for(int x = 0; x < res; ++x)
+			for(int x = Padding; x < Padding + res; ++x)
 			{
 				glm::vec3 Corners[8];
 				float Densities[8];
@@ -315,10 +398,9 @@ void COctreeNode::GenerateMesh()
 					int dx = aaCornerOffsets[i][0];
 					int dy = aaCornerOffsets[i][1];
 					int dz = aaCornerOffsets[i][2];
-					int idx = (x + dx) + (y + dy) * res1 + (z + dz) * res1 * res1;
+					int idx = (x + dx) + (y + dy) * PaddedRes1 + (z + dz) * PaddedRes1 * PaddedRes1;
 
-					Corners[i] = StartCorner + glm::vec3((x + dx) * StepSize, (y + dy) * StepSize, (z + dz) * StepSize);
-					// Read density from our stored struct
+					Corners[i] = SamplingStartCorner + glm::vec3((x + dx) * StepSize, (y + dy) * StepSize, (z + dz) * StepSize);
 					Densities[i] = vTerrainGrid[idx].density;
 					Gradients[i] = vGradientGrid[idx];
 					CornerGlobalIndices[i] = idx;
@@ -341,9 +423,7 @@ void COctreeNode::GenerateMesh()
 						int c1_global = CornerGlobalIndices[c1_local];
 						int c2_global = CornerGlobalIndices[c2_local];
 
-						std::pair<int, int> key = (c1_global < c2_global) ?
-										  std::make_pair(c1_global, c2_global) :
-										  std::make_pair(c2_global, c1_global);
+						std::pair<int, int> key = (c1_global < c2_global) ? std::make_pair(c1_global, c2_global) : std::make_pair(c2_global, c1_global);
 
 						if(mVertexMap.find(key) == mVertexMap.end())
 						{
@@ -351,20 +431,25 @@ void COctreeNode::GenerateMesh()
 							glm::vec3 p2 = Corners[c2_local];
 							float d1 = Densities[c1_local];
 							float d2 = Densities[c2_local];
-							glm::vec3 pos = InterpolateVertex(p1, p2, d1, d2);
+
+							float t = (glm::abs(d1 - d2) > 0.00001f) ? (0.0f - d1) / (d2 - d1) : 0.5f;
+							glm::vec3 pos = glm::mix(p1, p2, t);
 
 							glm::vec3 g1 = Gradients[c1_local];
 							glm::vec3 g2 = Gradients[c2_local];
-							float t = (0.0f - d1) / (d2 - d1);
 							glm::vec3 norm = glm::normalize(glm::mix(g1, g2, t));
 
+							STerrainOutput terrain1 = vTerrainGrid[c1_global];
+							STerrainOutput terrain2 = vTerrainGrid[c2_global];
+
+							float elevation = glm::mix(terrain1.elevation, terrain2.elevation, t);
+							float special_noise = glm::mix(terrain1.special_noise, terrain2.special_noise, t);
+
 							SProceduralVertex vert;
-							vert.position = pos - m_Center; // Store position relative to the node's center
+							vert.position = pos - m_Center;
 							vert.normal = norm;
 							vert.texCoord = glm::vec2(pos.x, pos.z) / 1000.0f;
-
-							STerrainOutput colorData = m_pOwnerMesh->m_TerrainGenerator.GetTerrainOutput(pos, (float)m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius);
-							vert.color_data = glm::vec2(colorData.elevation, colorData.special_noise);
+							vert.color_data = glm::vec2(elevation, special_noise);
 
 							m_vGeneratedVertices.push_back(vert);
 							unsigned int newIndex = m_vGeneratedVertices.size() - 1;

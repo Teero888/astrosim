@@ -111,7 +111,7 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(glm::vec3 worldPosition, floa
 	{
 		// Terrestrial Logic
 		float land_factor = (continent_noise + 1.0f) * 0.5f;
-		float continent_offset = 0;		// Use parameters from m_Params
+		float continent_offset = 0; // Use parameters from m_Params
 		if(land_factor > m_Params.SeaLevel)
 			continent_offset = (land_factor - m_Params.SeaLevel) * (planetRadius * m_Params.ContinentHeight);
 		else
@@ -193,7 +193,7 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(glm::vec3 worldPosition, floa
 	}
 	}
 
-	// 4. CAVE GENERATION
+	// CAVE GENERATION
 	float cave_effect = 0.0f;
 	if(base_density + terrain_offset > 100.0f)
 	{
@@ -210,7 +210,6 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(glm::vec3 worldPosition, floa
 		}
 	}
 
-	// 5. FINAL COMBINATION
 	float final_density = base_density + terrain_offset - cave_effect;
 
 	// Return all our calculated data in one struct

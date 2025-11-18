@@ -113,6 +113,7 @@ struct Vec3
 		return glm::vec3(x, y, z);
 	}
 
+	inline double dot(const Vec3 &other) const { return x * other.x + y * other.y + z * other.z; }
 	inline double length() const { return std::sqrt(x * x + y * y + z * z); }
 	inline Vec3 normalize() const { return *this / this->length(); }
 	inline Vec3 floor() const { return Vec3((int)x, (int)y, (int)z); }

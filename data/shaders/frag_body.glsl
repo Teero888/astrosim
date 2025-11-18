@@ -69,7 +69,8 @@ vec3 GetTerrainColor()
 			// Beach from 0m to uBeachHeightMax (e.g., 50m)
 			if(elevation < uBeachHeightMax)
 			{
-				return mix(LAND_LOW_COLOR, BEACH_COLOR, elevation / uBeachHeightMax);
+				float beach_ratio = clamp(elevation / uBeachHeightMax, 0.0, 1.0);
+				return mix(BEACH_COLOR, LAND_LOW_COLOR, beach_ratio);
 			}
 
 			// Check if it's a mountain or a hill based on the mountain noise component
