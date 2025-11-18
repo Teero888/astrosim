@@ -40,7 +40,7 @@ void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution
 
 	// Only initialize terrain generator for terrestrial bodies
 	if(m_BodyType == EBodyType::TERRESTRIAL)
-		m_TerrainGenerator.Init(pBody->m_Id, pBody->m_RenderParams.m_Terrain, pBody->m_RenderParams.m_TerrainType);
+		m_TerrainGenerator.Init(pBody->m_Id + pBody->m_RenderParams.m_Seed, pBody->m_RenderParams.m_Terrain, pBody->m_RenderParams.m_TerrainType);
 
 	// Create an octree root for all renderable types (Stars, Planets)
 	// For Stars, the terrain generator will just use default noise,
@@ -93,16 +93,44 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody)
 	m_Shader.SetInt("uTerrainType", (int)m_pBody->m_RenderParams.m_TerrainType);
 
 	// Set color palette uniforms
-	m_Shader.SetVec3("DEEP_OCEAN_COLOR", m_pBody->m_RenderParams.m_Colors.deepOcean);
-	m_Shader.SetVec3("SHALLOW_OCEAN_COLOR", m_pBody->m_RenderParams.m_Colors.shallowOcean);
-	m_Shader.SetVec3("BEACH_COLOR", m_pBody->m_RenderParams.m_Colors.beach);
-	m_Shader.SetVec3("LAND_LOW_COLOR", m_pBody->m_RenderParams.m_Colors.landLow);
-	m_Shader.SetVec3("LAND_HIGH_COLOR", m_pBody->m_RenderParams.m_Colors.landHigh);
-	m_Shader.SetVec3("MOUNTAIN_LOW_COLOR", m_pBody->m_RenderParams.m_Colors.mountainLow);
-	m_Shader.SetVec3("MOUNTAIN_HIGH_COLOR", m_pBody->m_RenderParams.m_Colors.mountainHigh);
-	m_Shader.SetVec3("SNOW_COLOR", m_pBody->m_RenderParams.m_Colors.snow);
+	m_Shader.SetVec3("DEEP_OCEAN_COLOR", m_pBody->m_RenderParams.m_Colors.DeepOcean);
+	m_Shader.SetVec3("SHALLOW_OCEAN_COLOR", m_pBody->m_RenderParams.m_Colors.ShallowOcean);
+	m_Shader.SetVec3("BEACH_COLOR", m_pBody->m_RenderParams.m_Colors.Beach);
+	m_Shader.SetVec3("LAND_LOW_COLOR", m_pBody->m_RenderParams.m_Colors.LandLow);
+	m_Shader.SetVec3("LAND_HIGH_COLOR", m_pBody->m_RenderParams.m_Colors.LandHigh);
+	m_Shader.SetVec3("MOUNTAIN_LOW_COLOR", m_pBody->m_RenderParams.m_Colors.MountainLow);
+	m_Shader.SetVec3("MOUNTAIN_HIGH_COLOR", m_pBody->m_RenderParams.m_Colors.MountainHigh);
+	m_Shader.SetVec3("SNOW_COLOR", m_pBody->m_RenderParams.m_Colors.Snow);
 
 	m_Shader.SetFloat("uPlanetRadius", (float)m_pBody->m_RenderParams.m_Radius);
+
+	// == TERRESTRIAL ==
+	m_Shader.SetFloat("uMountainStartMin", m_pBody->m_RenderParams.m_Terrain.MountainStartMin);
+	m_Shader.SetFloat("uOceanDepthMax", m_pBody->m_RenderParams.m_Colors.OceanDepthMax);
+	m_Shader.SetFloat("uBeachHeightMax", m_pBody->m_RenderParams.m_Colors.BeachHeightMax);
+	m_Shader.SetFloat("uLandHeightMax", m_pBody->m_RenderParams.m_Colors.LandHeightMax);
+	m_Shader.SetFloat("uMountainHeightMax", m_pBody->m_RenderParams.m_Colors.MountainHeightMax);
+	m_Shader.SetFloat("uSnowLineStart", m_pBody->m_RenderParams.m_Colors.SnowLineStart);
+	m_Shader.SetFloat("uSnowLineEnd", m_pBody->m_RenderParams.m_Colors.SnowLineEnd);
+
+	// == VOLCANIC ==
+	m_Shader.SetFloat("uLavaPoolHeight", m_pBody->m_RenderParams.m_Colors.LavaPoolHeight);
+	m_Shader.SetFloat("uLavaRockHeight", m_pBody->m_RenderParams.m_Colors.LavaRockHeight);
+	m_Shader.SetFloat("uLavaFlowStart", m_pBody->m_RenderParams.m_Colors.LavaFlowStart);
+	m_Shader.SetFloat("uLavaFlowMaskEnd", m_pBody->m_RenderParams.m_Colors.LavaFlowMaskEnd);
+	m_Shader.SetFloat("uLavaPeakHeight", m_pBody->m_RenderParams.m_Colors.LavaPeakHeight);
+	m_Shader.SetFloat("uLavaHotspotHeight", m_pBody->m_RenderParams.m_Colors.LavaHotspotHeight);
+
+	// == ICE ==
+	m_Shader.SetFloat("uSlushDepthMax", m_pBody->m_RenderParams.m_Colors.SlushDepthMax);
+	m_Shader.SetFloat("uIceSheetHeight", m_pBody->m_RenderParams.m_Colors.IceSheetHeight);
+	m_Shader.SetFloat("uCrevasseStart", m_pBody->m_RenderParams.m_Colors.CrevasseStart);
+	m_Shader.SetFloat("uCrevasseMaskEnd", m_pBody->m_RenderParams.m_Colors.CrevasseMaskEnd);
+	m_Shader.SetFloat("uCrevasseColorMix", m_pBody->m_RenderParams.m_Colors.CrevasseColorMix);
+
+	// == BARREN ==
+	m_Shader.SetFloat("uBarrenLandMax", m_pBody->m_RenderParams.m_Colors.BarrenLandMax);
+	m_Shader.SetFloat("uBarrenMountainMax", m_pBody->m_RenderParams.m_Colors.BarrenMountainMax);
 
 	// Render the single root node
 	if(m_pRootNode)
@@ -229,11 +257,12 @@ void COctreeNode::GenerateMesh()
 {
 	// printf("Generating mesh for node level %d\n", m_Level);
 	const int res = m_VoxelResolution;
-	const int numGridPoints = (res + 1) * (res + 1) * (res + 1);
+	const int NumGridPoints = (res + 1) * (res + 1) * (res + 1);
 	const int res1 = res + 1;
 
-	std::vector<float> vDensityGrid(numGridPoints);
-	std::vector<glm::vec3> vGradientGrid(numGridPoints);
+	// Store the full STerrainOutput
+	std::vector<STerrainOutput> vTerrainGrid(NumGridPoints);
+	std::vector<glm::vec3> vGradientGrid(NumGridPoints);
 
 	float StepSize = m_Size / res;
 	glm::vec3 StartCorner = m_Center - glm::vec3(m_Size * 0.5f); // Min corner of the cube
@@ -248,9 +277,9 @@ void COctreeNode::GenerateMesh()
 				glm::vec3 world_pos = StartCorner + glm::vec3(x * StepSize, y * StepSize, z * StepSize);
 
 				int idx = x + y * res1 + z * res1 * res1;
-				// Get density from the planar world position
 				float radius = (float)m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius;
-				vDensityGrid[idx] = m_pOwnerMesh->m_TerrainGenerator.GetTerrainDensity(world_pos, radius);
+
+				vTerrainGrid[idx] = m_pOwnerMesh->m_TerrainGenerator.GetTerrainOutput(world_pos, radius);
 				vGradientGrid[idx] = m_pOwnerMesh->m_TerrainGenerator.CalculateDensityGradient(world_pos, radius);
 			}
 		}
@@ -289,7 +318,8 @@ void COctreeNode::GenerateMesh()
 					int idx = (x + dx) + (y + dy) * res1 + (z + dz) * res1 * res1;
 
 					Corners[i] = StartCorner + glm::vec3((x + dx) * StepSize, (y + dy) * StepSize, (z + dz) * StepSize);
-					Densities[i] = vDensityGrid[idx];
+					// Read density from our stored struct
+					Densities[i] = vTerrainGrid[idx].density;
 					Gradients[i] = vGradientGrid[idx];
 					CornerGlobalIndices[i] = idx;
 					if(Densities[i] > 0)
@@ -332,8 +362,9 @@ void COctreeNode::GenerateMesh()
 							vert.position = pos - m_Center; // Store position relative to the node's center
 							vert.normal = norm;
 							vert.texCoord = glm::vec2(pos.x, pos.z) / 1000.0f;
-							STerrainColorData colorData = m_pOwnerMesh->m_TerrainGenerator.GetTerrainColorData(pos, (float)m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius);
-							vert.color_data = glm::vec2(colorData.elevation, colorData.mountain_noise);
+
+							STerrainOutput colorData = m_pOwnerMesh->m_TerrainGenerator.GetTerrainOutput(pos, (float)m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius);
+							vert.color_data = glm::vec2(colorData.elevation, colorData.special_noise);
 
 							m_vGeneratedVertices.push_back(vert);
 							unsigned int newIndex = m_vGeneratedVertices.size() - 1;

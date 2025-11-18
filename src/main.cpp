@@ -34,21 +34,33 @@ int main()
 		const double UpdateInterval = 1.0 / (StarSystem.m_DPS * (86400.0 / StarSystem.m_DeltaTime));
 		glfwPollEvents();
 
+		if(GfxEngine.m_bReloadRequested)
+		{
+			GfxEngine.ReloadSimulation();
+			PredictedStarSystem = StarSystem;
+			GfxEngine.m_bReloadRequested = false;
+		}
+
 		const auto CurrentTime = high_resolution_clock::now();
 		double ElapsedTime = duration_cast<duration<double>>(CurrentTime - LastRenderTick).count();
 		LastRenderTick = CurrentTime;
 		AccTime += ElapsedTime;
 
-		while(AccTime >= UpdateInterval)
+		if(GfxEngine.m_bIsRunning)
 		{
-			StarSystem.UpdateBodies();
-			AccTime -= UpdateInterval;
-			while(PredictedStarSystem.m_SimTick < StarSystem.m_SimTick + TRAJECTORY_LENGTH)
+			while(AccTime >= UpdateInterval)
 			{
-				GfxEngine.m_Trajectories.Update(PredictedStarSystem);
-				PredictedStarSystem.UpdateBodies();
+				StarSystem.UpdateBodies();
+				AccTime -= UpdateInterval;
+				while(PredictedStarSystem.m_SimTick < StarSystem.m_SimTick + TRAJECTORY_LENGTH)
+				{
+					GfxEngine.m_Trajectories.Update(PredictedStarSystem);
+					PredictedStarSystem.UpdateBodies();
+				}
 			}
 		}
+		else
+			AccTime = 0.0;
 		GfxEngine.m_Camera.UpdateViewMatrix();
 		GfxEngine.m_Trajectories.UpdateBuffers(PredictedStarSystem, GfxEngine.m_Camera);
 

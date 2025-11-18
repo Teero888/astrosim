@@ -118,13 +118,17 @@ target_include_directories(astrosim PRIVATE
 
 # Copy data files to build directory on every build
 add_custom_target(copy_data ALL
-	COMMAND ${CMAKE_COMMAND} -E remove_directory
-		${CMAKE_BINARY_DIR}/data
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-		${CMAKE_SOURCE_DIR}/data
-		${CMAKE_BINARY_DIR}/data
-	COMMENT "Copying data files to build directory"
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/data
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data ${CMAKE_BINARY_DIR}/data
+    COMMENT "Force-copying data/ to build directory"
+    VERBATIM
+    # This line makes it always run:
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+add_custom_target(always_run_copy_data
+    COMMAND ${CMAKE_COMMAND} -E echo "Data copied"
+    DEPENDS copy_data
 )
 
-add_dependencies(astrosim copy_data)
+add_dependencies(astrosim always_run_copy_data)
 

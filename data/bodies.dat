@@ -13,6 +13,8 @@ Mass=5.972e24
 Radius=6.371e6
 Position=1.496e11,0,0
 Velocity=0,0,29780
+Color=0,1,0
+Seed=13
 
 [colors]
 DeepOcean=0.0,0.1,0.3
@@ -24,6 +26,14 @@ MountainLow=0.4,0.3,0.2
 MountainHigh=0.3,0.2,0.15
 Snow=0.9,0.9,0.95
 
+# Terrestrial height transitions (in meters)
+OceanDepthMax=2000.0
+BeachHeightMax=50.0
+LandHeightMax=1000.0
+MountainHeightMax=1000.0
+SnowLineStart=4500.0
+SnowLineEnd=6000.0
+
 [terrain]
 ContinentFrequency=0.02
 ContinentOctaves=4
@@ -31,6 +41,14 @@ MountainFrequency=0.08
 MountainOctaves=6
 HillsFrequency=0.3
 HillsOctaves=3
+WarpFrequency=0.03
+WarpStrength=0.8
+SeaLevel=0.4
+OceanDepth=0.01
+ContinentHeight=0.005
+MountainHeight=0.015
+HillsHeight=0.001
+MountainStartMin=1500.0
 
 Name=Mars
 Type=TERRESTRIAL
@@ -39,6 +57,7 @@ Mass=6.4171e23
 Radius=3.3895e6
 Position=2.279e11,0,0
 Velocity=0,0,24070
+Color=1,0.5,0
 
 [colors]
 DeepOcean=0.8,0.1,0.05
@@ -50,6 +69,10 @@ MountainLow=0.4,0.2,0.1
 MountainHigh=0.3,0.15,0.05
 Snow=0.95,0.95,0.95
 
+# Barren height transitions (in meters)
+BarrenLandMax=2000.0
+BarrenMountainMax=3000.0
+
 [terrain]
 ContinentFrequency=0.05
 ContinentOctaves=6
@@ -57,6 +80,8 @@ MountainFrequency=0.1
 MountainOctaves=8
 HillsFrequency=0.4
 HillsOctaves=4
+WarpFrequency=0.05
+WarpStrength=0.5
 
 Name=Volcanis
 Type=TERRESTRIAL
@@ -65,6 +90,7 @@ Mass=8.9e22
 Radius=1.821e6
 Position=3.0e11,0,0
 Velocity=0,0,20000
+Color=1,0,0
 
 [colors]
 DeepOcean=0.8,0.1,0.05
@@ -76,6 +102,14 @@ MountainLow=1.0,0.5,0.0
 MountainHigh=1.0,0.8,0.0
 Snow=1.0,1.0,0.8
 
+# Volcanic height/noise transitions
+LavaPoolHeight=50.0
+LavaRockHeight=2000.0
+LavaFlowStart=0.6
+LavaFlowMaskEnd=1.0
+LavaPeakHeight=4000.0
+LavaHotspotHeight=5000.0
+
 [terrain]
 ContinentFrequency=0.08
 ContinentOctaves=6
@@ -83,6 +117,8 @@ MountainFrequency=0.15
 MountainOctaves=6
 HillsFrequency=0.5
 HillsOctaves=4
+WarpFrequency=0.1
+WarpStrength=1.2
 
 Name=Glacies
 Type=TERRESTRIAL
@@ -91,6 +127,7 @@ Mass=1.3e22
 Radius=1.56e6
 Position=3.5e11,0,0
 Velocity=0,0,18000
+Color=0,0,1
 
 [colors]
 DeepOcean=0.0,0.05,0.1
@@ -102,6 +139,13 @@ MountainLow=0.1,0.1,0.2
 MountainHigh=0.0,0.0,0.0
 Snow=1.0,1.0,1.0
 
+# Ice height/noise transitions
+SlushDepthMax=1000.0
+IceSheetHeight=200.0
+CrevasseStart=0.1
+CrevasseMaskEnd=1.0
+CrevasseColorMix=0.7
+
 [terrain]
 ContinentFrequency=0.05
 ContinentOctaves=2
@@ -109,3 +153,5 @@ MountainFrequency=0.1
 MountainOctaves=4
 HillsFrequency=0.8
 HillsOctaves=2
+WarpFrequency=0.02
+WarpStrength=0.4

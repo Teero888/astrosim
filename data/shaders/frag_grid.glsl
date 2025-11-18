@@ -46,8 +46,8 @@ void main()
 	double radius = double(u_focusedBodyRadius);
 	// The hole is fully transparent inside 1.1x radius.
 	// The fade occurs between 1.4x and 1.1x the planet's radius.
-	double holeEdge = radius * 1.1;
-	double fadeEdge = radius * 1.4;
+	double holeEdge = radius * 1.4;
+	double fadeEdge = radius * 2.0;
 	// Calculate a linear fade factor.
 	double planetFade = clamp((distToBodyCenter - holeEdge) / (fadeEdge - holeEdge), 0.0, 1.0);
 	// }}}

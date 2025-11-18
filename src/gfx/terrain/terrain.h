@@ -6,10 +6,11 @@
 
 class FastNoiseLite;
 
-struct STerrainColorData
+struct STerrainOutput
 {
-	float elevation;
-	float mountain_noise;
+	float density; // Final SDF value
+	float elevation; // The terrain offset, for color
+	float special_noise; // The second color data channel (e.g., mountain, lava)
 };
 
 class CTerrainGenerator
@@ -19,16 +20,21 @@ public:
 	~CTerrainGenerator();
 
 	void Init(int seed, const STerrainParameters &params, ETerrainType terrainType);
-	float GetTerrainDensity(glm::vec3 worldPosition, float planetRadius);
+
+	// This is our new, all-in-one function.
+	STerrainOutput GetTerrainOutput(glm::vec3 worldPosition, float planetRadius);
+
+	// This function is now much more efficient as it calls GetTerrainOutput
 	glm::vec3 CalculateDensityGradient(glm::vec3 p, float planetRadius);
-	STerrainColorData GetTerrainColorData(glm::vec3 worldPosition, float planetRadius);
 
 private:
 	FastNoiseLite *m_pContinentNoise;
 	FastNoiseLite *m_pMountainNoise;
 	FastNoiseLite *m_pHillsNoise;
 	FastNoiseLite *m_pCaveNoise;
+	FastNoiseLite *m_pWarpNoise;
 	ETerrainType m_TerrainType;
+	STerrainParameters m_Params; // Store params for use in GetTerrainOutput
 };
 
 #endif // TERRAIN_H

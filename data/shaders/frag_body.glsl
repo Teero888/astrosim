@@ -22,6 +22,34 @@ uniform vec3 MOUNTAIN_LOW_COLOR;
 uniform vec3 MOUNTAIN_HIGH_COLOR;
 uniform vec3 SNOW_COLOR;
 
+// == TERRESTRIAL ==
+uniform float uMountainStartMin;
+uniform float uOceanDepthMax;
+uniform float uBeachHeightMax;
+uniform float uLandHeightMax;
+uniform float uMountainHeightMax;
+uniform float uSnowLineStart;
+uniform float uSnowLineEnd;
+
+// == VOLCANIC ==
+uniform float uLavaPoolHeight;
+uniform float uLavaRockHeight;
+uniform float uLavaFlowStart;
+uniform float uLavaFlowMaskEnd;
+uniform float uLavaPeakHeight;
+uniform float uLavaHotspotHeight;
+
+// == ICE ==
+uniform float uSlushDepthMax;
+uniform float uIceSheetHeight;
+uniform float uCrevasseStart;
+uniform float uCrevasseMaskEnd;
+uniform float uCrevasseColorMix;
+
+// == BARREN ==
+uniform float uBarrenLandMax;
+uniform float uBarrenMountainMax;
+
 vec3 GetTerrainColor()
 {
 	float elevation = vColorData.x;
@@ -30,34 +58,40 @@ vec3 GetTerrainColor()
 	// Terrestrial
 	if(uTerrainType == 0)
 	{
-		float mountain_noise = special_noise;
+		float mountain_noise_component = special_noise;
 		if(elevation < 0.0) // Water
 		{
-			float depth_ratio = clamp(-elevation / (uPlanetRadius * 0.01), 0.0, 1.0);
+			float depth_ratio = clamp(-elevation / uOceanDepthMax, 0.0, 1.0);
 			return mix(SHALLOW_OCEAN_COLOR, DEEP_OCEAN_COLOR, depth_ratio);
 		}
 		else // Land
 		{
-			float beach_height = uPlanetRadius * 0.0005;
-			if(elevation < beach_height)
+			// Beach from 0m to uBeachHeightMax (e.g., 50m)
+			if(elevation < uBeachHeightMax)
 			{
-				return mix(LAND_LOW_COLOR, BEACH_COLOR, elevation / beach_height);
+				return mix(LAND_LOW_COLOR, BEACH_COLOR, elevation / uBeachHeightMax);
 			}
 
-			if(mountain_noise > uPlanetRadius * 0.001) // Mountainous areas
+			// Check if it's a mountain or a hill based on the mountain noise component
+			if(mountain_noise_component > uMountainStartMin)
 			{
-				float mountain_ratio = clamp((elevation - uPlanetRadius * 0.001) / (uPlanetRadius * 0.02), 0.0, 1.0);
+				// Mountain color blends based on *total* elevation
+				float mountain_ratio = clamp(elevation / uMountainHeightMax, 0.0, 1.0);
 				vec3 mountain_color = mix(MOUNTAIN_LOW_COLOR, MOUNTAIN_HIGH_COLOR, mountain_ratio);
-				if(elevation > uPlanetRadius * 0.01) // High peaks
+
+				// Snow line starts at uSnowLineStart
+				if(elevation > uSnowLineStart)
 				{
-					float snow_ratio = clamp((elevation - uPlanetRadius * 0.01) / (uPlanetRadius * 0.01), 0.0, 1.0);
+					// Snow fades in from uSnowLineStart to uSnowLineEnd
+					float snow_ratio = clamp((elevation - uSnowLineStart) / (uSnowLineEnd - uSnowLineStart), 0.0, 1.0);
 					return mix(mountain_color, SNOW_COLOR, snow_ratio);
 				}
 				return mountain_color;
 			}
 			else // Lowlands/hills
 			{
-				float land_ratio = clamp(elevation / (uPlanetRadius * 0.005), 0.0, 1.0);
+				// Land blends from uBeachHeightMax to uLandHeightMax
+				float land_ratio = clamp((elevation - uBeachHeightMax) / (uLandHeightMax - uBeachHeightMax), 0.0, 1.0);
 				return mix(LAND_LOW_COLOR, LAND_HIGH_COLOR, land_ratio);
 			}
 		}
@@ -67,27 +101,31 @@ vec3 GetTerrainColor()
 	{
 		float lava_noise = special_noise; // [0, 1] raw noise
 		// Use "ocean" for lava pools (low elevation)
-		if(elevation < uPlanetRadius * 0.001)
+		if(elevation < uLavaPoolHeight)
 		{
 			// blend from dark rock to bright lava
-			float lava_ratio = clamp(elevation / (uPlanetRadius * 0.001), 0.0, 1.0);
+			float lava_ratio = clamp(elevation / uLavaPoolHeight, 0.0, 1.0);
 			return mix(DEEP_OCEAN_COLOR, SHALLOW_OCEAN_COLOR, lava_ratio);
 		}
 
 		// Use "land" for cooled rock
-		float land_ratio = clamp(elevation / (uPlanetRadius * 0.01), 0.0, 1.0);
+		float land_ratio = clamp(elevation / uLavaRockHeight, 0.0, 1.0);
 		vec3 rock_color = mix(LAND_LOW_COLOR, LAND_HIGH_COLOR, land_ratio);
 
 		// Use "mountain" for active lava flows
 		// Use lava_noise as a mask for glowing lava
-		if(lava_noise > 0.6)
+		if(lava_noise > uLavaFlowStart)
 		{
-			float flow_mask = (lava_noise - 0.6) / 0.4;
+			float flow_mask = (lava_noise - uLavaFlowStart) / (uLavaFlowMaskEnd - uLavaFlowStart);
+			flow_mask = clamp(flow_mask, 0.0, 1.0);
+
 			// Use mountain colors for lava
-			float mountain_ratio = clamp(elevation / (uPlanetRadius * 0.02), 0.0, 1.0);
+			float mountain_ratio = clamp(elevation / uLavaPeakHeight, 0.0, 1.0);
 			vec3 lava_color = mix(MOUNTAIN_LOW_COLOR, MOUNTAIN_HIGH_COLOR, mountain_ratio);
+
 			// Add snow color as "brightest hot"
-			lava_color = mix(lava_color, SNOW_COLOR, mountain_ratio * flow_mask);
+			float hotspot_ratio = clamp((elevation - uLavaPeakHeight) / (uLavaHotspotHeight - uLavaPeakHeight), 0.0, 1.0);
+			lava_color = mix(lava_color, SNOW_COLOR, hotspot_ratio * flow_mask);
 
 			return mix(rock_color, lava_color, flow_mask * 0.8); // 80% lava
 		}
@@ -100,19 +138,21 @@ vec3 GetTerrainColor()
 		// Use "ocean" colors for water/slush at low points
 		if(elevation < 0.0)
 		{
-			float depth_ratio = clamp(-elevation / (uPlanetRadius * 0.01), 0.0, 1.0);
+			float depth_ratio = clamp(-elevation / uSlushDepthMax, 0.0, 1.0);
 			return mix(SHALLOW_OCEAN_COLOR, DEEP_OCEAN_COLOR, depth_ratio);
 		}
 
 		// Use "land" colors for basic ice sheet
-		float land_ratio = clamp(elevation / (uPlanetRadius * 0.001), 0.0, 1.0);
+		float land_ratio = clamp(elevation / uIceSheetHeight, 0.0, 1.0);
 		vec3 ice_color = mix(LAND_LOW_COLOR, LAND_HIGH_COLOR, land_ratio);
 
 		// Use "mountain" colors for deep crevasse shadows
-		if(crevasse_noise > 0.1)
+		if(crevasse_noise > uCrevasseStart)
 		{
-			vec3 crevasse_color = mix(MOUNTAIN_LOW_COLOR, MOUNTAIN_HIGH_COLOR, crevasse_noise);
-			return mix(ice_color, crevasse_color, crevasse_noise * 0.7);
+			float crevasse_mask = (crevasse_noise - uCrevasseStart) / (uCrevasseMaskEnd - uCrevasseStart);
+			crevasse_mask = clamp(crevasse_mask, 0.0, 1.0);
+			vec3 crevasse_color = mix(MOUNTAIN_LOW_COLOR, MOUNTAIN_HIGH_COLOR, crevasse_mask);
+			return mix(ice_color, crevasse_color, crevasse_mask * uCrevasseColorMix);
 		}
 		return ice_color;
 	}
@@ -121,11 +161,11 @@ vec3 GetTerrainColor()
 	{
 		float mountain_raw_noise = special_noise; // [0, 1]
 		// No water, just blend between rock colors based on elevation
-		float land_ratio = clamp(elevation / (uPlanetRadius * 0.01), 0.0, 1.0);
+		float land_ratio = clamp(elevation / uBarrenLandMax, 0.0, 1.0);
 		vec3 color = mix(LAND_LOW_COLOR, LAND_HIGH_COLOR, land_ratio);
 
 		// Add "mountain" colors based on noise, not just elevation
-		float mountain_ratio = clamp(elevation / (uPlanetRadius * 0.015), 0.0, 1.0);
+		float mountain_ratio = clamp(elevation / uBarrenMountainMax, 0.0, 1.0);
 		vec3 mountain_color = mix(MOUNTAIN_LOW_COLOR, MOUNTAIN_HIGH_COLOR, mountain_ratio);
 
 		return mix(color, mountain_color, mountain_raw_noise * land_ratio);

@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <map>
 #include <string>
@@ -78,12 +79,13 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	m_Markers.Init();
 	InitGfx();
 
+	CleanupMeshes();
 	OnBodiesReloaded(pStarSystem);
 
 	return true;
 }
 
-void CGraphics::OnBodiesReloaded(CStarSystem *pStarSystem)
+void CGraphics::CleanupMeshes()
 {
 	// Clean up old procedural meshes
 	for(auto &[id, mesh] : m_BodyMeshes)
@@ -92,7 +94,10 @@ void CGraphics::OnBodiesReloaded(CStarSystem *pStarSystem)
 		delete mesh;
 	}
 	m_BodyMeshes.clear();
+}
 
+void CGraphics::OnBodiesReloaded(CStarSystem *pStarSystem)
+{
 	// Initialize procedural meshes for ALL new bodies
 	for(auto &Body : pStarSystem->m_vBodies)
 	{
@@ -101,47 +106,41 @@ void CGraphics::OnBodiesReloaded(CStarSystem *pStarSystem)
 	}
 
 	m_Trajectories.ClearTrajectories();
-
-	ResetCamera(pStarSystem);
 }
 
 void CGraphics::ReloadSimulation()
 {
 	printf("Hot-reloading simulation data...\n");
-	m_pStarSystem->LoadBodies("data/bodies.dat");
+
+	// Store body name to fix camera
+	std::string PrevFocusedBody = "";
+	if(m_Camera.m_pFocusedBody)
+		PrevFocusedBody = m_Camera.m_pFocusedBody->m_Name;
+
+	CleanupMeshes();
+	m_pStarSystem->OnInit();
 	OnBodiesReloaded(m_pStarSystem);
+	ResetCamera(m_pStarSystem, PrevFocusedBody);
 }
 
-void CGraphics::ResetCamera(CStarSystem *pStarSystem)
+void CGraphics::ResetCamera(CStarSystem *pStarSystem, std::string PrevFocusedBody)
 {
-	std::string previouslyFocusedBody = "";
-	if(m_Camera.m_pFocusedBody)
-	{
-		previouslyFocusedBody = m_Camera.m_pFocusedBody->m_Name;
-	}
-
 	m_Camera.m_pFocusedBody = nullptr;
-
 	if(!pStarSystem->m_vBodies.empty())
 	{
-		// Try to find the same body to focus on
-		if(!previouslyFocusedBody.empty())
+		if(!PrevFocusedBody.empty())
 		{
 			for(auto &body : pStarSystem->m_vBodies)
 			{
-				if(body.m_Name == previouslyFocusedBody)
+				if(body.m_Name == PrevFocusedBody)
 				{
 					m_Camera.SetBody(&body);
 					break;
 				}
 			}
 		}
-
-		// If not found or was not set, default to the first body
 		if(!m_Camera.m_pFocusedBody)
-		{
 			m_Camera.SetBody(&pStarSystem->m_vBodies.front());
-		}
 	}
 }
 
@@ -162,7 +161,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	{
 		const char *pCurrentItem = m_Camera.m_pFocusedBody->m_Name.c_str();
 
-		ImGui::SliderInt("LOD", &m_Camera.m_LOD, 0, COctreeNode::MAX_LOD_LEVEL);
+		ImGui::Checkbox("Run Simulation", &m_bIsRunning);
 		ImGui::Checkbox("Show all trajectories", &m_Trajectories.m_ShowAll);
 		ImGui::Checkbox("Show markers", &m_Markers.m_ShowMarkers);
 		ImGui::Checkbox("Show Wireframe", &m_bShowWireframe);
@@ -330,7 +329,7 @@ void CGraphics::KeyActionCallback(GLFWwindow *pWindow, int Key, int Scancode, in
 			}
 		}
 		else if(Key == GLFW_KEY_F5)
-			pGraphics->ReloadSimulation();
+			pGraphics->m_bReloadRequested = true;
 	}
 }
 

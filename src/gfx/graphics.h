@@ -31,6 +31,8 @@ class CGraphics
 public:
 	float m_FrameTime = 0.0f;
 	bool m_bShowWireframe = false;
+	bool m_bReloadRequested = false;
+	bool m_bIsRunning = true;
 	// needs to be public for controls stuff since they're static
 	ImGuiIO *m_pImGuiIO;
 	CCamera m_Camera;
@@ -42,11 +44,12 @@ public:
 	void OnExit();
 	void ReloadSimulation();
 	void OnBodiesReloaded(CStarSystem *pStarSystem);
+	void CleanupMeshes();
 
 	inline GLFWwindow *GetWindow() { return m_pWindow; }
 
 private:
-	void ResetCamera(CStarSystem *pStarSystem);
+	void ResetCamera(CStarSystem *pStarSystem, std::string PrevFocusedBody = "");
 };
 
 #endif // GRAPHICS_H

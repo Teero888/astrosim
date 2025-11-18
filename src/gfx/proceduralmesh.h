@@ -69,7 +69,7 @@ private:
 class COctreeNode : public std::enable_shared_from_this<COctreeNode>
 {
 public:
-	static const int MAX_LOD_LEVEL = 25;
+	static const int MAX_LOD_LEVEL = 50;
 
 	COctreeNode(CProceduralMesh *pOwnerMesh, std::weak_ptr<COctreeNode> pParent, glm::vec3 center, float size, int level, int voxelResolution);
 	~COctreeNode();
