@@ -12,7 +12,7 @@ uniform float u_logDepthF;
 out vec3 FragPos;
 out vec3 Normal;
 out vec4 vColorData;
-out float v_log_z; // NEW: Linear depth output
+out float v_log_z;
 
 void main()
 {

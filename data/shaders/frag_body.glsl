@@ -3,7 +3,7 @@
 in vec3 FragPos;
 in vec3 Normal;
 in vec4 vColorData;
-in float v_log_z; // NEW: Linear depth input
+in float v_log_z;
 
 out vec4 FragColor;
 
@@ -104,8 +104,6 @@ void main()
 
 	vec3 linearColor = (ambient + diffuse) * terrain_color + specular;
 
-	// DISABLED FOG IN BODY SHADER FOR DEBUGGING
-	
 	// Tone Mapping
 	linearColor = linearColor / (linearColor + vec3(1.0));
 	linearColor = pow(linearColor, vec3(1.0/2.2));

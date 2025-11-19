@@ -48,7 +48,6 @@ public:
 
 	static const int VOXEL_RESOLUTION_DEFAULT = 16;
 
-	// NEW: Store Frustum Planes for Culling
 	// Planes are in Camera-Relative Space because View Matrix is rotation-only relative to 0,0,0
 	std::array<glm::vec4, 6> m_FrustumPlanes;
 	void CalculateFrustum(const CCamera &Camera);

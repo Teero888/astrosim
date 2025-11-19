@@ -4,8 +4,6 @@ project(AstroSim)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
-
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(GLEW REQUIRED)
@@ -99,6 +97,8 @@ set(SHADER_FILES
 	data/shaders/vert_marker.glsl
 	data/shaders/frag_atmosphere.glsl
 	data/shaders/vert_atmosphere.glsl
+	data/shaders/frag_transmittance.glsl
+	data/shaders/vert_fullscreen.glsl
 )
 
 set(EMBEDDED_SHADERS_HEADER ${CMAKE_BINARY_DIR}/generated/embedded_shaders.h)
@@ -132,7 +132,6 @@ add_custom_target(copy_data ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data ${CMAKE_BINARY_DIR}/data
     COMMENT "Force-copying data/ to build directory"
     VERBATIM
-    # This line makes it always run:
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 add_custom_target(always_run_copy_data
@@ -141,4 +140,3 @@ add_custom_target(always_run_copy_data
 )
 
 add_dependencies(astrosim always_run_copy_data)
-

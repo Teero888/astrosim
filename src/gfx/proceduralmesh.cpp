@@ -154,7 +154,6 @@ void CProceduralMesh::Update(CCamera &Camera)
 {
 	CheckApplyQueue();
 
-	// NEW: Calculate Frustum Planes once per frame
 	CalculateFrustum(Camera);
 
 	if(m_pRootNode)

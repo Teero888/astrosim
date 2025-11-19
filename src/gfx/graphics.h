@@ -23,7 +23,6 @@ class CGraphics
 	CAtmosphere m_Atmosphere;
 	std::map<int, CProceduralMesh *> m_BodyMeshes;
 
-	// == NEW: Framebuffer for Depth Reading ==
 	GLuint m_GBufferFBO = 0;
 	GLuint m_GBufferColorTex = 0;
 	GLuint m_GBufferDepthTex = 0;
@@ -40,7 +39,7 @@ public:
 	float m_FrameTime = 0.0f;
 	bool m_bShowWireframe = false;
 	bool m_bShowAtmosphere = true;
-	bool m_bShowGrid = true; // NEW: Grid Toggle
+	bool m_bShowGrid = true;
 	bool m_bReloadRequested = false;
 	bool m_bIsRunning = true;
 
