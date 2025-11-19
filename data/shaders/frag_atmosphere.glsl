@@ -30,19 +30,33 @@ uniform float u_sunIntensity;
 uniform float u_logDepthF;
 
 // CONFIG
-const int NUM_SAMPLES = 32;
-const int NUM_LIGHT_SAMPLES = 4; 
+// INCREASED SAMPLES FOR SMOOTHER HORIZONS
+const int NUM_SAMPLES = 64;
+const int NUM_LIGHT_SAMPLES = 8; 
 const float PI = 3.141592653589793;
 
+// Optimized: Uses standard quadratic formula (b^2 - c) to avoid cross products
 vec2 raySphereIntersect(vec3 ro, vec3 rd, float rad)
 {
     float b = dot(ro, rd);
-    vec3 temp = cross(ro, rd);
-    float h_sq = dot(temp, temp); 
-    float d = rad * rad - h_sq;
+    float c = dot(ro, ro) - rad * rad;
+    float d = b * b - c;
+    
     if (d < 0.0) return vec2(1e5, -1e5);
+    
     float sqrtD = sqrt(d);
     return vec2(-b - sqrtD, -b + sqrtD);
+}
+
+// Optimized: Boolean check only, avoids sqrt entirely
+bool testShadow(vec3 ro, vec3 rd, float rad)
+{
+    float b = dot(ro, rd);
+    float c = dot(ro, ro) - rad * rad;
+    float d = b * b - c;
+    // If d < 0, we miss. 
+    // If b > 0, the sphere is behind the ray origin (since ro is outside/above sphere).
+    return d >= 0.0 && b <= 0.0;
 }
 
 float GetDensity(float h, float H)
@@ -56,18 +70,16 @@ void main()
     vec2 uv = gl_FragCoord.xy / u_screenSize;
     float logZ = texture(u_depthTexture, uv).r;
     float ndcZ = logZ * 2.0 - 1.0;
+    
     // Recover View Space Z
     float planarDepth = exp2((ndcZ + 1.0) / u_logDepthF) - 1.0;
 
     // 2. Convert Planar Depth to Ray Euclidean Distance
-    // The depth buffer stores distance along the camera Z axis.
-    // The ray travels along the hypotenuse.
-    // Factor = length(viewRay) / abs(viewRay.z). Since viewRay.z is -1.0, factor is length.
     float depthCorrection = length(v_viewRay);
     float linearDist = planarDepth * depthCorrection;
     
     // If depth is effectively infinite (Skybox/Stars), push it out
-    if (planarDepth > 0.99 * 1e30) { // 1e10 is FAR_PLANE
+    if (planarDepth > 0.99 * 1e30) { 
         linearDist = 1e38;
     }
 
@@ -81,8 +93,7 @@ void main()
     float atmR = u_atmosphereRadius;
 
     vec2 atmosphereIntersect = raySphereIntersect(u_cameraPos, rayDir, atmR);
-    vec2 planetIntersect = raySphereIntersect(u_cameraPos, rayDir, earthR);
-
+    
     // If we miss the atmosphere, early out
     if(atmosphereIntersect.y < 0.0) discard;
 
@@ -90,15 +101,15 @@ void main()
     float tEnd = atmosphereIntersect.y;
 
     // Calculate the Analytical End Point (The "Perfect" Geometry)
+    // Optimized: Inline the check to avoid function call overhead if possible, 
+    // but the cached result is usually fine.
+    vec2 planetIntersect = raySphereIntersect(u_cameraPos, rayDir, earthR);
     if (planetIntersect.y > 0.0 && planetIntersect.x > 0.0) {
         tEnd = min(tEnd, planetIntersect.x);
     }
 
     // 4. Occlusion Logic
-    // If the buffer is closer than the analytical hit, it's a separate object (Ship/Moon/Terrain).
-    if (sceneDist < tEnd) {
-        tEnd = sceneDist;
-    }
+    tEnd = min(tEnd, sceneDist);
 
     // Safety: If we are fully occluded
     if(tStart >= tEnd) {
@@ -106,12 +117,25 @@ void main()
         return;
     }
 
-    // 5. Raymarch Loop
-    // Precision Snap: Reconstruct start position to minimize jitter
-    vec3 startPos = (tStart > 0.0) ? (normalize(u_cameraPos + rayDir * tStart) * atmR) : u_cameraPos;
+    // 5. Pre-calculate Phase and Coefficients (Invariant Hoisting)
+    // Moving these out of the loop saves calculation per sample
+    float mu = dot(rayDir, sunDir);
+    float mu2 = mu * mu;
+    float phaseR = 3.0 / (16.0 * PI) * (1.0 + mu2);
+    float g = u_miePreferredScatteringDir;
+    float g2 = g * g;
+    float phaseM = 3.0 / (8.0 * PI) * ((1.0 - g2) * (1.0 + mu2)) / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * g * mu, 1.5));
+    
+    vec3 betaR = u_rayleighScatteringCoeff * u_realPlanetRadius;
+    vec3 betaM = u_mieScatteringCoeff * 1.1 * u_realPlanetRadius;
+
+    // 6. Raymarch Loop
+    // Optimized: Simple linear addition rather than re-normalizing
+    vec3 startPos = u_cameraPos + rayDir * tStart;
     
     float rayLen = tEnd - tStart;
     float stepSize = rayLen / float(NUM_SAMPLES);
+    float halfStep = stepSize * 0.5;
     
     vec3 totalOpticalDepthR = vec3(0.0);
     vec3 totalOpticalDepthM = vec3(0.0);
@@ -119,21 +143,26 @@ void main()
     vec3 accumM = vec3(0.0);
     float currentDist = 0.0;
 
+    // Pre-calc light step size ratio to avoid division in inner loop
+    float invNumLightSamples = 1.0 / float(NUM_LIGHT_SAMPLES);
+
     for(int i = 0; i < NUM_SAMPLES; i++)
     {
-        vec3 samplePos = startPos + rayDir * (currentDist + stepSize * 0.5);
+        vec3 samplePos = startPos + rayDir * (currentDist + halfStep);
         float height = max(0.0, length(samplePos) - earthR);
 
         float densityR = GetDensity(height, u_rayleighScaleHeight);
         float densityM = GetDensity(height, u_mieScaleHeight);
+        
         totalOpticalDepthR += densityR * stepSize;
         totalOpticalDepthM += densityM * stepSize;
 
-        vec2 earthShadow = raySphereIntersect(samplePos, sunDir, earthR);
-        if (!(earthShadow.y > 0.0 && earthShadow.x > 0.0))
+        // Optimized: Shadow check without sqrt
+        if (!testShadow(samplePos, sunDir, earthR))
         {
             vec2 lightIntersect = raySphereIntersect(samplePos, sunDir, atmR);
-            float lightStep = lightIntersect.y / float(NUM_LIGHT_SAMPLES);
+            float lightRayLen = lightIntersect.y; // Distance to atmosphere edge
+            float lightStep = lightRayLen * invNumLightSamples;
             float lightOpticalDepthR = 0.0;
             float lightOpticalDepthM = 0.0;
             float lightT = lightStep * 0.5;
@@ -147,33 +176,42 @@ void main()
                 lightT += lightStep;
             }
 
-            vec3 tau = (u_rayleighScatteringCoeff * (totalOpticalDepthR + lightOpticalDepthR * lightStep) +
-                       u_mieScatteringCoeff * 1.1 * (totalOpticalDepthM + lightOpticalDepthM * lightStep)) * u_realPlanetRadius;
+            // Combine optical depths
+            // Note: totalOpticalDepth is already multiplied by stepSize in accumulation, 
+            // but for attenuation we need the sum along the path so far.
+            // Wait: In original code, totalOpticalDepth was accumulated. 
+            // Correct logic: Optical Depth = Density * Length. 
+            
+            vec3 tau = betaR * (totalOpticalDepthR + lightOpticalDepthR * lightStep) +
+                       betaM * (totalOpticalDepthM + lightOpticalDepthM * lightStep);
 
             vec3 attenuation = exp(-tau);
-            accumR += densityR * attenuation * stepSize;
-            accumM += densityM * attenuation * stepSize;
+            
+            accumR += densityR * attenuation; // stepSize applied at end
+            accumM += densityM * attenuation;
         }
         currentDist += stepSize;
     }
 
-    float mu = dot(rayDir, sunDir);
-    float phaseR = 3.0 / (16.0 * PI) * (1.0 + mu * mu);
-    float g = u_miePreferredScatteringDir;
-    float phaseM = 3.0 / (8.0 * PI) * ((1.0 - g * g) * (1.0 + mu * mu)) / ((2.0 + g * g) * pow(1.0 + g * g - 2.0 * g * mu, 1.5));
+    // Apply stepSize once at the end to save multiplications
+    accumR *= stepSize;
+    accumM *= stepSize;
 
-    vec3 inscatter = (accumR * u_rayleighScatteringCoeff * phaseR + accumM * u_mieScatteringCoeff * phaseM) * u_realPlanetRadius * u_sunIntensity;
+    vec3 inscatter = (accumR * betaR * phaseR + accumM * betaM * phaseM) * u_sunIntensity;
 
-    vec3 color = inscatter * 0.4; 
-    color = clamp((color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14), 0.0, 1.0);
+    // 1. Remove arbitrary dimmer (* 0.4) and use raw inscatter
+    vec3 color = inscatter;
+    
+    // 2. Switch to Simple Reinhard Tone Mapping (Matches frag_body.glsl)
+    color = color / (color + vec3(1.0));
+    
+    // 3. Gamma Correct
+    color = pow(color, vec3(1.0/2.2));
 
-    vec3 totalExtinction = exp(-(u_rayleighScatteringCoeff * totalOpticalDepthR + u_mieScatteringCoeff * 1.1 * totalOpticalDepthM) * u_realPlanetRadius);
+    // Calculate alpha/transmittance based on full path extinction
+    vec3 totalExtinction = exp(-(betaR * totalOpticalDepthR + betaM * totalOpticalDepthM));
     float transmittance = (totalExtinction.r + totalExtinction.g + totalExtinction.b) / 3.0;
     
-    // Strict physics blending: 
-    // FinalColor = AtmosphereColor + BackgroundColor * Transmittance
-    // OpenGL BlendFunc(ONE, ONE_MINUS_SRC_ALPHA) -> Src + Dst * (1 - SrcAlpha)
-    // Therefore: SrcAlpha = 1.0 - Transmittance
     float alpha = 1.0 - transmittance;
 
     FragColor = vec4(color, alpha);

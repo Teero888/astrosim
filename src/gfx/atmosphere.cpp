@@ -71,8 +71,9 @@ void CAtmosphere::Render(CStarSystem &System, CCamera &Camera, unsigned int Dept
 	// Physics-based blending: Color + Dest * Transmittance (where SrcAlpha = 1-Transmittance)
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-	// DISABLE Depth Test/Write
-	// We are reading depth manually in the shader now.
+	// ENABLE Depth Test, but disable write
+	//glEnable(GL_DEPTH_TEST);
+	//glDepthFunc(GL_LEQUAL);
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
 

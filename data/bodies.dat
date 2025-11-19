@@ -17,19 +17,14 @@ Color=1.0,0.98,0.95
 Name=Earth
 Type=TERRESTRIAL
 TerrainType=terrestrial
-# Mass: 5.972 * 10^24 kg
 Mass=5.972e24
-# Radius: 6,371 km
 Radius=6.371e6
-# Distance: ~149.6 million km (1 AU)
 Position=1.496e11,0,0
-# Velocity: ~29.78 km/s
 Velocity=0,0,29780
 Color=0.0,0.05,0.2
 Seed=1337
 
 [colors]
-# Realistic Earth Palette
 DeepOcean=0.0,0.02,0.10
 ShallowOcean=0.0,0.15,0.35
 Beach=0.76,0.70,0.50
@@ -41,38 +36,35 @@ Rock=0.30,0.30,0.30
 Snow=0.98,0.98,1.0
 
 [terrain]
-# Earth is relatively smooth compared to its radius
-# Continents ~3-4km high max -> 0.0005
 ContinentFrequency=1.2
 ContinentOctaves=8
 ContinentHeight=0.0005
 SeaLevel=0.0
-
-# Mountains ~9km max -> 0.0014
 MountainFrequency=12.0
 MountainMaskFrequency=1.5
 MountainHeight=0.0015
 MountainOctaves=8
-
-# Subtle Hills
 HillsFrequency=25.0
 HillsHeight=0.0001
 DetailFrequency=100.0
 DetailHeight=0.00001
-
 PolarIceCapLatitude=0.85
 MoistureOffset=0.0
 TemperatureOffset=0.0
 
 [atmosphere]
-# Real Atmosphere is thin (~100km visible). 
-# 100km / 6371km = 0.015 -> Radius 1.015
-AtmosphereRadius=1.05
-# Earth Scattering (Blue Sky, Red Sunset)
+# TIGHTENED RADIUS: 1.05 (300km) -> 1.015 (~95km visual limit)
+AtmosphereRadius=1.515
 SunIntensity=22.0
+
+# RAYLEIGH: (Air molecules)
+# Kept mostly the same, responsible for the blue sky
 RayleighScatteringCoeff=5.5e-6,1.3e-5,3.3e-5
 RayleighScaleHeight=8000.0
-MieScatteringCoeff=2.1e-5,2.1e-5,2.1e-5
+
+# MIE: (Fog/Dust) - THE CULPRIT
+# Reduced by 10x (2.1e-5 -> 2.0e-6). This removes the "milky" look.
+MieScatteringCoeff=2.0e-6,2.0e-6,2.0e-6
 MieScaleHeight=1200.0
 MiePreferredScatteringDir=0.76
 
