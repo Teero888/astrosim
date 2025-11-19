@@ -18,12 +18,9 @@ struct Vec3
 	Vec3(glm::vec3 v) :
 		x(v.x), y(v.y), z(v.z) {}
 
-	Vec3 operator+(const Vec3 &other) const
-	{
-		return Vec3(x + other.x, y + other.y, z + other.z);
-	}
+	// == Standard Math ==
 
-	Vec3 operator+=(const Vec3 &other) const
+	Vec3 operator+(const Vec3 &other) const
 	{
 		return Vec3(x + other.x, y + other.y, z + other.z);
 	}
@@ -33,9 +30,9 @@ struct Vec3
 		return Vec3(x - other.x, y - other.y, z - other.z);
 	}
 
-	Vec3 operator-=(const Vec3 &other) const
+	Vec3 operator*(const Vec3 &other) const
 	{
-		return Vec3(x - other.x, y - other.y, z - other.z);
+		return Vec3(x * other.x, y * other.y, z * other.z);
 	}
 
 	Vec3 operator/(const Vec3 &other) const
@@ -43,52 +40,51 @@ struct Vec3
 		return Vec3(x / other.x, y / other.y, z / other.z);
 	}
 
-	Vec3 operator/=(const Vec3 &other) const
+	Vec3 &operator+=(const Vec3 &other)
 	{
-		return Vec3(x / other.x, y / other.y, z / other.z);
+		x += other.x;
+		y += other.y;
+		z += other.z;
+		return *this;
 	}
 
-	Vec3 operator*(const Vec3 &other) const
+	Vec3 &operator-=(const Vec3 &other)
 	{
-		return Vec3(x * other.x, y * other.y, z * other.z);
+		x -= other.x;
+		y -= other.y;
+		z -= other.z;
+		return *this;
 	}
 
-	Vec3 operator*=(const Vec3 &other) const
+	Vec3 &operator*=(const Vec3 &other)
 	{
-		return Vec3(x * other.x, y * other.y, z * other.z);
+		x *= other.x;
+		y *= other.y;
+		z *= other.z;
+		return *this;
 	}
+
+	Vec3 &operator/=(const Vec3 &other)
+	{
+		x /= other.x;
+		y /= other.y;
+		z /= other.z;
+		return *this;
+	}
+
+	// == Scalar Math ==
 
 	Vec3 operator-(double sub) const
 	{
 		return Vec3(x - sub, y - sub, z - sub);
 	}
 
-	Vec3 operator-=(double sub) const
-	{
-		return Vec3(x - sub, y - sub, z - sub);
-	}
-
-	Vec3 operator-() const
-	{
-		return Vec3(-x, -y, -z);
-	}
-
 	Vec3 operator+(double add) const
 	{
-		return Vec3(x - add, y - add, z - add);
-	}
-
-	Vec3 operator+=(double add) const
-	{
-		return Vec3(x - add, y - add, z - add);
+		return Vec3(x + add, y + add, z + add);
 	}
 
 	Vec3 operator*(double scalar) const
-	{
-		return Vec3(x * scalar, y * scalar, z * scalar);
-	}
-
-	Vec3 operator*=(double scalar) const
 	{
 		return Vec3(x * scalar, y * scalar, z * scalar);
 	}
@@ -98,14 +94,48 @@ struct Vec3
 		return Vec3(x / scalar, y / scalar, z / scalar);
 	}
 
-	Vec3 operator/=(double scalar) const
+	Vec3 &operator-=(double sub)
 	{
-		return Vec3(x / scalar, y / scalar, z / scalar);
+		x -= sub;
+		y -= sub;
+		z -= sub;
+		return *this;
 	}
+
+	Vec3 &operator+=(double add)
+	{
+		x += add;
+		y += add;
+		z += add;
+		return *this;
+	}
+
+	Vec3 &operator*=(double scalar)
+	{
+		x *= scalar;
+		y *= scalar;
+		z *= scalar;
+		return *this;
+	}
+
+	Vec3 &operator/=(double scalar)
+	{
+		x /= scalar;
+		y /= scalar;
+		z /= scalar;
+		return *this;
+	}
+
+	// == Helpers ==
 
 	Vec3 operator%(double mod) const
 	{
 		return Vec3(fmod(x, mod), fmod(y, mod), fmod(z, mod));
+	}
+
+	Vec3 operator-() const
+	{
+		return Vec3(-x, -y, -z);
 	}
 
 	operator glm::vec3() const
@@ -117,6 +147,7 @@ struct Vec3
 	inline double length() const { return std::sqrt(x * x + y * y + z * z); }
 	inline Vec3 normalize() const { return *this / this->length(); }
 	inline Vec3 floor() const { return Vec3((int)x, (int)y, (int)z); }
+
 	inline Vec3 rotate(double Pitch, double Yaw) const
 	{
 		double p = glm::radians(Pitch), y = glm::radians(Yaw);
@@ -124,6 +155,7 @@ struct Vec3
 		double y1 = y * cp - z * sp, z1 = y * sp + z * cp;
 		return Vec3(x * cy + z1 * sy, y1, -x * sy + z1 * cy);
 	}
+
 	inline Vec3 cross(const Vec3 &other) const
 	{
 		return Vec3(
@@ -142,7 +174,6 @@ inline glm::vec2 WorldToScreenCoordinates(glm::vec3 WorldPos, glm::mat4 Model, g
 {
 	glm::mat4 mvp = Projection * View * Model;
 	glm::vec4 clipSpacePos = mvp * glm::vec4(WorldPos, 1.0f);
-	// outside of camera view
 	if(clipSpacePos.w < 0.f)
 		return glm::vec2(-1.f);
 	glm::vec3 ndcPos = glm::vec3(clipSpacePos) / clipSpacePos.w;

@@ -1,10 +1,10 @@
 #include "markers.h"
 #include "../sim/starsystem.h"
 #include "camera.h"
-#include "generated/embedded_shaders.h"
 #include "glm/fwd.hpp"
 #include "glm/geometric.hpp"
 #include "graphics.h"
+#include <embedded_shaders.h>
 
 void CMarkers::Init()
 {

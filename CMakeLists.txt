@@ -4,39 +4,7 @@ project(AstroSim)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Shader embedding
-set(SHADER_FILES
-	data/shaders/frag_solid.glsl
-	data/shaders/vert_solid.glsl
-	data/shaders/frag_body.glsl
-	data/shaders/vert_body.glsl
-	data/shaders/frag_grid.glsl
-	data/shaders/vert_grid.glsl
-	data/shaders/frag_trajectory.glsl
-	data/shaders/vert_trajectory.glsl
-	data/shaders/frag_marker.glsl
-	data/shaders/vert_marker.glsl
-)
 
-# create a header file with the shader source code as strings
-set(EMBEDDED_SHADERS_HEADER ${CMAKE_BINARY_DIR}/generated/embedded_shaders.h)
-file(WRITE ${EMBEDDED_SHADERS_HEADER} "// Auto-generated shader header\n\n")
-file(APPEND ${EMBEDDED_SHADERS_HEADER} "#ifndef EMBEDDED_SHADERS_H\n")
-file(APPEND ${EMBEDDED_SHADERS_HEADER} "#define EMBEDDED_SHADERS_H\n\n")
-file(APPEND ${EMBEDDED_SHADERS_HEADER} "namespace Shaders {\n\n")
-
-foreach(SHADER_FILE ${SHADER_FILES})
-	file(READ ${SHADER_FILE} SHADER_CONTENT)
-	get_filename_component(SHADER_NAME ${SHADER_FILE} NAME_WE)
-	string(TOUPPER ${SHADER_NAME} SHADER_NAME_UPPER)
-	file(APPEND ${EMBEDDED_SHADERS_HEADER} "inline const char* ${SHADER_NAME_UPPER} = R\"(${SHADER_CONTENT})\";\n\n")
-endforeach()
-
-file(APPEND ${EMBEDDED_SHADERS_HEADER} "} // namespace Shaders\n\n")
-file(APPEND ${EMBEDDED_SHADERS_HEADER} "#endif // EMBEDDED_SHADERS_H\n")
-
-# add the generated header to the include directories
-include_directories(${CMAKE_BINARY_DIR})
 
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
@@ -88,6 +56,7 @@ add_executable(astrosim
 	src/gfx/grid.h
 	src/gfx/markers.cpp
 	src/gfx/markers.h
+	src/gfx/atmosphere.cpp
 	src/gfx/shader.h
 	src/gfx/trajectories.cpp
 	src/gfx/trajectories.h
@@ -115,6 +84,47 @@ target_include_directories(astrosim PRIVATE
 	${CMAKE_SOURCE_DIR}/src
 	${CMAKE_SOURCE_DIR}/src/sim
 )
+
+# Shader embedding
+set(SHADER_FILES
+	data/shaders/frag_solid.glsl
+	data/shaders/vert_solid.glsl
+	data/shaders/frag_body.glsl
+	data/shaders/vert_body.glsl
+	data/shaders/frag_grid.glsl
+	data/shaders/vert_grid.glsl
+	data/shaders/frag_trajectory.glsl
+	data/shaders/vert_trajectory.glsl
+	data/shaders/frag_marker.glsl
+	data/shaders/vert_marker.glsl
+	data/shaders/frag_atmosphere.glsl
+	data/shaders/vert_atmosphere.glsl
+)
+
+set(EMBEDDED_SHADERS_HEADER ${CMAKE_BINARY_DIR}/generated/embedded_shaders.h)
+set(SHADER_LIST_FILE ${CMAKE_BINARY_DIR}/generated/shader_list.txt)
+
+file(WRITE ${SHADER_LIST_FILE} "") # Clear the file first
+foreach(SHADER_FILE ${SHADER_FILES})
+    file(APPEND ${SHADER_LIST_FILE} "${SHADER_FILE}\n")
+endforeach()
+
+add_custom_command(
+	OUTPUT ${EMBEDDED_SHADERS_HEADER}
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/generated
+	COMMAND ${CMAKE_COMMAND}
+		-DSHADER_LIST_FILE=${SHADER_LIST_FILE}
+		-DOUTPUT_HEADER=${EMBEDDED_SHADERS_HEADER}
+		-P ${CMAKE_SOURCE_DIR}/cmake/EmbedShaders.cmake
+	DEPENDS ${SHADER_FILES} ${SHADER_LIST_FILE}
+	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+	COMMENT "Embedding GLSL shaders into embedded_shaders.h"
+)
+
+add_custom_target(GenerateEmbeddedShaders DEPENDS ${EMBEDDED_SHADERS_HEADER})
+target_sources(astrosim PRIVATE ${EMBEDDED_SHADERS_HEADER})
+add_dependencies(astrosim GenerateEmbeddedShaders)
+target_include_directories(astrosim PRIVATE ${CMAKE_BINARY_DIR}/generated)
 
 # Copy data files to build directory on every build
 add_custom_target(copy_data ALL

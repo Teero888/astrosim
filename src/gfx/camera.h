@@ -4,12 +4,12 @@
 #include "../sim/body.h"
 #include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"
+#include <glm/gtc/quaternion.hpp> // Added
 #include <glm/gtc/type_ptr.hpp>
 
-#define ZOOM_FACTOR 1.0
-
-// This exists to prevent geometry getting too small to properly render if you zoom in a lot
-#define DEFAULT_SCALE 1000.f
+#define ZOOM_FACTOR 5.0
+#define FAR_PLANE 1e30f
+#define NEAR_PLANE 0.1f
 
 enum ECameraMode
 {
@@ -17,39 +17,44 @@ enum ECameraMode
 	MODE_FREEVIEW,
 };
 
-// Camera nightmare fuel
 struct CCamera
 {
 	SBody *m_pFocusedBody = nullptr;
-	Vec3 m_AbsolutePosition; // double precision absolute world position
+	Vec3 m_AbsolutePosition;
+	Vec3 m_LocalPosition;
 
-	double m_ViewDistance = 1e4 * DEFAULT_SCALE;
-	double m_WantedViewDistance = 1e4 * DEFAULT_SCALE;
+	double m_ViewDistance = 20000.0;
+	double m_WantedViewDistance = 20000.0;
 
-	// for debugging
-	// double m_LowestDist;
-	// double m_HighestDist;
-
-	glm::vec2 m_ScreenSize; // get only
+	glm::vec2 m_ScreenSize;
 	Vec3 m_FocusPoint = Vec3(0, 0, 0);
 	ECameraMode m_CameraMode = MODE_FOCUS;
-	Vec3 m_Position = Vec3(0.0f, 0.0f, 1.0f);
+
+	// Orientation (Quaternion based)
+	glm::quat m_Orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f); // Identity
+
+	// Cached vectors for movement
 	Vec3 m_Front = Vec3(0.0f, 0.0f, -1.0f);
 	Vec3 m_Up = Vec3(0.0f, 1.0f, 0.0f);
-	Vec3 m_Right = m_Front.cross(m_Up).normalize();
+	Vec3 m_Right = Vec3(1.0f, 0.0f, 0.0f);
 
-	double m_Yaw = 45.0f; // Yaw angle (left/right rotation)
-	double m_Pitch = 30.0f; // Pitch angle (up/down rotation)
-	double m_Speed = 2.5f; // Movement speed
-	double m_Sensitivity = 0.1f; // Mouse sensitivity
+	// Focus Mode Angles (Still useful for orbit cam)
+	double m_OrbitYaw = 45.0f;
+	double m_OrbitPitch = 30.0f;
+
+	double m_Speed = 100.0f;
+	float m_SpeedMultiplier = 1.0f;
+	double m_Sensitivity = 0.1f;
 
 	float m_FOV = 70.f;
-	glm::mat4 m_View = glm::lookAt((glm::vec3)m_Position, (glm::vec3)m_Position + (glm::vec3)m_Front, (glm::vec3)m_Up);
-	glm::mat4 m_Projection = glm::perspective(glm::radians(m_FOV), 1600.0f / 1000.0f, 0.001f, 10000.f);
+	glm::mat4 m_View;
+	glm::mat4 m_Projection;
 
 	int m_LOD = 0;
 
 	void SetBody(SBody *pBody);
+	void ToggleMode();
+	void ResetCameraAngle();
 	void UpdateViewMatrix();
 	void ProcessKeyboard(int direction, float deltaTime);
 	void ProcessMouse(float xoffset, float yoffset);

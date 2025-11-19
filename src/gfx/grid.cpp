@@ -1,10 +1,10 @@
 #include "grid.h"
 #include "camera.h"
-#include "generated/embedded_shaders.h"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "graphics.h"
 #include <cmath>
+#include <embedded_shaders.h>
 
 #define GRID_RESOLUTION 1
 
@@ -46,7 +46,7 @@ void CGrid::Render(CStarSystem &System, CCamera &Camera)
 	m_Shader.Use();
 
 	// Pass constant needed for logarithmic depth calculation
-	float F = 2.0f / log2(10000.0f + 1.0f); // far plane is 10000.0f
+	float F = 2.0f / log2(FAR_PLANE + 1.0f); // far plane is 10000.0f
 	m_Shader.SetFloat("u_logDepthF", F);
 
 	// A view matrix without translation or zoom scaling, for calculating the ray direction.

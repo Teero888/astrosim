@@ -8,11 +8,10 @@
 #include <sstream>
 #include <string>
 
-constexpr double G = 6.67430e-11; // gravitational constant
+constexpr double G = 6.67430e-11;
 
 #include "vmath.h"
 
-// Helper to trim whitespace from a string
 static std::string trim(const std::string &Str)
 {
 	size_t First = Str.find_first_not_of(" \t\n\r");
@@ -27,7 +26,7 @@ static std::string trim(const std::string &Str)
 void CStarSystem::OnInit()
 {
 	*this = CStarSystem();
-	LoadBodies("../data/bodies.dat");
+	LoadBodies("data/bodies.dat");
 }
 
 void CStarSystem::LoadBodies(const std::string &Filename)
@@ -37,8 +36,6 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 	std::ifstream File(Filename);
 	if(!File.is_open())
 	{
-		// A bit of a hack, but it's better than crashing
-		// TODO: proper error handling
 		std::cerr << "Error: Could not open bodies data file: " << Filename << std::endl;
 		m_vBodies.emplace_back(0, "Error", SBody::SSimParams{1, Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0)}, SBody::SRenderParams{1, glm::vec3(1, 0, 0)});
 		return;
@@ -56,9 +53,8 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 		if(!Name.empty())
 		{
 			m_vBodies.emplace_back(IdCounter++, Name, SimParams, RenderParams);
-			// Reset for next body
 			SimParams = {};
-			RenderParams = {};
+			RenderParams = {}; // Resets m_Atmosphere.Enabled to false by default
 			Name = "";
 			CurrentSelection = "";
 		}
@@ -69,7 +65,7 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 		Line = trim(Line);
 		if(Line.empty())
 			continue;
-		if(Line[0] == '#') // comments
+		if(Line[0] == '#')
 			continue;
 
 		if(Line[0] == '[' && Line.back() == ']')
@@ -90,19 +86,21 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 			AddBody();
 			CurrentSelection = "";
 			Name = value;
-			continue; // Move to next line
+			continue;
 		}
 
-		// Skip if no body is being parsed yet
 		if(Name.empty())
 			continue;
 
-		if(CurrentSelection.empty()) // Base parameters
+		if(CurrentSelection.empty())
 		{
 			if(Key == "Type")
 			{
 				if(value == "STAR")
+				{
 					RenderParams.m_BodyType = EBodyType::STAR;
+					RenderParams.m_Atmosphere.Enabled = false;
+				}
 				else if(value == "TERRESTRIAL")
 					RenderParams.m_BodyType = EBodyType::TERRESTRIAL;
 				else if(value == "GAS_GIANT")
@@ -110,14 +108,13 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 			}
 			else if(Key == "TerrainType")
 			{
-				// Convert string to enum
 				if(value == "volcanic")
 					RenderParams.m_TerrainType = ETerrainType::VOLCANIC;
 				else if(value == "ice")
 					RenderParams.m_TerrainType = ETerrainType::ICE;
 				else if(value == "barren")
 					RenderParams.m_TerrainType = ETerrainType::BARREN;
-				else // Default
+				else
 					RenderParams.m_TerrainType = ETerrainType::TERRESTRIAL;
 			}
 			else if(Key == "Mass")
@@ -144,6 +141,10 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 				char comma;
 				ssv >> RenderParams.m_Color.x >> comma >> RenderParams.m_Color.y >> comma >> RenderParams.m_Color.z;
 			}
+			else if(Key == "HasAtmosphere")
+			{
+				RenderParams.m_Atmosphere.Enabled = (value == "true");
+			}
 		}
 		else if(CurrentSelection == "colors")
 		{
@@ -154,16 +155,18 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 				pColor = &RenderParams.m_Colors.ShallowOcean;
 			else if(Key == "Beach")
 				pColor = &RenderParams.m_Colors.Beach;
-			else if(Key == "LandLow")
-				pColor = &RenderParams.m_Colors.LandLow;
-			else if(Key == "LandHigh")
-				pColor = &RenderParams.m_Colors.LandHigh;
-			else if(Key == "MountainLow")
-				pColor = &RenderParams.m_Colors.MountainLow;
-			else if(Key == "MountainHigh")
-				pColor = &RenderParams.m_Colors.MountainHigh;
+			else if(Key == "Grass")
+				pColor = &RenderParams.m_Colors.Grass;
+			else if(Key == "Forest")
+				pColor = &RenderParams.m_Colors.Forest;
+			else if(Key == "Desert")
+				pColor = &RenderParams.m_Colors.Desert;
 			else if(Key == "Snow")
 				pColor = &RenderParams.m_Colors.Snow;
+			else if(Key == "Rock")
+				pColor = &RenderParams.m_Colors.Rock;
+			else if(Key == "Tundra")
+				pColor = &RenderParams.m_Colors.Tundra;
 
 			if(pColor)
 			{
@@ -171,48 +174,6 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 				char comma;
 				ssv >> pColor->x >> comma >> pColor->y >> comma >> pColor->z;
 			}
-			// TERRESTRIAL
-			else if(Key == "OceanDepthMax")
-				RenderParams.m_Colors.OceanDepthMax = std::stof(value);
-			else if(Key == "BeachHeightMax")
-				RenderParams.m_Colors.BeachHeightMax = std::stof(value);
-			else if(Key == "LandHeightMax")
-				RenderParams.m_Colors.LandHeightMax = std::stof(value);
-			else if(Key == "MountainHeightMax")
-				RenderParams.m_Colors.MountainHeightMax = std::stof(value);
-			else if(Key == "SnowLineStart")
-				RenderParams.m_Colors.SnowLineStart = std::stof(value);
-			else if(Key == "SnowLineEnd")
-				RenderParams.m_Colors.SnowLineEnd = std::stof(value);
-			// VOLCANIC
-			else if(Key == "LavaPoolHeight")
-				RenderParams.m_Colors.LavaPoolHeight = std::stof(value);
-			else if(Key == "LavaRockHeight")
-				RenderParams.m_Colors.LavaRockHeight = std::stof(value);
-			else if(Key == "LavaFlowStart")
-				RenderParams.m_Colors.LavaFlowStart = std::stof(value);
-			else if(Key == "LavaFlowMaskEnd")
-				RenderParams.m_Colors.LavaFlowMaskEnd = std::stof(value);
-			else if(Key == "LavaPeakHeight")
-				RenderParams.m_Colors.LavaPeakHeight = std::stof(value);
-			else if(Key == "LavaHotspotHeight")
-				RenderParams.m_Colors.LavaHotspotHeight = std::stof(value);
-			// ICE
-			else if(Key == "SlushDepthMax")
-				RenderParams.m_Colors.SlushDepthMax = std::stof(value);
-			else if(Key == "IceSheetHeight")
-				RenderParams.m_Colors.IceSheetHeight = std::stof(value);
-			else if(Key == "CrevasseStart")
-				RenderParams.m_Colors.CrevasseStart = std::stof(value);
-			else if(Key == "CrevasseMaskEnd")
-				RenderParams.m_Colors.CrevasseMaskEnd = std::stof(value);
-			else if(Key == "CrevasseColorMix")
-				RenderParams.m_Colors.CrevasseColorMix = std::stof(value);
-			// BARREN
-			else if(Key == "BarrenLandMax")
-				RenderParams.m_Colors.BarrenLandMax = std::stof(value);
-			else if(Key == "BarrenMountainMax")
-				RenderParams.m_Colors.BarrenMountainMax = std::stof(value);
 		}
 		else if(CurrentSelection == "terrain")
 		{
@@ -232,11 +193,8 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 				RenderParams.m_Terrain.DetailFrequency = std::stof(value);
 			else if(Key == "DetailOctaves")
 				RenderParams.m_Terrain.DetailOctaves = std::stoi(value);
-			// Load new parameters
-			else if(Key == "WarpFrequency")
-				RenderParams.m_Terrain.WarpFrequency = std::stof(value);
-			else if(Key == "WarpStrength")
-				RenderParams.m_Terrain.WarpStrength = std::stof(value);
+			else if(Key == "MountainWarpStrength")
+				RenderParams.m_Terrain.MountainWarpStrength = std::stof(value);
 			else if(Key == "SeaLevel")
 				RenderParams.m_Terrain.SeaLevel = std::stof(value);
 			else if(Key == "OceanDepth")
@@ -249,16 +207,48 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 				RenderParams.m_Terrain.HillsHeight = std::stof(value);
 			else if(Key == "DetailHeight")
 				RenderParams.m_Terrain.DetailHeight = std::stof(value);
-			// Add parser for the new mountain-start value
-			else if(Key == "MountainStartMin")
-				RenderParams.m_Terrain.MountainStartMin = std::stof(value);
+			else if(Key == "MountainMaskFrequency")
+				RenderParams.m_Terrain.MountainMaskFrequency = std::stof(value);
+			else if(Key == "PolarIceCapLatitude")
+				RenderParams.m_Terrain.PolarIceCapLatitude = std::stof(value);
+			else if(Key == "MoistureOffset")
+				RenderParams.m_Terrain.MoistureOffset = std::stof(value);
+			else if(Key == "TemperatureOffset")
+				RenderParams.m_Terrain.TemperatureOffset = std::stof(value);
+		}
+		else if(CurrentSelection == "atmosphere")
+		{
+			// Enabling atmosphere explicitly
+			RenderParams.m_Atmosphere.Enabled = true;
+
+			if(Key == "AtmosphereRadius")
+				RenderParams.m_Atmosphere.AtmosphereRadius = std::stof(value);
+			else if(Key == "SunIntensity")
+				RenderParams.m_Atmosphere.SunIntensity = std::stof(value);
+			else if(Key == "RayleighScatteringCoeff")
+			{
+				std::stringstream ssv(value);
+				char comma;
+				ssv >> RenderParams.m_Atmosphere.RayleighScatteringCoeff.x >> comma >> RenderParams.m_Atmosphere.RayleighScatteringCoeff.y >> comma >> RenderParams.m_Atmosphere.RayleighScatteringCoeff.z;
+			}
+			else if(Key == "RayleighScaleHeight")
+				RenderParams.m_Atmosphere.RayleighScaleHeight = std::stof(value);
+			else if(Key == "MieScatteringCoeff")
+			{
+				std::stringstream ssv(value);
+				char comma;
+				ssv >> RenderParams.m_Atmosphere.MieScatteringCoeff.x >> comma >> RenderParams.m_Atmosphere.MieScatteringCoeff.y >> comma >> RenderParams.m_Atmosphere.MieScatteringCoeff.z;
+			}
+			else if(Key == "MieScaleHeight")
+				RenderParams.m_Atmosphere.MieScaleHeight = std::stof(value);
+			else if(Key == "MiePreferredScatteringDir")
+				RenderParams.m_Atmosphere.MiePreferredScatteringDir = std::stof(value);
 		}
 	}
-	AddBody(); // add the last body
+	AddBody();
 
 	if(!m_vBodies.empty())
 	{
-		// Find the sun
 		m_pSunBody = nullptr;
 		for(auto &body : m_vBodies)
 		{
@@ -268,21 +258,20 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 				break;
 			}
 		}
-		// Fallback if no star
 		if(!m_pSunBody)
 			m_pSunBody = &m_vBodies.front();
 	}
 	else
-		m_pSunBody = nullptr; // No bodies loaded
+		m_pSunBody = nullptr;
 }
 
 static Vec3 CalculateForce(const SBody &a, const SBody &b)
 {
-	Vec3 r = b.m_SimParams.m_Position - a.m_SimParams.m_Position; // Vector from a to b
+	Vec3 r = b.m_SimParams.m_Position - a.m_SimParams.m_Position;
 	const double Distance = r.length();
 	if(Distance < 1e-3)
-		return Vec3(0); // Avoid division by zero if bodies are too close
-	const double ForceMagnitude = (G * a.m_SimParams.m_Mass * b.m_SimParams.m_Mass) / (Distance * Distance); // F = G * m1 * m2 / r^2
+		return Vec3(0);
+	const double ForceMagnitude = (G * a.m_SimParams.m_Mass * b.m_SimParams.m_Mass) / (Distance * Distance);
 	Vec3 Force = r * (ForceMagnitude / Distance);
 	return Force;
 }
@@ -292,25 +281,21 @@ void CStarSystem::UpdateBodies()
 	if(m_vBodies.empty())
 		return;
 
-	// update velocities by half a time step using current accelerations
 	for(auto &Body : m_vBodies)
 		Body.m_SimParams.m_Velocity = Body.m_SimParams.m_Velocity + Body.m_SimParams.m_Acceleration * (0.5 * m_DeltaTime);
 
-	// update positions using the half-step updated velocities
 	for(auto &Body : m_vBodies)
 		Body.m_SimParams.m_Position = Body.m_SimParams.m_Position + Body.m_SimParams.m_Velocity * m_DeltaTime;
 
-	// calculate new accelerations based on updated positions
 	for(auto &Body : m_vBodies)
 	{
 		Vec3 TotalForce(0, 0, 0);
 		for(const auto &other : m_vBodies)
 			if(&Body != &other)
 				TotalForce = TotalForce + CalculateForce(Body, other);
-		Body.m_SimParams.m_Acceleration = TotalForce / Body.m_SimParams.m_Mass; // a = F / m
+		Body.m_SimParams.m_Acceleration = TotalForce / Body.m_SimParams.m_Mass;
 	}
 
-	// update velocities by the other half time step using new accelerations
 	for(auto &Body : m_vBodies)
 		Body.m_SimParams.m_Velocity = Body.m_SimParams.m_Velocity + Body.m_SimParams.m_Acceleration * (0.5 * m_DeltaTime);
 

@@ -2,8 +2,9 @@
 #define PROCEDURALMESH_H
 
 #include <GL/glew.h>
+#include <array> // Added for std::array
 #include <atomic>
-#include <condition_variable> // Add this include
+#include <condition_variable>
 #include <glm/glm.hpp>
 #include <memory>
 #include <mutex>
@@ -21,7 +22,7 @@ struct SProceduralVertex
 	glm::vec3 position;
 	glm::vec3 normal;
 	glm::vec2 texCoord;
-	glm::vec2 color_data;
+	glm::vec4 color_data;
 };
 
 class COctreeNode;
@@ -44,7 +45,13 @@ public:
 	void GenerationWorkerLoop();
 
 	EBodyType m_BodyType;
-	static const int VOXEL_RESOLUTION_DEFAULT = 8;
+
+	static const int VOXEL_RESOLUTION_DEFAULT = 16;
+
+	// NEW: Store Frustum Planes for Culling
+	// Planes are in Camera-Relative Space because View Matrix is rotation-only relative to 0,0,0
+	std::array<glm::vec4, 6> m_FrustumPlanes;
+	void CalculateFrustum(const CCamera &Camera);
 
 private:
 	SBody *m_pBody = nullptr;
@@ -71,7 +78,7 @@ class COctreeNode : public std::enable_shared_from_this<COctreeNode>
 public:
 	static const int MAX_LOD_LEVEL = 50;
 
-	COctreeNode(CProceduralMesh *pOwnerMesh, std::weak_ptr<COctreeNode> pParent, glm::vec3 center, float size, int level, int voxelResolution);
+	COctreeNode(CProceduralMesh *pOwnerMesh, std::weak_ptr<COctreeNode> pParent, Vec3 center, double size, int level, int voxelResolution);
 	~COctreeNode();
 
 	void Update(CCamera &Camera);
@@ -91,8 +98,8 @@ private:
 	int m_Level;
 	int m_VoxelResolution;
 
-	glm::vec3 m_Center;
-	float m_Size;
+	Vec3 m_Center;
+	double m_Size;
 
 	GLuint m_VAO = 0, m_VBO = 0, m_EBO = 0;
 	unsigned int m_NumIndices = 0;

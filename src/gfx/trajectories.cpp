@@ -1,9 +1,9 @@
 #include "trajectories.h"
 #include "camera.h"
-#include "generated/embedded_shaders.h"
 #include "glm/ext/vector_float3.hpp"
 #include "shader.h"
 #include <cstdio>
+#include <embedded_shaders.h>
 
 void CTrajectories::Init()
 {
@@ -71,7 +71,7 @@ void CTrajectories::Render(CCamera &Camera)
 	m_Shader.Use();
 
 	// Pass constant needed for logarithmic depth calculation
-	float F = 2.0f / log2(10000.0f + 1.0f); // far plane is 10000.0f
+	float F = 2.0f / log2(FAR_PLANE + 1.0f); // far plane is 10000.0f
 	m_Shader.SetFloat("u_logDepthF", F);
 
 	auto Model = glm::mat4(1.0f);

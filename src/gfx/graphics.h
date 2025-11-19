@@ -1,6 +1,7 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
+#include "atmosphere.h"
 #include "camera.h"
 #include "grid.h"
 #include "imgui.h"
@@ -18,9 +19,16 @@ class CGraphics
 	GLFWwindow *m_pWindow = nullptr;
 	CStarSystem *m_pStarSystem = nullptr;
 
-	// beautiful nice grid by meine wenigkeit
 	CGrid m_Grid;
+	CAtmosphere m_Atmosphere;
 	std::map<int, CProceduralMesh *> m_BodyMeshes;
+
+	// == NEW: Framebuffer for Depth Reading ==
+	GLuint m_GBufferFBO = 0;
+	GLuint m_GBufferColorTex = 0;
+	GLuint m_GBufferDepthTex = 0;
+	void InitFramebuffer(int width, int height);
+	void ResizeFramebuffer(int width, int height);
 
 	static void MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double YOffset);
 	static void MouseMotionCallback(GLFWwindow *pWindow, double XPos, double YPos);
@@ -31,15 +39,22 @@ class CGraphics
 public:
 	float m_FrameTime = 0.0f;
 	bool m_bShowWireframe = false;
+	bool m_bShowAtmosphere = true;
+	bool m_bShowGrid = true; // NEW: Grid Toggle
 	bool m_bReloadRequested = false;
 	bool m_bIsRunning = true;
-	// needs to be public for controls stuff since they're static
+
+	// UI Toggles
+	bool m_bShowSimSettings = true;
+	bool m_bShowCameraControls = true;
+	bool m_bShowPlanetInfo = true;
+
 	ImGuiIO *m_pImGuiIO;
 	CCamera m_Camera;
 	CTrajectories m_Trajectories;
 	CMarkers m_Markers;
 	bool OnInit(CStarSystem *pStarSystem);
-	void InitGfx(); // This is now an empty function, but kept for structure
+	void InitGfx();
 	void OnRender(CStarSystem &StarSystem);
 	void OnExit();
 	void ReloadSimulation();

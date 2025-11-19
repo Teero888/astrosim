@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aNormal;
-layout(location = 3) in vec2 aColorData;
+layout(location = 3) in vec4 aColorData;
 
 uniform mat4 uModel;
 uniform mat4 uView;
@@ -11,7 +11,8 @@ uniform float u_logDepthF;
 
 out vec3 FragPos;
 out vec3 Normal;
-out vec2 vColorData;
+out vec4 vColorData;
+out float v_log_z; // NEW: Linear depth output
 
 void main()
 {
@@ -21,7 +22,9 @@ void main()
 	vColorData = aColorData;
 	gl_Position = uProjection * uView * worldPos;
 
-	// Logarithmic depth buffer
+	// Pass linear depth for fragment shader
+	v_log_z = 1.0 + gl_Position.w;
+
 	gl_Position.z = (log2(max(1e-6, gl_Position.w) + 1.0)) * u_logDepthF - 1.0;
 	gl_Position.z *= gl_Position.w;
 }

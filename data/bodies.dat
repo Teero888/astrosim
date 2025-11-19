@@ -1,178 +1,187 @@
+# ==========================================
+# THE SUN
+# ==========================================
 Name=Sun
 Type=STAR
+# Mass: 1.989 * 10^30 kg
 Mass=1.989e30
-Radius=6.957e8
+# Radius: 696,340 km
+Radius=6.9634e8
 Position=0,0,0
 Velocity=0,0,0
-Color=1.0,0.95,0.85
+Color=1.0,0.98,0.95
 
+# ==========================================
+# EARTH
+# ==========================================
 Name=Earth
 Type=TERRESTRIAL
 TerrainType=terrestrial
+# Mass: 5.972 * 10^24 kg
 Mass=5.972e24
+# Radius: 6,371 km
 Radius=6.371e6
+# Distance: ~149.6 million km (1 AU)
 Position=1.496e11,0,0
+# Velocity: ~29.78 km/s
 Velocity=0,0,29780
-Color=0,1,0
-Seed=13
+Color=0.0,0.05,0.2
+Seed=1337
 
 [colors]
-DeepOcean=0.0,0.1,0.3
-ShallowOcean=0.1,0.3,0.5
-Beach=0.85,0.75,0.5
-LandLow=0.2,0.5,0.2
-LandHigh=0.4,0.6,0.3
-MountainLow=0.4,0.3,0.2
-MountainHigh=0.3,0.2,0.15
-Snow=0.9,0.9,0.95
-
-# Terrestrial height transitions (in meters)
-OceanDepthMax=2000.0
-BeachHeightMax=50.0
-LandHeightMax=1000.0
-MountainHeightMax=1000.0
-SnowLineStart=4500.0
-SnowLineEnd=6000.0
+# Realistic Earth Palette
+DeepOcean=0.0,0.02,0.10
+ShallowOcean=0.0,0.15,0.35
+Beach=0.76,0.70,0.50
+Grass=0.10,0.25,0.05
+Forest=0.02,0.15,0.02
+Desert=0.75,0.65,0.45
+Tundra=0.40,0.35,0.30
+Rock=0.30,0.30,0.30
+Snow=0.98,0.98,1.0
 
 [terrain]
-ContinentFrequency=0.025
-ContinentOctaves=6
-MountainFrequency=0.08
-MountainOctaves=8
-HillsFrequency=0.3
-HillsOctaves=6
-DetailFrequency=0.9
-DetailOctaves=4
-WarpFrequency=0.02
-WarpStrength=1.0
-SeaLevel=0.48
-OceanDepth=0.003
-ContinentHeight=0.0025
-MountainHeight=0.006
-HillsHeight=0.0005
-DetailHeight=0.00003
-MountainStartMin=1500.0
+# Earth is relatively smooth compared to its radius
+# Continents ~3-4km high max -> 0.0005
+ContinentFrequency=1.2
+ContinentOctaves=8
+ContinentHeight=0.0005
+SeaLevel=0.0
 
+# Mountains ~9km max -> 0.0014
+MountainFrequency=12.0
+MountainMaskFrequency=1.5
+MountainHeight=0.0015
+MountainOctaves=8
+
+# Subtle Hills
+HillsFrequency=25.0
+HillsHeight=0.0001
+DetailFrequency=100.0
+DetailHeight=0.00001
+
+PolarIceCapLatitude=0.85
+MoistureOffset=0.0
+TemperatureOffset=0.0
+
+[atmosphere]
+# Real Atmosphere is thin (~100km visible). 
+# 100km / 6371km = 0.015 -> Radius 1.015
+AtmosphereRadius=1.05
+# Earth Scattering (Blue Sky, Red Sunset)
+SunIntensity=22.0
+RayleighScatteringCoeff=5.5e-6,1.3e-5,3.3e-5
+RayleighScaleHeight=8000.0
+MieScatteringCoeff=2.1e-5,2.1e-5,2.1e-5
+MieScaleHeight=1200.0
+MiePreferredScatteringDir=0.76
+
+# ==========================================
+# THE MOON
+# ==========================================
+Name=Moon
+Type=TERRESTRIAL
+TerrainType=barren
+# Mass: 7.342 * 10^22 kg
+Mass=7.342e22
+# Radius: 1,737 km
+Radius=1.737e6
+# Distance: Earth + 384,400 km
+Position=1.499844e11,0,0
+# Velocity: Earth Vel + 1.022 km/s
+Velocity=0,0,30802
+Color=0.5,0.5,0.5
+Seed=9999
+
+[colors]
+# Monochromatic Gray Palette
+DeepOcean=0.1,0.1,0.1
+ShallowOcean=0.15,0.15,0.15
+Beach=0.3,0.3,0.3
+Grass=0.4,0.4,0.4
+Forest=0.2,0.2,0.2
+Desert=0.5,0.5,0.5
+Tundra=0.6,0.6,0.6
+Rock=0.3,0.3,0.3
+Snow=0.8,0.8,0.8
+
+[terrain]
+# The Moon is rougher relative to its size
+ContinentFrequency=3.0
+ContinentHeight=0.001
+SeaLevel=-1000.0
+
+MountainFrequency=15.0
+MountainHeight=0.004
+MountainOctaves=6
+
+HillsFrequency=30.0
+HillsHeight=0.001
+DetailFrequency=80.0
+DetailHeight=0.0002
+
+PolarIceCapLatitude=2.0
+MoistureOffset=-1.0
+TemperatureOffset=-1.0
+
+# ==========================================
+# MARS
+# ==========================================
 Name=Mars
 Type=TERRESTRIAL
 TerrainType=barren
-Mass=6.4171e23
-Radius=3.3895e6
+# Mass: 6.39 * 10^23 kg
+Mass=6.39e23
+# Radius: 3,389 km
+Radius=3.389e6
+# Distance: ~227.9 million km (1.52 AU)
 Position=2.279e11,0,0
+# Velocity: ~24.07 km/s
 Velocity=0,0,24070
-Color=1,0.5,0
+Color=0.8,0.4,0.2
+Seed=5050
 
 [colors]
-DeepOcean=0.8,0.1,0.05
-ShallowOcean=0.8,0.2,0.1
-Beach=0.9,0.3,0.1
-LandLow=0.5,0.25,0.2
-LandHigh=0.7,0.3,0.1
-MountainLow=0.4,0.2,0.1
-MountainHigh=0.3,0.15,0.05
-Snow=0.95,0.95,0.95
-
-# Barren height transitions (in meters)
-BarrenLandMax=2000.0
-BarrenMountainMax=3000.0
+# Mars Red/Rusty Palette
+DeepOcean=0.3,0.15,0.05
+ShallowOcean=0.4,0.2,0.1
+Beach=0.5,0.25,0.1
+Grass=0.6,0.3,0.1
+Forest=0.45,0.2,0.1
+Desert=0.7,0.35,0.15
+Rock=0.3,0.1,0.05
+Tundra=0.4,0.2,0.1
+Snow=0.9,0.9,0.95
 
 [terrain]
-ContinentFrequency=0.03
-ContinentOctaves=6
-MountainFrequency=0.1
-MountainOctaves=8
-HillsFrequency=0.5
-HillsOctaves=4
-DetailFrequency=1.5
-DetailOctaves=4
-WarpFrequency=0.03
-WarpStrength=0.6
+# Mars has massive features (Olympus Mons is ~21km high)
+# 21km / 3389km = ~0.006
+ContinentFrequency=1.5
 ContinentHeight=0.002
-MountainHeight=0.004
-HillsHeight=0.0003
-DetailHeight=0.00002
+SeaLevel=-1000.0
 
-Name=Volcanis
-Type=TERRESTRIAL
-TerrainType=volcanic
-Mass=8.9e22
-Radius=1.821e6
-Position=3.0e11,0,0
-Velocity=0,0,20000
-Color=1,0,0
-
-[colors]
-DeepOcean=0.8,0.1,0.05
-ShallowOcean=1.0,0.3,0.0
-Beach=0.0,0.0,0.0
-LandLow=0.1,0.1,0.1
-LandHigh=0.3,0.3,0.3
-MountainLow=1.0,0.5,0.0
-MountainHigh=1.0,0.8,0.0
-Snow=1.0,1.0,0.8
-
-# Volcanic height/noise transitions
-LavaPoolHeight=50.0
-LavaRockHeight=2000.0
-LavaFlowStart=0.6
-LavaFlowMaskEnd=1.0
-LavaPeakHeight=4000.0
-LavaHotspotHeight=5000.0
-
-[terrain]
-ContinentFrequency=0.05
-ContinentOctaves=6
-MountainFrequency=0.15
+MountainFrequency=5.0
+MountainMaskFrequency=1.0
+MountainHeight=0.007
 MountainOctaves=8
-HillsFrequency=0.6
-HillsOctaves=4
-DetailFrequency=1.8
-DetailOctaves=4
-WarpFrequency=0.08
-WarpStrength=1.5
-ContinentHeight=0.004
-MountainHeight=0.008
-HillsHeight=0.0006
-DetailHeight=0.00004
 
-Name=Glacies
-Type=TERRESTRIAL
-TerrainType=ice
-Mass=1.3e22
-Radius=1.56e6
-Position=3.5e11,0,0
-Velocity=0,0,18000
-Color=0,0,1
+HillsFrequency=15.0
+HillsHeight=0.0005
+DetailFrequency=60.0
+DetailHeight=0.0001
 
-[colors]
-DeepOcean=0.0,0.05,0.1
-ShallowOcean=0.1,0.2,0.4
-Beach=0.0,0.0,0.0
-LandLow=0.9,0.9,1.0
-LandHigh=0.8,0.8,0.9
-MountainLow=0.1,0.1,0.2
-MountainHigh=0.0,0.0,0.0
-Snow=1.0,1.0,1.0
+PolarIceCapLatitude=0.9
+MoistureOffset=-0.8
+TemperatureOffset=-0.3
 
-# Ice height/noise transitions
-SlushDepthMax=1000.0
-IceSheetHeight=200.0
-CrevasseStart=0.1
-CrevasseMaskEnd=1.0
-CrevasseColorMix=0.7
-
-[terrain]
-ContinentFrequency=0.03
-ContinentOctaves=2
-MountainFrequency=0.15
-MountainOctaves=4
-HillsFrequency=0.5
-HillsOctaves=2
-DetailFrequency=1.2
-DetailOctaves=4
-WarpFrequency=0.01
-WarpStrength=0.4
-ContinentHeight=0.001
-MountainHeight=0.0015
-HillsHeight=0.0001
-DetailHeight=0.00002
+[atmosphere]
+AtmosphereRadius=1.02
+SunIntensity=15.0
+# Martian Atmosphere:
+# Low Rayleigh (Thin atmosphere)
+RayleighScatteringCoeff=0.0000019,0.0000013,0.00000058
+RayleighScaleHeight=11000.0
+# High Mie (Dusty) - Gives the reddish/tan glow
+MieScatteringCoeff=0.00002,0.000015,0.00001
+MieScaleHeight=3000.0
+MiePreferredScatteringDir=0.8

@@ -1,198 +1,117 @@
 #version 330 core
 
-in vec3 FragPos; // fragment position in world space
-in vec3 Normal; // transformed normal in world space
-in vec2 vColorData;
+in vec3 FragPos;
+in vec3 Normal;
+in vec4 vColorData;
+in float v_log_z; // NEW: Linear depth input
 
 out vec4 FragColor;
 
 uniform vec3 uLightDir;
 uniform vec3 uLightColor;
 uniform vec3 uObjectColor;
-uniform float uPlanetRadius;
+uniform vec3 uViewPos; 
+uniform float uAmbientStrength;
+uniform float uSpecularStrength;
+uniform float uShininess;
 uniform bool uSource;
 uniform int uTerrainType;
+uniform float u_logDepthF;
 
-uniform vec3 DEEP_OCEAN_COLOR;
-uniform vec3 SHALLOW_OCEAN_COLOR;
-uniform vec3 BEACH_COLOR;
-uniform vec3 LAND_LOW_COLOR;
-uniform vec3 LAND_HIGH_COLOR;
-uniform vec3 MOUNTAIN_LOW_COLOR;
-uniform vec3 MOUNTAIN_HIGH_COLOR;
-uniform vec3 SNOW_COLOR;
+// Palette Uniforms
+uniform vec3 uDeepOcean;
+uniform vec3 uShallowOcean;
+uniform vec3 uBeach;
+uniform vec3 uGrass;
+uniform vec3 uForest;
+uniform vec3 uDesert;
+uniform vec3 uSnow;
+uniform vec3 uRock;
+uniform vec3 uTundra;
 
-// == TERRESTRIAL ==
-uniform float uMountainStartMin;
-uniform float uOceanDepthMax;
-uniform float uBeachHeightMax;
-uniform float uLandHeightMax;
-uniform float uMountainHeightMax;
-uniform float uSnowLineStart;
-uniform float uSnowLineEnd;
+vec3 GetBiomeColor(float temp, float moisture)
+{
+	vec3 biomeColor;
+	float t_weight = smoothstep(0.2, 0.7, temp);
+	float m_weight = smoothstep(0.2, 0.8, moisture);
 
-// == VOLCANIC ==
-uniform float uLavaPoolHeight;
-uniform float uLavaRockHeight;
-uniform float uLavaFlowStart;
-uniform float uLavaFlowMaskEnd;
-uniform float uLavaPeakHeight;
-uniform float uLavaHotspotHeight;
-
-// == ICE ==
-uniform float uSlushDepthMax;
-uniform float uIceSheetHeight;
-uniform float uCrevasseStart;
-uniform float uCrevasseMaskEnd;
-uniform float uCrevasseColorMix;
-
-// == BARREN ==
-uniform float uBarrenLandMax;
-uniform float uBarrenMountainMax;
+	vec3 coldColor = mix(uTundra, uSnow, m_weight);
+	vec3 hotDry = mix(uDesert, uGrass, smoothstep(0.1, 0.45, moisture));
+	vec3 hotColor = mix(hotDry, uForest, smoothstep(0.55, 0.9, moisture));
+	return mix(coldColor, hotColor, t_weight);
+}
 
 vec3 GetTerrainColor()
 {
 	float elevation = vColorData.x;
-	float special_noise = vColorData.y; // mountain_noise, lava_noise, crevasse_noise...
+	float temp = vColorData.y;
+	float moisture = vColorData.z;
+	float ice_mask = vColorData.w;
+	
+	if(uTerrainType == 3) 
+		return mix(uDesert, uRock, smoothstep(0.0, 0.8, elevation / 3000.0));
 
-	// Terrestrial
-	if(uTerrainType == 0)
-	{
-		float mountain_noise_component = special_noise;
-		if(elevation < 0.0) // Water
-		{
-			float depth_ratio = clamp(-elevation / uOceanDepthMax, 0.0, 1.0);
-			return mix(SHALLOW_OCEAN_COLOR, DEEP_OCEAN_COLOR, depth_ratio);
-		}
-		else // Land
-		{
-			// Beach from 0m to uBeachHeightMax (e.g., 50m)
-			if(elevation < uBeachHeightMax)
-			{
-				float beach_ratio = clamp(elevation / uBeachHeightMax, 0.0, 1.0);
-				return mix(BEACH_COLOR, LAND_LOW_COLOR, beach_ratio);
-			}
+	if (elevation < 0.0) {
+		float depth = clamp(-elevation / 2000.0, 0.0, 1.0);
+		return mix(uShallowOcean, uDeepOcean, depth);
+	} 
+	
+	vec3 up = normalize(FragPos + uViewPos);
+	float slope = 1.0 - dot(normalize(Normal), up);
+	
+	vec3 terrainColor = GetBiomeColor(temp, moisture);
+	float beach_alpha = 1.0 - smoothstep(10.0, 60.0, elevation);
+	terrainColor = mix(terrainColor, uBeach, beach_alpha);
+	float rock_factor = smoothstep(0.20, 0.45, slope);
+	terrainColor = mix(terrainColor, uRock, rock_factor);
 
-			// Check if it's a mountain or a hill based on the mountain noise component
-			if(mountain_noise_component > uMountainStartMin)
-			{
-				// Mountain color blends based on *total* elevation
-				float mountain_ratio = clamp(elevation / uMountainHeightMax, 0.0, 1.0);
-				vec3 mountain_color = mix(MOUNTAIN_LOW_COLOR, MOUNTAIN_HIGH_COLOR, mountain_ratio);
-
-				// Snow line starts at uSnowLineStart
-				if(elevation > uSnowLineStart)
-				{
-					// Snow fades in from uSnowLineStart to uSnowLineEnd
-					float snow_ratio = clamp((elevation - uSnowLineStart) / (uSnowLineEnd - uSnowLineStart), 0.0, 1.0);
-					return mix(mountain_color, SNOW_COLOR, snow_ratio);
-				}
-				return mountain_color;
-			}
-			else // Lowlands/hills
-			{
-				// Land blends from uBeachHeightMax to uLandHeightMax
-				float land_ratio = clamp((elevation - uBeachHeightMax) / (uLandHeightMax - uBeachHeightMax), 0.0, 1.0);
-				return mix(LAND_LOW_COLOR, LAND_HIGH_COLOR, land_ratio);
-			}
-		}
+	if (ice_mask > 0.01) {
+		float ice_alpha = smoothstep(0.0, 0.5, ice_mask);
+		terrainColor = mix(terrainColor, uSnow, ice_alpha);
 	}
-	// Volcanic
-	else if(uTerrainType == 1)
-	{
-		float lava_noise = special_noise; // [0, 1] raw noise
-		// Use "ocean" for lava pools (low elevation)
-		if(elevation < uLavaPoolHeight)
-		{
-			// blend from dark rock to bright lava
-			float lava_ratio = clamp(elevation / uLavaPoolHeight, 0.0, 1.0);
-			return mix(DEEP_OCEAN_COLOR, SHALLOW_OCEAN_COLOR, lava_ratio);
-		}
-
-		// Use "land" for cooled rock
-		float land_ratio = clamp(elevation / uLavaRockHeight, 0.0, 1.0);
-		vec3 rock_color = mix(LAND_LOW_COLOR, LAND_HIGH_COLOR, land_ratio);
-
-		// Use "mountain" for active lava flows
-		// Use lava_noise as a mask for glowing lava
-		if(lava_noise > uLavaFlowStart)
-		{
-			float flow_mask = (lava_noise - uLavaFlowStart) / (uLavaFlowMaskEnd - uLavaFlowStart);
-			flow_mask = clamp(flow_mask, 0.0, 1.0);
-
-			// Use mountain colors for lava
-			float mountain_ratio = clamp(elevation / uLavaPeakHeight, 0.0, 1.0);
-			vec3 lava_color = mix(MOUNTAIN_LOW_COLOR, MOUNTAIN_HIGH_COLOR, mountain_ratio);
-
-			// Add snow color as "brightest hot"
-			float hotspot_ratio = clamp((elevation - uLavaPeakHeight) / (uLavaHotspotHeight - uLavaPeakHeight), 0.0, 1.0);
-			lava_color = mix(lava_color, SNOW_COLOR, hotspot_ratio * flow_mask);
-
-			return mix(rock_color, lava_color, flow_mask * 0.8); // 80% lava
-		}
-		return rock_color;
-	}
-	// Ice
-	else if(uTerrainType == 2)
-	{
-		float crevasse_noise = special_noise; // [0, 1] crevasse strength
-		// Use "ocean" colors for water/slush at low points
-		if(elevation < 0.0)
-		{
-			float depth_ratio = clamp(-elevation / uSlushDepthMax, 0.0, 1.0);
-			return mix(SHALLOW_OCEAN_COLOR, DEEP_OCEAN_COLOR, depth_ratio);
-		}
-
-		// Use "land" colors for basic ice sheet
-		float land_ratio = clamp(elevation / uIceSheetHeight, 0.0, 1.0);
-		vec3 ice_color = mix(LAND_LOW_COLOR, LAND_HIGH_COLOR, land_ratio);
-
-		// Use "mountain" colors for deep crevasse shadows
-		if(crevasse_noise > uCrevasseStart)
-		{
-			float crevasse_mask = (crevasse_noise - uCrevasseStart) / (uCrevasseMaskEnd - uCrevasseStart);
-			crevasse_mask = clamp(crevasse_mask, 0.0, 1.0);
-			vec3 crevasse_color = mix(MOUNTAIN_LOW_COLOR, MOUNTAIN_HIGH_COLOR, crevasse_mask);
-			return mix(ice_color, crevasse_color, crevasse_mask * uCrevasseColorMix);
-		}
-		return ice_color;
-	}
-	// Barren
-	else if(uTerrainType == 3)
-	{
-		float mountain_raw_noise = special_noise; // [0, 1]
-		// No water, just blend between rock colors based on elevation
-		float land_ratio = clamp(elevation / uBarrenLandMax, 0.0, 1.0);
-		vec3 color = mix(LAND_LOW_COLOR, LAND_HIGH_COLOR, land_ratio);
-
-		// Add "mountain" colors based on noise, not just elevation
-		float mountain_ratio = clamp(elevation / uBarrenMountainMax, 0.0, 1.0);
-		vec3 mountain_color = mix(MOUNTAIN_LOW_COLOR, MOUNTAIN_HIGH_COLOR, mountain_ratio);
-
-		return mix(color, mountain_color, mountain_raw_noise * land_ratio);
-	}
-
-	// Fallback
-	return vec3(1.0, 0.0, 1.0); // Pink error
+	return terrainColor;
 }
 
 void main()
 {
-	if(uSource)
-	{
+	if(uSource) {
 		FragColor = vec4(uObjectColor, 1.0);
+		// Still need depth for the sun
+		gl_FragDepth = log2(v_log_z) * u_logDepthF * 0.5;
 		return;
 	}
 
 	vec3 terrain_color = GetTerrainColor();
+	float ice_mask = vColorData.w;
+	
+	float specMod = 1.0;
+	if(vColorData.x < 0.0) specMod = 3.0; 
+	else if(ice_mask > 0.5) specMod = 2.0; 
+	else specMod = 0.01;
 
-	// diffuse lighting
+	vec3 ambient = uAmbientStrength * uLightColor;
 	vec3 norm = normalize(Normal);
-	float diff = max(dot(norm, uLightDir), 0.0);
-	vec3 diffuse = diff * uLightColor;
+	vec3 lightDir = normalize(uLightDir);
+	
+	float NdotL = max(dot(norm, lightDir), 0.0);
+	vec3 diffuse = NdotL * uLightColor;
 
-	// combine lighting
-	vec3 result = diffuse * terrain_color;
+	vec3 viewDir = normalize(-FragPos);
+	vec3 halfwayDir = normalize(lightDir + viewDir);
+	float spec = pow(max(dot(norm, halfwayDir), 0.0), uShininess);
+	vec3 specular = uSpecularStrength * specMod * spec * uLightColor;
+	if(NdotL <= 0.0) specular = vec3(0.0);
 
-	FragColor = vec4(result, 1.0);
+	vec3 linearColor = (ambient + diffuse) * terrain_color + specular;
+
+	// DISABLED FOG IN BODY SHADER FOR DEBUGGING
+	
+	// Tone Mapping
+	linearColor = linearColor / (linearColor + vec3(1.0));
+	linearColor = pow(linearColor, vec3(1.0/2.2));
+
+	FragColor = vec4(linearColor, 1.0);
+
+	// Correctly write logarithmic depth
+	gl_FragDepth = log2(v_log_z) * u_logDepthF * 0.5;
 }
