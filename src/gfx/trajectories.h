@@ -29,7 +29,7 @@ class CTrajectories
 	std::vector<STrajectory> m_vPlanetTrajectories;
 
 public:
-	bool m_ShowAll = true;
+	bool m_Show = true;
 	void Init();
 	void Update(CStarSystem &PredictedSystem);
 	void UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera);

@@ -53,18 +53,16 @@ MoistureOffset=0.0
 TemperatureOffset=0.0
 
 [atmosphere]
-# TIGHTENED RADIUS: 1.05 (300km) -> 1.015 (~95km visual limit)
 AtmosphereRadius=1.515
 SunIntensity=22.0
 
 # RAYLEIGH: (Air molecules)
-# Kept mostly the same, responsible for the blue sky
 RayleighScatteringCoeff=5.5e-6,1.3e-5,3.3e-5
 RayleighScaleHeight=8000.0
 
 # MIE: (Fog/Dust) - THE CULPRIT
 # Reduced by 10x (2.1e-5 -> 2.0e-6). This removes the "milky" look.
-MieScatteringCoeff=2.0e-6,2.0e-6,2.0e-6
+MieScatteringCoeff=2.0e-7,2.0e-7,2.0e-7
 MieScaleHeight=1200.0
 MiePreferredScatteringDir=0.76
 

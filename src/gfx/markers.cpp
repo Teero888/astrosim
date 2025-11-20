@@ -49,6 +49,8 @@ void CMarkers::Render(CStarSystem &System, CCamera &Camera)
 	glDisable(GL_DEPTH_TEST);
 	for(auto &Body : System.m_vBodies)
 	{
+		if(Body.m_Id == Camera.m_pFocusedBody->m_Id)
+			continue;
 		// Calculate screen position
 		Vec3 relativePos_d = Body.m_SimParams.m_Position - Camera.m_AbsolutePosition;
 		glm::vec3 WorldPos = (glm::vec3)relativePos_d;

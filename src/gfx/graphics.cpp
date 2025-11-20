@@ -232,7 +232,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 		ImGui::Text("Rendering");
 		ImGui::Checkbox("Show Atmosphere", &m_bShowAtmosphere);
 		ImGui::Checkbox("Show Grid", &m_bShowGrid);
-		ImGui::Checkbox("Show Trajectories", &m_Trajectories.m_ShowAll);
+		ImGui::Checkbox("Show Trajectories", &m_Trajectories.m_Show);
 		ImGui::Checkbox("Show Markers", &m_Markers.m_ShowMarkers);
 		ImGui::Checkbox("Wireframe Mode", &m_bShowWireframe);
 		if(ImGui::Button("Reload Simulation (F5)"))
@@ -334,14 +334,15 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	// ========================================================
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Back to screen
 
-	// Render Atmosphere (reading from FBO Depth)
+	// Render Atmosphere
 	if(m_bShowAtmosphere)
 	{
-		// Bind depth texture to Slot 0 for the shader to read
+		// Bind depth texture to Unit 0
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, m_GBufferDepthTex);
 
-		m_Atmosphere.Render(StarSystem, m_Camera, 0); // 0 is the texture unit
+		// Ensure the shader knows to use Unit 0
+		m_Atmosphere.Render(StarSystem, m_Camera, 0);
 	}
 
 	// Render Grid and Markers (Standard Depth Test against blitted depth)

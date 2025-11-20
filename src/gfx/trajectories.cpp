@@ -30,12 +30,10 @@ void CTrajectories::Update(CStarSystem &PredictedSystem)
 
 void CTrajectories::UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera)
 {
-	if(m_vPlanetTrajectories.empty())
+	if(m_vPlanetTrajectories.empty() || !m_Show)
 		return;
 
-	for(int i = m_ShowAll ? 0 : Camera.m_pFocusedBody->m_Id;
-		m_ShowAll ? i < (int)m_vPlanetTrajectories.size() : i == Camera.m_pFocusedBody->m_Id;
-		++i)
+	for(int i = 0; i < (int)m_vPlanetTrajectories.size(); ++i)
 	{
 		auto &Trajectory = m_vPlanetTrajectories[i];
 		for(int i = 0; i < TRAJECTORY_LENGTH; ++i)
@@ -80,8 +78,8 @@ void CTrajectories::Render(CCamera &Camera)
 	m_Shader.SetMat4("Projection", Camera.m_Projection);
 	glEnable(GL_LINE_SMOOTH);
 
-	for(int i = m_ShowAll ? 0 : Camera.m_pFocusedBody->m_Id;
-		m_ShowAll ? i < (int)m_vPlanetTrajectories.size() : i == Camera.m_pFocusedBody->m_Id;
+	for(int i = m_Show ? 0 : Camera.m_pFocusedBody->m_Id;
+		m_Show ? i < (int)m_vPlanetTrajectories.size() : i == Camera.m_pFocusedBody->m_Id;
 		++i)
 	{
 		auto &Trajectory = m_vPlanetTrajectories[i];
