@@ -37,7 +37,10 @@ public:
 
 	void Init(SBody *pBody, EBodyType bodyType, int voxelResolution);
 	void Update(CCamera &Camera);
-	void Render(const CCamera &Camera, const SBody *pLightBody);
+
+	// [FIX] Added bIsShadowPass parameter
+	void Render(const CCamera &Camera, const SBody *pLightBody, bool bIsShadowPass);
+
 	void Destroy();
 
 	void AddToGenerationQueue(std::shared_ptr<COctreeNode> pNode);

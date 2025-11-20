@@ -22,11 +22,11 @@ public:
 	CTerrainGenerator();
 	~CTerrainGenerator();
 
-	void Init(int seed, const STerrainParameters &params, ETerrainType terrainType);
+	void Init(int Seed, const STerrainParameters &Params, ETerrainType TerrainType);
 
-	STerrainOutput GetTerrainOutput(Vec3 worldPosition, double planetRadius);
+	STerrainOutput GetTerrainOutput(Vec3 WorldPosition, double PlanetRadius);
 
-	glm::vec3 CalculateDensityGradient(Vec3 p, double planetRadius);
+	glm::vec3 CalculateDensityGradient(Vec3 p, double PlanetRadius);
 
 private:
 	FastNoiseLite *m_pContinentNoise;

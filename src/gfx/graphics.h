@@ -26,8 +26,16 @@ class CGraphics
 	GLuint m_GBufferFBO = 0;
 	GLuint m_GBufferColorTex = 0;
 	GLuint m_GBufferDepthTex = 0;
+
+	// == Shadow Map Resources ==
+	GLuint m_ShadowMapFBO = 0;
+	GLuint m_ShadowMapTexture = 0;
+	const int SHADOW_RES = 4096; // 4k Resolution for crisp cave shadows
+	glm::mat4 m_LightSpaceMatrix;
+
 	void InitFramebuffer(int width, int height);
 	void ResizeFramebuffer(int width, int height);
+	void InitShadowMap();
 
 	static void MouseScrollCallback(GLFWwindow *pWindow, double XOffset, double YOffset);
 	static void MouseMotionCallback(GLFWwindow *pWindow, double XPos, double YPos);
@@ -36,6 +44,7 @@ class CGraphics
 	static void WindowSizeCallback(GLFWwindow *pWindow, int Width, int Height);
 
 public:
+	int m_DebugMode = 0;
 	float m_FrameTime = 0.0f;
 	bool m_bShowWireframe = false;
 	bool m_bShowAtmosphere = true;

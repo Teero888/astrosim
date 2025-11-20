@@ -160,12 +160,15 @@ void CProceduralMesh::Update(CCamera &Camera)
 		m_pRootNode->Update(Camera);
 }
 
-void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody)
+void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody, bool bIsShadowPass)
 {
 	if(!m_pRootNode)
 		return;
 
 	m_Shader.Use();
+
+	// [FIX] Pass the shadow pass flag
+	m_Shader.SetBool("uIsShadowPass", bIsShadowPass);
 
 	float F = 2.0f / log2(FAR_PLANE + 1.0f);
 	m_Shader.SetFloat("u_logDepthF", F);

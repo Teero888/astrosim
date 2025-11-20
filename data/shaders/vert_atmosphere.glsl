@@ -9,18 +9,21 @@ out vec3 v_viewRay;
 
 void main()
 {
-	// We are rendering a full-screen quad, so we calculate a view ray
-	// for each corner that will be interpolated for each fragment.
+	// We are rendering a full-screen quad. 
+	// Unproject the NEAR plane (Z = -1.0) to keep vector magnitude small and manageable.
 	vec4 ray_clip = vec4(aPos.xy, -1.0, 1.0);
 	vec4 ray_eye = u_invProjection * ray_clip;
+	
+	// Perspective divide is crucial here
+	ray_eye /= ray_eye.w;
 
-	// ray_eye.z is -1.0 here, representing the near plane slice
-	ray_eye = vec4(ray_eye.xy, -1.0, 0.0);
-
-	// Pass the un-rotated view vector to fragment shader for depth correction
+	// Pass the un-rotated view vector (to the near plane) to fragment shader for depth correction
 	v_viewRay = ray_eye.xyz;
 
-	v_rayDirection = (u_invView * ray_eye).xyz;
+	// Calculate World Space Ray Direction
+	// We use vec4(..., 0.0) to IGNORE the translation part of u_invView.
+	// This ensures we get a pure direction vector.
+	v_rayDirection = (u_invView * vec4(ray_eye.xyz, 0.0)).xyz;
 
 	// Output a full-screen quad that is at the very back of the clipping volume.
 	gl_Position = vec4(aPos.xy, 1.0, 1.0);

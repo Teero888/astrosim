@@ -3,13 +3,99 @@
 # ==========================================
 Name=Sun
 Type=STAR
-# Mass: 1.989 * 10^30 kg
 Mass=1.989e30
-# Radius: 696,340 km
 Radius=6.9634e8
 Position=0,0,0
 Velocity=0,0,0
 Color=1.0,0.98,0.95
+
+# ==========================================
+# MERCURY
+# ==========================================
+Name=Mercury
+Type=TERRESTRIAL
+TerrainType=barren
+Mass=3.301e23
+Radius=2.439e6
+# 0.39 AU
+Position=5.79e10,0,0
+Velocity=0,0,47870
+Color=0.4,0.38,0.35
+Seed=101
+
+[colors]
+DeepOcean=0.2,0.2,0.2
+ShallowOcean=0.25,0.25,0.25
+Beach=0.3,0.3,0.3
+Grass=0.35,0.33,0.3
+Forest=0.3,0.28,0.25
+Desert=0.4,0.38,0.35
+Tundra=0.45,0.43,0.4
+Rock=0.25,0.23,0.2
+Snow=0.5,0.5,0.5
+
+[terrain]
+# Heavily cratered look
+ContinentFrequency=4.0
+ContinentHeight=0.002
+SeaLevel=-1000.0
+MountainFrequency=10.0
+MountainHeight=0.003
+HillsFrequency=30.0
+HillsHeight=0.001
+DetailFrequency=100.0
+DetailHeight=0.0005
+PolarIceCapLatitude=2.0
+MoistureOffset=-1.0
+TemperatureOffset=0.5
+
+# ==========================================
+# VENUS
+# ==========================================
+Name=Venus
+Type=TERRESTRIAL
+TerrainType=volcanic
+Mass=4.867e24
+Radius=6.051e6
+# 0.72 AU
+Position=1.082e11,0,0
+Velocity=0,0,35020
+Color=0.8,0.7,0.5
+Seed=202
+
+[colors]
+# Yellowish/Orange acidic look
+DeepOcean=0.6,0.4,0.1
+ShallowOcean=0.7,0.5,0.2
+Beach=0.75,0.55,0.2
+Grass=0.8,0.6,0.2
+Forest=0.7,0.5,0.15
+Desert=0.85,0.65,0.25
+Rock=0.5,0.3,0.1
+Tundra=0.8,0.6,0.2
+Snow=0.9,0.8,0.5
+
+[terrain]
+ContinentFrequency=0.8
+ContinentHeight=0.001
+SeaLevel=-1000.0
+MountainFrequency=3.0
+MountainHeight=0.004
+HillsFrequency=10.0
+HillsHeight=0.0005
+PolarIceCapLatitude=2.0
+MoistureOffset=-1.0
+TemperatureOffset=1.0
+
+[atmosphere]
+AtmosphereRadius=1.1
+SunIntensity=20.0
+# Extremely dense Mie scattering for the "featureless cloud" look
+RayleighScatteringCoeff=0.00001,0.000005,0.000002
+RayleighScaleHeight=6000.0
+MieScatteringCoeff=0.0001,0.00008,0.00005
+MieScaleHeight=4000.0
+MiePreferredScatteringDir=0.8
 
 # ==========================================
 # EARTH
@@ -53,16 +139,11 @@ MoistureOffset=0.0
 TemperatureOffset=0.0
 
 [atmosphere]
-AtmosphereRadius=1.515
+AtmosphereRadius=1.025
 SunIntensity=22.0
-
-# RAYLEIGH: (Air molecules)
 RayleighScatteringCoeff=5.5e-6,1.3e-5,3.3e-5
 RayleighScaleHeight=8000.0
-
-# MIE: (Fog/Dust) - THE CULPRIT
-# Reduced by 10x (2.1e-5 -> 2.0e-6). This removes the "milky" look.
-MieScatteringCoeff=2.0e-7,2.0e-7,2.0e-7
+MieScatteringCoeff=2.0e-6,2.0e-6,2.0e-6
 MieScaleHeight=1200.0
 MiePreferredScatteringDir=0.76
 
@@ -72,19 +153,14 @@ MiePreferredScatteringDir=0.76
 Name=Moon
 Type=TERRESTRIAL
 TerrainType=barren
-# Mass: 7.342 * 10^22 kg
 Mass=7.342e22
-# Radius: 1,737 km
 Radius=1.737e6
-# Distance: Earth + 384,400 km
 Position=1.499844e11,0,0
-# Velocity: Earth Vel + 1.022 km/s
 Velocity=0,0,30802
 Color=0.5,0.5,0.5
 Seed=9999
 
 [colors]
-# Monochromatic Gray Palette
 DeepOcean=0.1,0.1,0.1
 ShallowOcean=0.15,0.15,0.15
 Beach=0.3,0.3,0.3
@@ -96,20 +172,15 @@ Rock=0.3,0.3,0.3
 Snow=0.8,0.8,0.8
 
 [terrain]
-# The Moon is rougher relative to its size
 ContinentFrequency=3.0
 ContinentHeight=0.001
 SeaLevel=-1000.0
-
 MountainFrequency=15.0
 MountainHeight=0.004
-MountainOctaves=6
-
 HillsFrequency=30.0
 HillsHeight=0.001
 DetailFrequency=80.0
 DetailHeight=0.0002
-
 PolarIceCapLatitude=2.0
 MoistureOffset=-1.0
 TemperatureOffset=-1.0
@@ -120,19 +191,14 @@ TemperatureOffset=-1.0
 Name=Mars
 Type=TERRESTRIAL
 TerrainType=barren
-# Mass: 6.39 * 10^23 kg
 Mass=6.39e23
-# Radius: 3,389 km
 Radius=3.389e6
-# Distance: ~227.9 million km (1.52 AU)
 Position=2.279e11,0,0
-# Velocity: ~24.07 km/s
 Velocity=0,0,24070
 Color=0.8,0.4,0.2
 Seed=5050
 
 [colors]
-# Mars Red/Rusty Palette
 DeepOcean=0.3,0.15,0.05
 ShallowOcean=0.4,0.2,0.1
 Beach=0.5,0.25,0.1
@@ -144,22 +210,17 @@ Tundra=0.4,0.2,0.1
 Snow=0.9,0.9,0.95
 
 [terrain]
-# Mars has massive features (Olympus Mons is ~21km high)
-# 21km / 3389km = ~0.006
 ContinentFrequency=1.5
 ContinentHeight=0.002
 SeaLevel=-1000.0
-
 MountainFrequency=5.0
 MountainMaskFrequency=1.0
 MountainHeight=0.007
 MountainOctaves=8
-
 HillsFrequency=15.0
 HillsHeight=0.0005
 DetailFrequency=60.0
 DetailHeight=0.0001
-
 PolarIceCapLatitude=0.9
 MoistureOffset=-0.8
 TemperatureOffset=-0.3
@@ -167,11 +228,355 @@ TemperatureOffset=-0.3
 [atmosphere]
 AtmosphereRadius=1.02
 SunIntensity=15.0
-# Martian Atmosphere:
-# Low Rayleigh (Thin atmosphere)
 RayleighScatteringCoeff=0.0000019,0.0000013,0.00000058
 RayleighScaleHeight=11000.0
-# High Mie (Dusty) - Gives the reddish/tan glow
 MieScatteringCoeff=0.00002,0.000015,0.00001
 MieScaleHeight=3000.0
 MiePreferredScatteringDir=0.8
+
+# ==========================================
+# JUPITER
+# ==========================================
+# Simulating Gas Giant using Terrestrial shader with specific bands
+Name=Jupiter
+Type=TERRESTRIAL
+TerrainType=terrestrial
+Mass=1.898e27
+Radius=6.991e7
+# 5.2 AU
+Position=7.78e11,0,0
+Velocity=0,0,13070
+Color=0.8,0.7,0.6
+Seed=303
+
+[colors]
+# Banded colors mapped to Biomes
+DeepOcean=0.5,0.3,0.2
+ShallowOcean=0.6,0.4,0.3
+Beach=0.8,0.7,0.6
+Grass=0.7,0.6,0.5
+Forest=0.55,0.35,0.25
+Desert=0.85,0.75,0.65
+Rock=0.4,0.3,0.2
+Tundra=0.75,0.65,0.55
+Snow=0.9,0.85,0.8
+
+[terrain]
+# Very flat to simulate gas surface
+ContinentFrequency=0.5
+ContinentHeight=0.00001
+SeaLevel=-1000.0
+MountainFrequency=1.0
+MountainHeight=0.00001
+HillsFrequency=1.0
+HillsHeight=0.00001
+DetailFrequency=10.0
+DetailHeight=0.00001
+PolarIceCapLatitude=2.0
+MoistureOffset=0.0
+TemperatureOffset=0.0
+
+[atmosphere]
+AtmosphereRadius=1.01
+SunIntensity=10.0
+RayleighScatteringCoeff=0.000005,0.000005,0.000005
+RayleighScaleHeight=20000.0
+MieScatteringCoeff=0.000005,0.000005,0.000005
+MieScaleHeight=10000.0
+MiePreferredScatteringDir=0.8
+
+# ==========================================
+# IO (Jupiter Moon)
+# ==========================================
+Name=Io
+Type=TERRESTRIAL
+TerrainType=volcanic
+Mass=8.93e22
+Radius=1.821e6
+# Jupiter Pos + 421,700 km
+Position=7.7842e11,0,0
+Velocity=0,0,30400
+Color=0.9,0.9,0.4
+Seed=304
+
+[colors]
+DeepOcean=0.8,0.8,0.2
+ShallowOcean=0.9,0.9,0.3
+Beach=0.9,0.8,0.4
+Grass=0.8,0.7,0.2
+Forest=0.7,0.6,0.1
+Desert=1.0,0.9,0.5
+Rock=0.6,0.5,0.2
+Tundra=0.9,0.9,0.6
+Snow=1.0,1.0,0.8
+
+[terrain]
+ContinentFrequency=2.0
+ContinentHeight=0.003
+SeaLevel=-1000.0
+MountainFrequency=8.0
+MountainHeight=0.005
+PolarIceCapLatitude=2.0
+MoistureOffset=-1.0
+
+# ==========================================
+# EUROPA (Jupiter Moon)
+# ==========================================
+Name=Europa
+Type=TERRESTRIAL
+TerrainType=ice
+Mass=4.8e22
+Radius=1.560e6
+# Jupiter Pos + 671,000 km
+Position=7.7867e11,0,0
+Velocity=0,0,26800
+Color=0.9,0.9,1.0
+Seed=305
+
+[colors]
+DeepOcean=0.8,0.8,0.9
+ShallowOcean=0.85,0.85,0.95
+Beach=0.9,0.9,1.0
+Grass=0.9,0.9,1.0
+Forest=0.8,0.8,0.9
+Desert=0.95,0.95,1.0
+Rock=0.7,0.7,0.8
+Tundra=0.85,0.85,0.95
+Snow=1.0,1.0,1.0
+
+[terrain]
+ContinentFrequency=0.5
+ContinentHeight=0.0005
+SeaLevel=-1000.0
+MountainFrequency=20.0
+MountainHeight=0.0002
+PolarIceCapLatitude=-1.0
+MoistureOffset=1.0
+
+# ==========================================
+# SATURN
+# ==========================================
+Name=Saturn
+Type=TERRESTRIAL
+TerrainType=terrestrial
+Mass=5.683e26
+Radius=5.823e7
+# 9.58 AU
+Position=1.434e12,0,0
+Velocity=0,0,9680
+Color=0.9,0.8,0.6
+Seed=404
+
+[colors]
+DeepOcean=0.7,0.6,0.4
+ShallowOcean=0.8,0.7,0.5
+Beach=0.85,0.75,0.55
+Grass=0.8,0.7,0.5
+Forest=0.75,0.65,0.45
+Desert=0.9,0.8,0.6
+Rock=0.7,0.6,0.5
+Tundra=0.8,0.7,0.6
+Snow=0.9,0.85,0.75
+
+[terrain]
+ContinentFrequency=0.5
+ContinentHeight=0.00001
+SeaLevel=-1000.0
+MountainFrequency=1.0
+MountainHeight=0.00001
+HillsFrequency=1.0
+HillsHeight=0.00001
+DetailFrequency=10.0
+DetailHeight=0.00001
+PolarIceCapLatitude=2.0
+MoistureOffset=0.0
+TemperatureOffset=0.0
+
+[atmosphere]
+AtmosphereRadius=1.015
+SunIntensity=8.0
+RayleighScatteringCoeff=0.000005,0.000005,0.000004
+RayleighScaleHeight=20000.0
+MieScatteringCoeff=0.000005,0.000005,0.000004
+MieScaleHeight=10000.0
+MiePreferredScatteringDir=0.8
+
+# ==========================================
+# TITAN (Saturn Moon)
+# ==========================================
+Name=Titan
+Type=TERRESTRIAL
+TerrainType=terrestrial
+Mass=1.345e23
+Radius=2.574e6
+# Saturn Pos + 1,221,870 km
+Position=1.4352e12,0,0
+Velocity=0,0,15250
+Color=0.8,0.6,0.2
+Seed=405
+
+[colors]
+DeepOcean=0.1,0.1,0.05
+ShallowOcean=0.2,0.2,0.1
+Beach=0.4,0.3,0.1
+Grass=0.3,0.2,0.1
+Forest=0.2,0.15,0.05
+Desert=0.5,0.4,0.1
+Rock=0.2,0.2,0.2
+Tundra=0.3,0.25,0.15
+Snow=0.4,0.35,0.2
+
+[terrain]
+ContinentFrequency=1.0
+ContinentHeight=0.001
+SeaLevel=-0.0005
+MountainFrequency=5.0
+MountainHeight=0.002
+MoistureOffset=0.5
+
+[atmosphere]
+AtmosphereRadius=1.15
+SunIntensity=5.0
+RayleighScatteringCoeff=0.00001,0.000005,0.000001
+RayleighScaleHeight=8000.0
+MieScatteringCoeff=0.00005,0.00003,0.00001
+MieScaleHeight=5000.0
+MiePreferredScatteringDir=0.85
+
+# ==========================================
+# URANUS
+# ==========================================
+Name=Uranus
+Type=TERRESTRIAL
+TerrainType=ice
+Mass=8.681e25
+Radius=2.536e7
+# 19.2 AU
+Position=2.871e12,0,0
+Velocity=0,0,6800
+Color=0.5,0.8,0.9
+Seed=505
+
+[colors]
+# Cyan/Teal palette
+DeepOcean=0.3,0.6,0.7
+ShallowOcean=0.4,0.7,0.8
+Beach=0.5,0.8,0.9
+Grass=0.45,0.75,0.85
+Forest=0.4,0.7,0.8
+Desert=0.55,0.85,0.95
+Rock=0.4,0.7,0.8
+Tundra=0.5,0.8,0.9
+Snow=0.8,0.9,1.0
+
+[terrain]
+ContinentFrequency=0.5
+ContinentHeight=0.00001
+SeaLevel=-1000.0
+MountainFrequency=1.0
+MountainHeight=0.00001
+HillsFrequency=1.0
+HillsHeight=0.00001
+PolarIceCapLatitude=2.0
+MoistureOffset=1.0
+
+[atmosphere]
+AtmosphereRadius=1.02
+SunIntensity=3.0
+RayleighScatteringCoeff=0.000005,0.00001,0.00002
+RayleighScaleHeight=20000.0
+MieScatteringCoeff=0.000001,0.000002,0.000003
+MieScaleHeight=10000.0
+MiePreferredScatteringDir=0.7
+
+# ==========================================
+# NEPTUNE
+# ==========================================
+Name=Neptune
+Type=TERRESTRIAL
+TerrainType=ice
+Mass=1.024e26
+Radius=2.462e7
+# 30.05 AU
+Position=4.495e12,0,0
+Velocity=0,0,5430
+Color=0.1,0.2,0.6
+Seed=606
+
+[colors]
+# Deep Blue palette
+DeepOcean=0.05,0.1,0.4
+ShallowOcean=0.1,0.2,0.5
+Beach=0.2,0.3,0.6
+Grass=0.15,0.25,0.55
+Forest=0.1,0.2,0.5
+Desert=0.25,0.35,0.65
+Rock=0.1,0.2,0.5
+Tundra=0.2,0.3,0.6
+Snow=0.5,0.6,0.9
+
+[terrain]
+ContinentFrequency=0.5
+ContinentHeight=0.00001
+SeaLevel=-1000.0
+MountainFrequency=1.0
+MountainHeight=0.00001
+HillsFrequency=1.0
+HillsHeight=0.00001
+PolarIceCapLatitude=2.0
+MoistureOffset=1.0
+
+[atmosphere]
+AtmosphereRadius=1.02
+SunIntensity=2.0
+RayleighScatteringCoeff=0.000005,0.00001,0.00003
+RayleighScaleHeight=20000.0
+MieScatteringCoeff=0.000001,0.000002,0.000004
+MieScaleHeight=10000.0
+MiePreferredScatteringDir=0.7
+
+# ==========================================
+# PLUTO
+# ==========================================
+Name=Pluto
+Type=TERRESTRIAL
+TerrainType=barren
+Mass=1.309e22
+Radius=1.188e6
+# 39.48 AU
+Position=5.906e12,0,0
+Velocity=0,0,4700
+Color=0.6,0.5,0.4
+Seed=707
+
+[colors]
+DeepOcean=0.3,0.2,0.2
+ShallowOcean=0.4,0.3,0.3
+Beach=0.6,0.5,0.4
+Grass=0.5,0.4,0.3
+Forest=0.4,0.3,0.2
+Desert=0.7,0.6,0.5
+Rock=0.3,0.3,0.3
+Tundra=0.5,0.4,0.4
+Snow=0.8,0.7,0.7
+
+[terrain]
+ContinentFrequency=2.0
+ContinentHeight=0.002
+SeaLevel=-1000.0
+MountainFrequency=5.0
+MountainHeight=0.005
+HillsFrequency=15.0
+HillsHeight=0.001
+PolarIceCapLatitude=0.3
+MoistureOffset=-0.5
+TemperatureOffset=-2.0
+
+[atmosphere]
+AtmosphereRadius=1.05
+SunIntensity=1.0
+RayleighScatteringCoeff=0.000002,0.000002,0.000004
+RayleighScaleHeight=4000.0
+MieScatteringCoeff=0.000001,0.000001,0.000001
+MieScaleHeight=2000.0
+MiePreferredScatteringDir=0.7

@@ -97,7 +97,6 @@ set(SHADER_FILES
 	data/shaders/vert_marker.glsl
 	data/shaders/frag_atmosphere.glsl
 	data/shaders/vert_atmosphere.glsl
-	data/shaders/frag_transmittance.glsl
 	data/shaders/vert_fullscreen.glsl
 )
 

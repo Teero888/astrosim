@@ -72,6 +72,7 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	int width, height;
 	glfwGetWindowSize(m_pWindow, &width, &height);
 	InitFramebuffer(width, height);
+	InitShadowMap();
 
 	m_Grid.Init();
 	m_Atmosphere.Init();
@@ -97,24 +98,55 @@ void CGraphics::InitFramebuffer(int width, int height)
 	glGenFramebuffers(1, &m_GBufferFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_GBufferFBO);
 
-	// Color Buffer
+	// == COLOR BUFFER CHANGE ==
+	// CHANGED: GL_RGBA8 -> GL_RGBA16F
+	// CHANGED: GL_UNSIGNED_BYTE -> GL_FLOAT
 	glGenTextures(1, &m_GBufferColorTex);
 	glBindTexture(GL_TEXTURE_2D, m_GBufferColorTex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_GBufferColorTex, 0);
 
-	// Depth Buffer
+	// Depth Buffer - using 32F for High Precision Occlusion
 	glGenTextures(1, &m_GBufferDepthTex);
 	glBindTexture(GL_TEXTURE_2D, m_GBufferDepthTex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_GBufferDepthTex, 0);
 
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		printf("ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n");
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void CGraphics::InitShadowMap()
+{
+	glGenFramebuffers(1, &m_ShadowMapFBO);
+
+	glGenTextures(1, &m_ShadowMapTexture);
+	glBindTexture(GL_TEXTURE_2D, m_ShadowMapTexture);
+	// High precision depth buffer
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, SHADOW_RES, SHADOW_RES, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_ShadowMapTexture, 0);
+
+	// Explicitly tell OpenGL we are not rendering color
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		printf("ERROR::SHADOW_FRAMEBUFFER:: Framebuffer is not complete!\n");
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -237,6 +269,11 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 		if(ImGui::Button("Reload Simulation (F5)"))
 			m_bReloadRequested = true;
 		ImGui::Text("FPS: %.1f", 1.0f / m_FrameTime);
+
+		ImGui::Separator();
+		ImGui::Text("Debug");
+		ImGui::SliderInt("Atmosphere Debug Mode", &m_DebugMode, 0, 5);
+		ImGui::Text("0:Nrm 1:RawZ 2:LinDist 3:Occ 4:RayDir 5:Shadow");
 		ImGui::End();
 	}
 
@@ -283,12 +320,72 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	}
 
 	// ========================================================
-	// RENDER PASS 1: OPAQUE GEOMETRY TO FBO
+	// RENDER PASS 0: SHADOW MAP (Sun Perspective)
+	// ========================================================
+	if(m_Camera.m_pFocusedBody && m_bShowAtmosphere)
+	{
+		glViewport(0, 0, SHADOW_RES, SHADOW_RES);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		glDisable(GL_CULL_FACE); // Render backfaces for robust closed meshes
+
+		// Shadow logic for Arbitrary Meshes (Terrain)
+		// We want the shadow map to cover the area the camera is looking at.
+		// Standard "Follow the Camera" shadow map.
+
+		Vec3 sunPos = StarSystem.m_pSunBody->m_SimParams.m_Position;
+		Vec3 bodyPos = m_Camera.m_pFocusedBody->m_SimParams.m_Position;
+
+		glm::vec3 lightDir = glm::normalize((glm::vec3)(sunPos - bodyPos));
+
+		// Center the light view on the camera's projected position on the planet surface
+		// to maximize resolution where we are looking.
+		// Simplified: Center on Camera Position.
+
+		// Determine Ortho size based on altitude
+		double alt = m_Camera.m_ViewDistance - m_Camera.m_pFocusedBody->m_RenderParams.m_Radius;
+		float orthoSize = (float)std::max(5000.0, alt * 1.0); // Minimum 5km area
+
+		// Position light camera "above" the player relative to light dir
+		glm::vec3 lightCamPos = (glm::vec3)m_Camera.m_LocalPosition + lightDir * orthoSize;
+
+		glm::mat4 lightView = glm::lookAt(lightCamPos, (glm::vec3)m_Camera.m_LocalPosition, glm::vec3(0, 1, 0));
+		glm::mat4 lightProj = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, 10.0f, orthoSize * 4.0f);
+
+		m_LightSpaceMatrix = lightProj * lightView;
+
+		CCamera ShadowCam;
+		ShadowCam.m_View = lightView;
+		ShadowCam.m_Projection = lightProj;
+		// Crucial: ShadowCam absolute position determines where the procedural mesh generates.
+		// It must match the main camera so the LODs match (roughly).
+		ShadowCam.m_AbsolutePosition = m_Camera.m_AbsolutePosition;
+
+		if(m_BodyMeshes.count(m_Camera.m_pFocusedBody->m_Id))
+		{
+			auto mesh = m_BodyMeshes[m_Camera.m_pFocusedBody->m_Id];
+			// Pass true for bIsShadowPass
+			mesh->Render(ShadowCam, StarSystem.m_pSunBody, true);
+		}
+
+		// We used to Enable Culling here. Removed to prevent affecting main pass.
+		// glEnable(GL_CULL_FACE);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	// ========================================================
+	// RENDER PASS 1: OPAQUE GEOMETRY
 	// ========================================================
 	glBindFramebuffer(GL_FRAMEBUFFER, m_GBufferFBO);
 	glViewport(0, 0, (int)m_Camera.m_ScreenSize.x, (int)m_Camera.m_ScreenSize.y);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// FIX: Disable Culling explicitly for the main pass
+	// because the Shadow Pass might have touched it, and our procedural
+	// mesh winding order might be inverted or messy.
+	glDisable(GL_CULL_FACE);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -306,7 +403,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 			{
 				auto mesh = m_BodyMeshes[Body.m_Id];
 				mesh->Update(m_Camera);
-				mesh->Render(m_Camera, m_pStarSystem->m_pSunBody);
+				mesh->Render(m_Camera, m_pStarSystem->m_pSunBody, false);
 			}
 		}
 	}
@@ -316,14 +413,13 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	// ========================================================
 	// COPY FBO TO SCREEN
 	// ========================================================
+	// ... [Rest of the function same as before] ...
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_GBufferFBO);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // Write to screen
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
-	// Copy Color
 	glBlitFramebuffer(0, 0, (int)m_Camera.m_ScreenSize.x, (int)m_Camera.m_ScreenSize.y,
 		0, 0, (int)m_Camera.m_ScreenSize.x, (int)m_Camera.m_ScreenSize.y,
 		GL_COLOR_BUFFER_BIT, GL_NEAREST);
-	// Copy Depth (Essential for Markers/Grid to work correctly)
 	glBlitFramebuffer(0, 0, (int)m_Camera.m_ScreenSize.x, (int)m_Camera.m_ScreenSize.y,
 		0, 0, (int)m_Camera.m_ScreenSize.x, (int)m_Camera.m_ScreenSize.y,
 		GL_DEPTH_BUFFER_BIT, GL_NEAREST);
@@ -331,20 +427,16 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	// ========================================================
 	// RENDER PASS 2: TRANSPARENTS (Screen)
 	// ========================================================
-	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Back to screen
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	// Render Atmosphere
 	if(m_bShowAtmosphere)
 	{
-		// Bind depth texture to Unit 0
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, m_GBufferDepthTex);
-
-		// Ensure the shader knows to use Unit 0
-		m_Atmosphere.Render(StarSystem, m_Camera, 0);
+		// Pass Texture Unit 0 (Depth) and Texture ID (Shadow)
+		m_Atmosphere.Render(StarSystem, m_Camera, 0, m_ShadowMapTexture, m_LightSpaceMatrix, m_DebugMode);
 	}
 
-	// Render Grid and Markers (Standard Depth Test against blitted depth)
 	if(m_bShowGrid)
 		m_Grid.Render(StarSystem, m_Camera);
 
@@ -359,6 +451,8 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	s_LastFrame = std::chrono::steady_clock::now();
 }
 
+// ... [OnExit, Callbacks same as before] ...
+
 void CGraphics::OnExit()
 {
 	ImGui_ImplOpenGL3_Shutdown();
@@ -371,6 +465,11 @@ void CGraphics::OnExit()
 		glDeleteTextures(1, &m_GBufferColorTex);
 	if(m_GBufferDepthTex)
 		glDeleteTextures(1, &m_GBufferDepthTex);
+
+	if(m_ShadowMapFBO)
+		glDeleteFramebuffers(1, &m_ShadowMapFBO);
+	if(m_ShadowMapTexture)
+		glDeleteTextures(1, &m_ShadowMapTexture);
 
 	CleanupMeshes();
 	m_Atmosphere.Destroy();
@@ -422,8 +521,42 @@ void CGraphics::KeyActionCallback(GLFWwindow *pWindow, int Key, int Scancode, in
 			MouseScrollCallback(pGraphics->m_pWindow, 0, 1);
 		else if(Key == GLFW_KEY_S)
 			MouseScrollCallback(pGraphics->m_pWindow, 0, -1);
-		else if(Key == GLFW_KEY_LEFT) { /* ... Cycle bodies ... */ }
-		else if(Key == GLFW_KEY_RIGHT) { /* ... Cycle bodies ... */ }
+		else if(Key == GLFW_KEY_LEFT || Key == GLFW_KEY_RIGHT)
+		{
+			if(pGraphics->m_pStarSystem && !pGraphics->m_pStarSystem->m_vBodies.empty())
+			{
+				auto &Bodies = pGraphics->m_pStarSystem->m_vBodies;
+				int CurrentIndex = 0;
+
+				// Find index of currently focused body
+				if(pGraphics->m_Camera.m_pFocusedBody)
+				{
+					for(int i = 0; i < (int)Bodies.size(); ++i)
+					{
+						if(Bodies[i].m_Id == pGraphics->m_Camera.m_pFocusedBody->m_Id)
+						{
+							CurrentIndex = i;
+							break;
+						}
+					}
+				}
+
+				if(Key == GLFW_KEY_RIGHT)
+				{
+					CurrentIndex++;
+					if(CurrentIndex >= (int)Bodies.size())
+						CurrentIndex = 0;
+				}
+				else // LEFT
+				{
+					CurrentIndex--;
+					if(CurrentIndex < 0)
+						CurrentIndex = (int)Bodies.size() - 1;
+				}
+
+				pGraphics->m_Camera.SetBody(&Bodies[CurrentIndex]);
+			}
+		}
 		else if(Key == GLFW_KEY_R && pGraphics->m_Camera.m_pFocusedBody)
 			pGraphics->m_Camera.ResetCameraAngle();
 		else if(Key == GLFW_KEY_F5)
