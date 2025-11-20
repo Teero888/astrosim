@@ -118,7 +118,7 @@ void main()
 	vec3 betaR = u_rayleighScatteringCoeff * u_realPlanetRadius;
 	vec3 betaM = u_mieScatteringCoeff * 1.1 * u_realPlanetRadius;
 
-	// 6. Raymarch Loop
+	// Raymarch Loop
 	vec3 startPos = u_cameraPos + rayDir * tStart;
 	float rayLen = tEnd - tStart;
 	float stepSize = rayLen / float(NUM_SAMPLES);

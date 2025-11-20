@@ -99,7 +99,7 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 				if(value == "STAR")
 				{
 					RenderParams.m_BodyType = EBodyType::STAR;
-					RenderParams.m_Atmosphere.Enabled = false;
+					RenderParams.m_Atmosphere.m_Enabled = false;
 				}
 				else if(value == "TERRESTRIAL")
 					RenderParams.m_BodyType = EBodyType::TERRESTRIAL;
@@ -143,30 +143,30 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 			}
 			else if(Key == "HasAtmosphere")
 			{
-				RenderParams.m_Atmosphere.Enabled = (value == "true");
+				RenderParams.m_Atmosphere.m_Enabled = (value == "true");
 			}
 		}
 		else if(CurrentSelection == "colors")
 		{
 			glm::vec3 *pColor = nullptr;
 			if(Key == "DeepOcean")
-				pColor = &RenderParams.m_Colors.DeepOcean;
+				pColor = &RenderParams.m_Colors.m_DeepOcean;
 			else if(Key == "ShallowOcean")
-				pColor = &RenderParams.m_Colors.ShallowOcean;
+				pColor = &RenderParams.m_Colors.m_ShallowOcean;
 			else if(Key == "Beach")
-				pColor = &RenderParams.m_Colors.Beach;
+				pColor = &RenderParams.m_Colors.m_Beach;
 			else if(Key == "Grass")
-				pColor = &RenderParams.m_Colors.Grass;
+				pColor = &RenderParams.m_Colors.m_Grass;
 			else if(Key == "Forest")
-				pColor = &RenderParams.m_Colors.Forest;
+				pColor = &RenderParams.m_Colors.m_Forest;
 			else if(Key == "Desert")
-				pColor = &RenderParams.m_Colors.Desert;
+				pColor = &RenderParams.m_Colors.m_Desert;
 			else if(Key == "Snow")
-				pColor = &RenderParams.m_Colors.Snow;
+				pColor = &RenderParams.m_Colors.m_Snow;
 			else if(Key == "Rock")
-				pColor = &RenderParams.m_Colors.Rock;
+				pColor = &RenderParams.m_Colors.m_Rock;
 			else if(Key == "Tundra")
-				pColor = &RenderParams.m_Colors.Tundra;
+				pColor = &RenderParams.m_Colors.m_Tundra;
 
 			if(pColor)
 			{
@@ -178,71 +178,71 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 		else if(CurrentSelection == "terrain")
 		{
 			if(Key == "ContinentFrequency")
-				RenderParams.m_Terrain.ContinentFrequency = std::stof(value);
+				RenderParams.m_Terrain.m_ContinentFrequency = std::stof(value);
 			else if(Key == "ContinentOctaves")
-				RenderParams.m_Terrain.ContinentOctaves = std::stoi(value);
+				RenderParams.m_Terrain.m_ContinentOctaves = std::stoi(value);
 			else if(Key == "MountainFrequency")
-				RenderParams.m_Terrain.MountainFrequency = std::stof(value);
+				RenderParams.m_Terrain.m_MountainFrequency = std::stof(value);
 			else if(Key == "MountainOctaves")
-				RenderParams.m_Terrain.MountainOctaves = std::stoi(value);
+				RenderParams.m_Terrain.m_MountainOctaves = std::stoi(value);
 			else if(Key == "HillsFrequency")
-				RenderParams.m_Terrain.HillsFrequency = std::stof(value);
+				RenderParams.m_Terrain.m_HillsFrequency = std::stof(value);
 			else if(Key == "HillsOctaves")
-				RenderParams.m_Terrain.HillsOctaves = std::stoi(value);
+				RenderParams.m_Terrain.m_HillsOctaves = std::stoi(value);
 			else if(Key == "DetailFrequency")
-				RenderParams.m_Terrain.DetailFrequency = std::stof(value);
+				RenderParams.m_Terrain.m_DetailFrequency = std::stof(value);
 			else if(Key == "DetailOctaves")
-				RenderParams.m_Terrain.DetailOctaves = std::stoi(value);
+				RenderParams.m_Terrain.m_DetailOctaves = std::stoi(value);
 			else if(Key == "MountainWarpStrength")
-				RenderParams.m_Terrain.MountainWarpStrength = std::stof(value);
+				RenderParams.m_Terrain.m_MountainWarpStrength = std::stof(value);
 			else if(Key == "SeaLevel")
-				RenderParams.m_Terrain.SeaLevel = std::stof(value);
+				RenderParams.m_Terrain.m_SeaLevel = std::stof(value);
 			else if(Key == "OceanDepth")
-				RenderParams.m_Terrain.OceanDepth = std::stof(value);
+				RenderParams.m_Terrain.m_OceanDepth = std::stof(value);
 			else if(Key == "ContinentHeight")
-				RenderParams.m_Terrain.ContinentHeight = std::stof(value);
+				RenderParams.m_Terrain.m_ContinentHeight = std::stof(value);
 			else if(Key == "MountainHeight")
-				RenderParams.m_Terrain.MountainHeight = std::stof(value);
+				RenderParams.m_Terrain.m_MountainHeight = std::stof(value);
 			else if(Key == "HillsHeight")
-				RenderParams.m_Terrain.HillsHeight = std::stof(value);
+				RenderParams.m_Terrain.m_HillsHeight = std::stof(value);
 			else if(Key == "DetailHeight")
-				RenderParams.m_Terrain.DetailHeight = std::stof(value);
+				RenderParams.m_Terrain.m_DetailHeight = std::stof(value);
 			else if(Key == "MountainMaskFrequency")
-				RenderParams.m_Terrain.MountainMaskFrequency = std::stof(value);
+				RenderParams.m_Terrain.m_MountainMaskFrequency = std::stof(value);
 			else if(Key == "PolarIceCapLatitude")
-				RenderParams.m_Terrain.PolarIceCapLatitude = std::stof(value);
+				RenderParams.m_Terrain.m_PolarIceCapLatitude = std::stof(value);
 			else if(Key == "MoistureOffset")
-				RenderParams.m_Terrain.MoistureOffset = std::stof(value);
+				RenderParams.m_Terrain.m_MoistureOffset = std::stof(value);
 			else if(Key == "TemperatureOffset")
-				RenderParams.m_Terrain.TemperatureOffset = std::stof(value);
+				RenderParams.m_Terrain.m_TemperatureOffset = std::stof(value);
 		}
 		else if(CurrentSelection == "atmosphere")
 		{
 			// Enabling atmosphere explicitly
-			RenderParams.m_Atmosphere.Enabled = true;
+			RenderParams.m_Atmosphere.m_Enabled = true;
 
 			if(Key == "AtmosphereRadius")
-				RenderParams.m_Atmosphere.AtmosphereRadius = std::stof(value);
+				RenderParams.m_Atmosphere.m_AtmosphereRadius = std::stof(value);
 			else if(Key == "SunIntensity")
-				RenderParams.m_Atmosphere.SunIntensity = std::stof(value);
+				RenderParams.m_Atmosphere.m_SunIntensity = std::stof(value);
 			else if(Key == "RayleighScatteringCoeff")
 			{
 				std::stringstream ssv(value);
 				char comma;
-				ssv >> RenderParams.m_Atmosphere.RayleighScatteringCoeff.x >> comma >> RenderParams.m_Atmosphere.RayleighScatteringCoeff.y >> comma >> RenderParams.m_Atmosphere.RayleighScatteringCoeff.z;
+				ssv >> RenderParams.m_Atmosphere.m_RayleighScatteringCoeff.x >> comma >> RenderParams.m_Atmosphere.m_RayleighScatteringCoeff.y >> comma >> RenderParams.m_Atmosphere.m_RayleighScatteringCoeff.z;
 			}
 			else if(Key == "RayleighScaleHeight")
-				RenderParams.m_Atmosphere.RayleighScaleHeight = std::stof(value);
+				RenderParams.m_Atmosphere.m_RayleighScaleHeight = std::stof(value);
 			else if(Key == "MieScatteringCoeff")
 			{
 				std::stringstream ssv(value);
 				char comma;
-				ssv >> RenderParams.m_Atmosphere.MieScatteringCoeff.x >> comma >> RenderParams.m_Atmosphere.MieScatteringCoeff.y >> comma >> RenderParams.m_Atmosphere.MieScatteringCoeff.z;
+				ssv >> RenderParams.m_Atmosphere.m_MieScatteringCoeff.x >> comma >> RenderParams.m_Atmosphere.m_MieScatteringCoeff.y >> comma >> RenderParams.m_Atmosphere.m_MieScatteringCoeff.z;
 			}
 			else if(Key == "MieScaleHeight")
-				RenderParams.m_Atmosphere.MieScaleHeight = std::stof(value);
+				RenderParams.m_Atmosphere.m_MieScaleHeight = std::stof(value);
 			else if(Key == "MiePreferredScatteringDir")
-				RenderParams.m_Atmosphere.MiePreferredScatteringDir = std::stof(value);
+				RenderParams.m_Atmosphere.m_MiePreferredScatteringDir = std::stof(value);
 		}
 	}
 	AddBody();

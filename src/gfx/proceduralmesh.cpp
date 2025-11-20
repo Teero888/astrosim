@@ -135,7 +135,7 @@ void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution
 	if(m_BodyType == EBodyType::TERRESTRIAL || m_BodyType == EBodyType::STAR)
 	{
 		const auto &terrainParams = m_pBody->m_RenderParams.m_Terrain;
-		float max_displacement_factor = terrainParams.ContinentHeight + terrainParams.MountainHeight + terrainParams.HillsHeight + terrainParams.DetailHeight;
+		float max_displacement_factor = terrainParams.m_ContinentHeight + terrainParams.m_MountainHeight + terrainParams.m_HillsHeight + terrainParams.m_DetailHeight;
 		float scale_factor = 1.0f + max_displacement_factor * 1.2f;
 
 		// Use double precision for root size calculation
@@ -190,29 +190,29 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody)
 	m_Shader.SetInt("uTerrainType", (int)m_pBody->m_RenderParams.m_TerrainType);
 	m_Shader.SetFloat("uPlanetRadius", (float)m_pBody->m_RenderParams.m_Radius);
 
-	if(m_pBody->m_RenderParams.m_Atmosphere.Enabled)
+	if(m_pBody->m_RenderParams.m_Atmosphere.m_Enabled)
 	{
-		m_Shader.SetVec3("uRayleighScatteringCoeff", m_pBody->m_RenderParams.m_Atmosphere.RayleighScatteringCoeff);
-		m_Shader.SetFloat("uRayleighScaleHeight", m_pBody->m_RenderParams.m_Atmosphere.RayleighScaleHeight);
-		m_Shader.SetVec3("uMieScatteringCoeff", m_pBody->m_RenderParams.m_Atmosphere.MieScatteringCoeff);
-		m_Shader.SetFloat("uMieScaleHeight", m_pBody->m_RenderParams.m_Atmosphere.MieScaleHeight);
-		m_Shader.SetFloat("uMiePreferredScatteringDir", m_pBody->m_RenderParams.m_Atmosphere.MiePreferredScatteringDir);
-		m_Shader.SetFloat("uAtmosphereRadius", m_pBody->m_RenderParams.m_Atmosphere.AtmosphereRadius);
+		m_Shader.SetVec3("uRayleighScatteringCoeff", m_pBody->m_RenderParams.m_Atmosphere.m_RayleighScatteringCoeff);
+		m_Shader.SetFloat("uRayleighScaleHeight", m_pBody->m_RenderParams.m_Atmosphere.m_RayleighScaleHeight);
+		m_Shader.SetVec3("uMieScatteringCoeff", m_pBody->m_RenderParams.m_Atmosphere.m_MieScatteringCoeff);
+		m_Shader.SetFloat("uMieScaleHeight", m_pBody->m_RenderParams.m_Atmosphere.m_MieScaleHeight);
+		m_Shader.SetFloat("uMiePreferredScatteringDir", m_pBody->m_RenderParams.m_Atmosphere.m_MiePreferredScatteringDir);
+		m_Shader.SetFloat("uAtmosphereRadius", m_pBody->m_RenderParams.m_Atmosphere.m_AtmosphereRadius);
 	}
 	else
 	{
 		m_Shader.SetFloat("uAtmosphereRadius", 1.0f);
 	}
 
-	m_Shader.SetVec3("uDeepOcean", m_pBody->m_RenderParams.m_Colors.DeepOcean);
-	m_Shader.SetVec3("uShallowOcean", m_pBody->m_RenderParams.m_Colors.ShallowOcean);
-	m_Shader.SetVec3("uBeach", m_pBody->m_RenderParams.m_Colors.Beach);
-	m_Shader.SetVec3("uGrass", m_pBody->m_RenderParams.m_Colors.Grass);
-	m_Shader.SetVec3("uForest", m_pBody->m_RenderParams.m_Colors.Forest);
-	m_Shader.SetVec3("uDesert", m_pBody->m_RenderParams.m_Colors.Desert);
-	m_Shader.SetVec3("uSnow", m_pBody->m_RenderParams.m_Colors.Snow);
-	m_Shader.SetVec3("uRock", m_pBody->m_RenderParams.m_Colors.Rock);
-	m_Shader.SetVec3("uTundra", m_pBody->m_RenderParams.m_Colors.Tundra);
+	m_Shader.SetVec3("uDeepOcean", m_pBody->m_RenderParams.m_Colors.m_DeepOcean);
+	m_Shader.SetVec3("uShallowOcean", m_pBody->m_RenderParams.m_Colors.m_ShallowOcean);
+	m_Shader.SetVec3("uBeach", m_pBody->m_RenderParams.m_Colors.m_Beach);
+	m_Shader.SetVec3("uGrass", m_pBody->m_RenderParams.m_Colors.m_Grass);
+	m_Shader.SetVec3("uForest", m_pBody->m_RenderParams.m_Colors.m_Forest);
+	m_Shader.SetVec3("uDesert", m_pBody->m_RenderParams.m_Colors.m_Desert);
+	m_Shader.SetVec3("uSnow", m_pBody->m_RenderParams.m_Colors.m_Snow);
+	m_Shader.SetVec3("uRock", m_pBody->m_RenderParams.m_Colors.m_Rock);
+	m_Shader.SetVec3("uTundra", m_pBody->m_RenderParams.m_Colors.m_Tundra);
 
 	if(m_pRootNode)
 		m_pRootNode->Render(m_Shader, Camera.m_AbsolutePosition, m_pBody->m_SimParams.m_Position);

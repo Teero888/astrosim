@@ -1,7 +1,6 @@
 #include "graphics.h"
 #include "../sim/body.h"
 #include "../sim/starsystem.h"
-#include "../sim/vmath.h"
 #include "gfx/camera.h"
 #include <GLFW/glfw3.h>
 

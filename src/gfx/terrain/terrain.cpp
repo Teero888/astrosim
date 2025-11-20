@@ -31,30 +31,30 @@ void CTerrainGenerator::Init(int seed, const STerrainParameters &params, ETerrai
 
 	m_pContinentNoise->SetSeed(seed);
 	m_pContinentNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	m_pContinentNoise->SetFrequency(params.ContinentFrequency);
+	m_pContinentNoise->SetFrequency(params.m_ContinentFrequency);
 	m_pContinentNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-	m_pContinentNoise->SetFractalOctaves(params.ContinentOctaves);
+	m_pContinentNoise->SetFractalOctaves(params.m_ContinentOctaves);
 
 	m_pMountainMaskNoise->SetSeed(seed + 100);
 	m_pMountainMaskNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	m_pMountainMaskNoise->SetFrequency(params.MountainMaskFrequency);
+	m_pMountainMaskNoise->SetFrequency(params.m_MountainMaskFrequency);
 
 	m_pMountainNoise->SetSeed(seed + 1);
 	m_pMountainNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	m_pMountainNoise->SetFrequency(params.MountainFrequency);
+	m_pMountainNoise->SetFrequency(params.m_MountainFrequency);
 	m_pMountainNoise->SetFractalType(FastNoiseLite::FractalType_Ridged);
-	m_pMountainNoise->SetFractalOctaves(params.MountainOctaves);
+	m_pMountainNoise->SetFractalOctaves(params.m_MountainOctaves);
 
 	m_pHillsNoise->SetSeed(seed + 2);
 	m_pHillsNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	m_pHillsNoise->SetFrequency(params.HillsFrequency);
+	m_pHillsNoise->SetFrequency(params.m_HillsFrequency);
 	m_pHillsNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-	m_pHillsNoise->SetFractalOctaves(params.HillsOctaves);
+	m_pHillsNoise->SetFractalOctaves(params.m_HillsOctaves);
 
 	m_pDetailNoise->SetSeed(seed + 4);
-	m_pDetailNoise->SetFrequency(params.DetailFrequency);
+	m_pDetailNoise->SetFrequency(params.m_DetailFrequency);
 	m_pDetailNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-	m_pDetailNoise->SetFractalOctaves(params.DetailOctaves);
+	m_pDetailNoise->SetFractalOctaves(params.m_DetailOctaves);
 
 	m_pBiomeNoise->SetSeed(seed + 99);
 	m_pBiomeNoise->SetFrequency(1.5f);
@@ -90,15 +90,15 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(Vec3 worldPosition, double pl
 	float continent_val = m_pContinentNoise->GetNoise(w_nx, w_ny, w_nz);
 
 	float terrain_height = 0.0f;
-	bool isLand = continent_val > m_Params.SeaLevel;
+	bool isLand = continent_val > m_Params.m_SeaLevel;
 
 	if(isLand)
 	{
-		terrain_height += (continent_val) * ((float)planetRadius * m_Params.ContinentHeight);
+		terrain_height += (continent_val) * ((float)planetRadius * m_Params.m_ContinentHeight);
 	}
 	else
 	{
-		terrain_height += (continent_val) * ((float)planetRadius * m_Params.OceanDepth);
+		terrain_height += (continent_val) * ((float)planetRadius * m_Params.m_OceanDepth);
 	}
 
 	float mountain_mask = m_pMountainMaskNoise->GetNoise(nx, ny, nz);
@@ -112,21 +112,21 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(Vec3 worldPosition, double pl
 		m_val = 1.0f - std::abs(m_raw);
 		m_val = pow(m_val, 3.0f);
 
-		terrain_height += m_val * mask_strength * ((float)planetRadius * m_Params.MountainHeight);
+		terrain_height += m_val * mask_strength * ((float)planetRadius * m_Params.m_MountainHeight);
 	}
 
 	float hill_mask = 1.0f - glm::clamp(m_val, 0.0f, 1.0f);
 	float hills = m_pHillsNoise->GetNoise(w_nx, w_ny, w_nz);
-	terrain_height += hills * hill_mask * ((float)planetRadius * m_Params.HillsHeight);
+	terrain_height += hills * hill_mask * ((float)planetRadius * m_Params.m_HillsHeight);
 
 	float detail = m_pDetailNoise->GetNoise(w_nx * 4.0, w_ny * 4.0, w_nz * 4.0);
-	terrain_height += detail * hill_mask * ((float)planetRadius * m_Params.DetailHeight);
+	terrain_height += detail * hill_mask * ((float)planetRadius * m_Params.m_DetailHeight);
 
 	float latitude = std::abs((float)ny); // Latitude calculation is fine in float
 	float ice_influence = 0.0f;
-	if(latitude > m_Params.PolarIceCapLatitude)
+	if(latitude > m_Params.m_PolarIceCapLatitude)
 	{
-		float t = (latitude - m_Params.PolarIceCapLatitude) / (1.0f - m_Params.PolarIceCapLatitude);
+		float t = (latitude - m_Params.m_PolarIceCapLatitude) / (1.0f - m_Params.m_PolarIceCapLatitude);
 		t = t * t;
 		ice_influence = t;
 		terrain_height += t * ((float)planetRadius * 0.002f);
@@ -136,11 +136,11 @@ STerrainOutput CTerrainGenerator::GetTerrainOutput(Vec3 worldPosition, double pl
 	float base_temp = 1.0f - latitude;
 	float height_cooling = (terrain_height / (float)planetRadius) * 100.0f;
 
-	float final_temp = base_temp + (temp_noise * 0.2f) - height_cooling + m_Params.TemperatureOffset;
+	float final_temp = base_temp + (temp_noise * 0.2f) - height_cooling + m_Params.m_TemperatureOffset;
 	final_temp = glm::clamp(final_temp, 0.0f, 1.0f);
 
 	float moisture_noise = m_pBiomeNoise->GetNoise(nx, ny + 50.0, nz);
-	float final_moisture = (moisture_noise * 0.5f + 0.5f) + m_Params.MoistureOffset;
+	float final_moisture = (moisture_noise * 0.5f + 0.5f) + m_Params.m_MoistureOffset;
 	if(terrain_height < 0.0f)
 		final_moisture += 0.2f;
 	final_moisture = glm::clamp(final_moisture, 0.0f, 1.0f);

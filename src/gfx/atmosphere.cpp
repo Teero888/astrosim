@@ -63,9 +63,9 @@ void CAtmosphere::BakeLUT(const SBody &Body)
 
 	// Pass Physics params relative to Unit Space (Radius = 1.0)
 	double realRadius = Body.m_RenderParams.m_Radius;
-	m_BakerShader.SetFloat("u_atmosphereRadius", Body.m_RenderParams.m_Atmosphere.AtmosphereRadius);
-	m_BakerShader.SetFloat("u_rayleighScaleHeight", Body.m_RenderParams.m_Atmosphere.RayleighScaleHeight / realRadius);
-	m_BakerShader.SetFloat("u_mieScaleHeight", Body.m_RenderParams.m_Atmosphere.MieScaleHeight / realRadius);
+	m_BakerShader.SetFloat("u_atmosphereRadius", Body.m_RenderParams.m_Atmosphere.m_AtmosphereRadius);
+	m_BakerShader.SetFloat("u_rayleighScaleHeight", Body.m_RenderParams.m_Atmosphere.m_RayleighScaleHeight / realRadius);
+	m_BakerShader.SetFloat("u_mieScaleHeight", Body.m_RenderParams.m_Atmosphere.m_MieScaleHeight / realRadius);
 
 	glBindVertexArray(m_Shader.VAO); // Re-use the quad
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -84,7 +84,7 @@ void CAtmosphere::Render(CStarSystem &System, CCamera &Camera, unsigned int Dept
 {
 	SBody *pFocusedBody = Camera.m_pFocusedBody;
 
-	if(!pFocusedBody || !pFocusedBody->m_RenderParams.m_Atmosphere.Enabled)
+	if(!pFocusedBody || !pFocusedBody->m_RenderParams.m_Atmosphere.m_Enabled)
 		return;
 
 	// Check if we need to re-bake (Optimized to only happen on switch)
@@ -123,14 +123,14 @@ void CAtmosphere::Render(CStarSystem &System, CCamera &Camera, unsigned int Dept
 	m_Shader.SetFloat("u_realPlanetRadius", (float)realRadius);
 
 	// Pass new customizable intensity and radius
-	m_Shader.SetFloat("u_sunIntensity", pFocusedBody->m_RenderParams.m_Atmosphere.SunIntensity);
-	m_Shader.SetFloat("u_atmosphereRadius", pFocusedBody->m_RenderParams.m_Atmosphere.AtmosphereRadius);
+	m_Shader.SetFloat("u_sunIntensity", pFocusedBody->m_RenderParams.m_Atmosphere.m_SunIntensity);
+	m_Shader.SetFloat("u_atmosphereRadius", pFocusedBody->m_RenderParams.m_Atmosphere.m_AtmosphereRadius);
 
-	m_Shader.SetVec3("u_rayleighScatteringCoeff", pFocusedBody->m_RenderParams.m_Atmosphere.RayleighScatteringCoeff);
-	m_Shader.SetFloat("u_rayleighScaleHeight", pFocusedBody->m_RenderParams.m_Atmosphere.RayleighScaleHeight / realRadius);
-	m_Shader.SetVec3("u_mieScatteringCoeff", pFocusedBody->m_RenderParams.m_Atmosphere.MieScatteringCoeff);
-	m_Shader.SetFloat("u_mieScaleHeight", pFocusedBody->m_RenderParams.m_Atmosphere.MieScaleHeight / realRadius);
-	m_Shader.SetFloat("u_miePreferredScatteringDir", pFocusedBody->m_RenderParams.m_Atmosphere.MiePreferredScatteringDir);
+	m_Shader.SetVec3("u_rayleighScatteringCoeff", pFocusedBody->m_RenderParams.m_Atmosphere.m_RayleighScatteringCoeff);
+	m_Shader.SetFloat("u_rayleighScaleHeight", pFocusedBody->m_RenderParams.m_Atmosphere.m_RayleighScaleHeight / realRadius);
+	m_Shader.SetVec3("u_mieScatteringCoeff", pFocusedBody->m_RenderParams.m_Atmosphere.m_MieScatteringCoeff);
+	m_Shader.SetFloat("u_mieScaleHeight", pFocusedBody->m_RenderParams.m_Atmosphere.m_MieScaleHeight / realRadius);
+	m_Shader.SetFloat("u_miePreferredScatteringDir", pFocusedBody->m_RenderParams.m_Atmosphere.m_MiePreferredScatteringDir);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);

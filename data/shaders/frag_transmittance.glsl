@@ -1,7 +1,6 @@
 #version 460 core
 out vec2 FragColor; // R = Rayleigh Optical Depth, G = Mie Optical Depth
 
-// Inputs matching the main atmosphere logic
 uniform float u_atmosphereRadius;
 uniform float u_rayleighScaleHeight;
 uniform float u_mieScaleHeight;

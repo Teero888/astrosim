@@ -1,6 +1,8 @@
 #include "markers.h"
 #include "../sim/starsystem.h"
+#include "../sim/vmath.h"
 #include "camera.h"
+#include "gfx_utils.h"
 #include "glm/fwd.hpp"
 #include "glm/geometric.hpp"
 #include "graphics.h"

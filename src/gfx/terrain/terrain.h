@@ -24,10 +24,8 @@ public:
 
 	void Init(int seed, const STerrainParameters &params, ETerrainType terrainType);
 
-	// CHANGED: Now takes Vec3 (double precision)
 	STerrainOutput GetTerrainOutput(Vec3 worldPosition, double planetRadius);
 
-	// CHANGED: Now takes Vec3 (double precision)
 	glm::vec3 CalculateDensityGradient(Vec3 p, double planetRadius);
 
 private:

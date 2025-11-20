@@ -7,13 +7,11 @@
 
 struct CStarSystem
 {
-	// basically the speed/accuracy of the simultion
-	// 8.0 guarantees 180 tps even if days per sec is 1
 	double m_DeltaTime = 60.0 * 8.0; // Time step in seconds
 	uint64_t m_SimTick = 0;
 	int m_DPS = 7; // Days per second
 	std::vector<SBody> m_vBodies;
-	SBody* m_pSunBody = nullptr;
+	SBody *m_pSunBody = nullptr;
 
 	void OnInit();
 	void LoadBodies(const std::string &filename);

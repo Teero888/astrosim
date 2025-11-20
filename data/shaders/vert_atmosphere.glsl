@@ -13,7 +13,7 @@ void main()
 	// for each corner that will be interpolated for each fragment.
 	vec4 ray_clip = vec4(aPos.xy, -1.0, 1.0);
 	vec4 ray_eye = u_invProjection * ray_clip;
-	
+
 	// ray_eye.z is -1.0 here, representing the near plane slice
 	ray_eye = vec4(ray_eye.xy, -1.0, 0.0);
 

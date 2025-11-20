@@ -10,7 +10,7 @@ out vec4 FragColor;
 uniform vec3 uLightDir;
 uniform vec3 uLightColor;
 uniform vec3 uObjectColor;
-uniform vec3 uViewPos; 
+uniform vec3 uViewPos;
 uniform float uAmbientStrength;
 uniform float uSpecularStrength;
 uniform float uShininess;
@@ -47,25 +47,27 @@ vec3 GetTerrainColor()
 	float temp = vColorData.y;
 	float moisture = vColorData.z;
 	float ice_mask = vColorData.w;
-	
-	if(uTerrainType == 3) 
+
+	if(uTerrainType == 3)
 		return mix(uDesert, uRock, smoothstep(0.0, 0.8, elevation / 3000.0));
 
-	if (elevation < 0.0) {
+	if(elevation < 0.0)
+	{
 		float depth = clamp(-elevation / 2000.0, 0.0, 1.0);
 		return mix(uShallowOcean, uDeepOcean, depth);
-	} 
-	
+	}
+
 	vec3 up = normalize(FragPos + uViewPos);
 	float slope = 1.0 - dot(normalize(Normal), up);
-	
+
 	vec3 terrainColor = GetBiomeColor(temp, moisture);
 	float beach_alpha = 1.0 - smoothstep(10.0, 60.0, elevation);
 	terrainColor = mix(terrainColor, uBeach, beach_alpha);
 	float rock_factor = smoothstep(0.20, 0.45, slope);
 	terrainColor = mix(terrainColor, uRock, rock_factor);
 
-	if (ice_mask > 0.01) {
+	if(ice_mask > 0.01)
+	{
 		float ice_alpha = smoothstep(0.0, 0.5, ice_mask);
 		terrainColor = mix(terrainColor, uSnow, ice_alpha);
 	}
@@ -74,7 +76,8 @@ vec3 GetTerrainColor()
 
 void main()
 {
-	if(uSource) {
+	if(uSource)
+	{
 		FragColor = vec4(uObjectColor, 1.0);
 		// Still need depth for the sun
 		gl_FragDepth = log2(v_log_z) * u_logDepthF * 0.5;
@@ -83,16 +86,19 @@ void main()
 
 	vec3 terrain_color = GetTerrainColor();
 	float ice_mask = vColorData.w;
-	
+
 	float specMod = 1.0;
-	if(vColorData.x < 0.0) specMod = 3.0; 
-	else if(ice_mask > 0.5) specMod = 2.0; 
-	else specMod = 0.01;
+	if(vColorData.x < 0.0)
+		specMod = 3.0;
+	else if(ice_mask > 0.5)
+		specMod = 2.0;
+	else
+		specMod = 0.01;
 
 	vec3 ambient = uAmbientStrength * uLightColor;
 	vec3 norm = normalize(Normal);
 	vec3 lightDir = normalize(uLightDir);
-	
+
 	float NdotL = max(dot(norm, lightDir), 0.0);
 	vec3 diffuse = NdotL * uLightColor;
 
@@ -100,13 +106,14 @@ void main()
 	vec3 halfwayDir = normalize(lightDir + viewDir);
 	float spec = pow(max(dot(norm, halfwayDir), 0.0), uShininess);
 	vec3 specular = uSpecularStrength * specMod * spec * uLightColor;
-	if(NdotL <= 0.0) specular = vec3(0.0);
+	if(NdotL <= 0.0)
+		specular = vec3(0.0);
 
 	vec3 linearColor = (ambient + diffuse) * terrain_color + specular;
 
 	// Tone Mapping
 	linearColor = linearColor / (linearColor + vec3(1.0));
-	linearColor = pow(linearColor, vec3(1.0/2.2));
+	linearColor = pow(linearColor, vec3(1.0 / 2.2));
 
 	FragColor = vec4(linearColor, 1.0);
 
