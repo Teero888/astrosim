@@ -9,7 +9,7 @@ class CMarkers
 public:
 	bool m_ShowMarkers = true;
 	void Init();
-	void Render(class CStarSystem &System, class CCamera &Camera);
+	void Render(struct CStarSystem &System, struct CCamera &Camera);
 	void Destroy();
 };
 

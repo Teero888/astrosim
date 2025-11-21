@@ -22,8 +22,8 @@ uniform float u_miePreferredScatteringDir;
 uniform float u_sunIntensity;
 uniform float u_logDepthF;
 
-const int NUM_SAMPLES = 24;      // Primary Ray Steps
-const int NUM_SUN_SAMPLES = 4;   // Secondary Ray Steps (Light Shafts)
+const int NUM_SAMPLES = 24; // Primary Ray Steps
+const int NUM_SUN_SAMPLES = 4; // Secondary Ray Steps (Light Shafts)
 const float PI = 3.141592653589793;
 
 // == INTERSECTIONS (Unit Space) ==
@@ -33,7 +33,8 @@ vec2 raySphereIntersect(vec3 ro, vec3 rd, float rad)
 	float b = dot(ro, rd);
 	float c = dot(ro, ro) - rad * rad;
 	float d = b * b - c;
-	if(d < 0.0) return vec2(1e5, -1e5);
+	if(d < 0.0)
+		return vec2(1e5, -1e5);
 	float sqrtD = sqrt(d);
 	return vec2(-b - sqrtD, -b + sqrtD);
 }
@@ -62,33 +63,33 @@ vec2 GetSunTransmittance(vec3 p, vec3 sunDir, float atmRadius, float earthRadius
 {
 	vec2 intersect = raySphereIntersect(p, sunDir, atmRadius);
 	float distToTop = intersect.y;
-	
-	// Optimization: If we are intersecting the planet while looking at the sun, 
-	// we are in shadow. The analytic sphere check in main() handles this, 
+
+	// Optimization: If we are intersecting the planet while looking at the sun,
+	// we are in shadow. The analytic sphere check in main() handles this,
 	// so we assume here we have a clear line of sight to the atmosphere top.
-	
+
 	float stepSize = distToTop / float(NUM_SUN_SAMPLES);
 	float halfStep = stepSize * 0.5;
-	
+
 	float optR = 0.0;
 	float optM = 0.0;
-	
+
 	for(int i = 0; i < NUM_SUN_SAMPLES; i++)
 	{
 		vec3 pos = p + sunDir * (float(i) * stepSize + halfStep);
 		float h = length(pos) - earthRadius;
-		
+
 		optR += GetDensity(h, H_R);
 		optM += GetDensity(h, H_M);
 	}
-	
+
 	return vec2(optR * stepSize, optM * stepSize);
 }
 
 void main()
 {
 	vec2 uv = gl_FragCoord.xy / u_screenSize;
-	
+
 	// 1. Depth Reconstruction
 	// Use texelFetch to match pixel centers exactly
 	float depthVal = texelFetch(u_depthTexture, ivec2(gl_FragCoord.xy), 0).r;
@@ -101,7 +102,11 @@ void main()
 
 	// 3. Atmosphere Intersection
 	vec2 hitInfo = raySphereIntersect(rayOrigin, rayDir, atmR);
-	if(hitInfo.x > hitInfo.y || hitInfo.y < 0.0) { FragColor = vec4(0.0); return; }
+	if(hitInfo.x > hitInfo.y || hitInfo.y < 0.0)
+	{
+		FragColor = vec4(0.0);
+		return;
+	}
 
 	float tStart = max(0.0, hitInfo.x);
 	float tEnd = hitInfo.y;
@@ -114,7 +119,11 @@ void main()
 		tEnd = min(tEnd, viewDistUnit);
 	}
 
-	if(tStart >= tEnd) { FragColor = vec4(0.0); return; }
+	if(tStart >= tEnd)
+	{
+		FragColor = vec4(0.0);
+		return;
+	}
 
 	// 5. Raymarch
 	float stepSize = (tEnd - tStart) / float(NUM_SAMPLES);
@@ -146,7 +155,7 @@ void main()
 		// Density along view ray
 		float dR = GetDensity(h, H_R) * stepSize;
 		float dM = GetDensity(h, H_M) * stepSize;
-		
+
 		opticalDepthR += dR;
 		opticalDepthM += dM;
 
@@ -156,29 +165,30 @@ void main()
 		float b = dot(posUnit, u_sunDirection);
 		float c = dot(posUnit, posUnit) - earthR * earthR;
 		float d = b * b - c;
-		
-		// Shadow logic: 
-		// If d < 0, we miss the sphere (Day). 
-		// If d >= 0, we hit sphere line. 
+
+		// Shadow logic:
+		// If d < 0, we miss the sphere (Day).
+		// If d >= 0, we hit sphere line.
 		// If intersection is "forward" (b < 0 check roughly, or exact t check), we are blocked.
 		// Exact check: t0 = -b - sqrt(d). If t0 > 0, we are blocked.
 		bool blocked = false;
 		if(d >= 0.0)
 		{
 			float t0 = -b - sqrt(d);
-			if(t0 > 0.001) blocked = true;
+			if(t0 > 0.001)
+				blocked = true;
 		}
 
 		if(!blocked)
 		{
 			// Secondary Ray March (Replacing LUT)
 			vec2 sunOpticalDepth = GetSunTransmittance(posUnit, u_sunDirection, atmR, earthR, H_R, H_M);
-			
-			vec3 tau = betaR * (opticalDepthR + sunOpticalDepth.r) + 
-					   betaM * (opticalDepthM + sunOpticalDepth.g);
-			
+
+			vec3 tau = betaR * (opticalDepthR + sunOpticalDepth.r) +
+				   betaM * (opticalDepthM + sunOpticalDepth.g);
+
 			vec3 attn = exp(-tau);
-			
+
 			totalR += dR * attn;
 			totalM += dM * attn;
 		}

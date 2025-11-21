@@ -3,7 +3,7 @@
 #include "shader.h"
 #include <cmath>
 
-class CCamera;
+struct CCamera;
 class CGrid
 {
 	// struct SPlanetInfo
@@ -18,7 +18,7 @@ class CGrid
 
 public:
 	void Init();
-	void Render(class CStarSystem &System, CCamera &Camera);
+	void Render(struct CStarSystem &System, CCamera &Camera);
 	void Destroy();
 };
 #endif // GRID_H

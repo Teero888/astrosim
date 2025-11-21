@@ -9,11 +9,11 @@ out vec3 v_viewRay;
 
 void main()
 {
-	// We are rendering a full-screen quad. 
+	// We are rendering a full-screen quad.
 	// Unproject the NEAR plane (Z = -1.0) to keep vector magnitude small and manageable.
 	vec4 ray_clip = vec4(aPos.xy, -1.0, 1.0);
 	vec4 ray_eye = u_invProjection * ray_clip;
-	
+
 	// Perspective divide is crucial here
 	ray_eye /= ray_eye.w;
 

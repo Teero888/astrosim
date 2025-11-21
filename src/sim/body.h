@@ -1,6 +1,7 @@
 #ifndef BODY_H
 #define BODY_H
 
+#include "qmath.h" // Include the new Quat math
 #include "vmath.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
@@ -48,9 +49,9 @@ struct STerrainParameters
 
 struct SAtmosphereParameters
 {
-	bool m_Enabled = false; // Replaces the old boolean in SRenderParams
+	bool m_Enabled = false;
 	float m_AtmosphereRadius = 1.025f;
-	float m_SunIntensity = 20.0f; // New customizable brightness
+	float m_SunIntensity = 20.0f;
 
 	glm::vec3 m_RayleighScatteringCoeff = glm::vec3(5.802e-6, 1.3558e-5, 3.31e-5);
 	float m_RayleighScaleHeight = 8e3;
@@ -85,6 +86,12 @@ struct SBody
 		Vec3 m_Position;
 		Vec3 m_Velocity;
 		Vec3 m_Acceleration;
+
+		// == Rotational Physics ==
+		// Current orientation quaternion
+		Quat m_Orientation = Quat::Identity();
+		// Angular velocity vector (axis * radians_per_sec)
+		Vec3 m_AngularVelocity = Vec3(0.0);
 	} m_SimParams;
 
 	struct SRenderParams
@@ -97,6 +104,12 @@ struct SBody
 		SColorPalette m_Colors;
 		SAtmosphereParameters m_Atmosphere;
 		int m_Seed = 0;
+
+		// == Rotational Config ==
+		// Period in seconds (e.g. Earth = 86164.0)
+		double m_RotationPeriod = 0.0;
+		// Axial tilt in degrees (e.g. Earth = 23.5)
+		double m_Obliquity = 0.0;
 	} m_RenderParams;
 
 	SBody(int Id, const std::string &Name, SSimParams SimulationParameters, SRenderParams RenderParameters);

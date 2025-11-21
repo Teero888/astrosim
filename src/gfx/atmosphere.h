@@ -2,9 +2,9 @@
 #define ATMOSPHERE_H
 #include "shader.h"
 
-class CStarSystem;
+struct CStarSystem;
 struct SBody;
-class CCamera;
+struct CCamera;
 
 class CAtmosphere
 {

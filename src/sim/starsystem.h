@@ -5,11 +5,14 @@
 #include <cstdint>
 #include <vector>
 
+constexpr double G = 6.67430e-11;
+constexpr double PI = 3.14159265358979323846;
+
 struct CStarSystem
 {
-	double m_DeltaTime = 60.0 * 8.0; // Time step in seconds
+	double m_DeltaTime = 1.0; // Time step in minutes
 	uint64_t m_SimTick = 0;
-	int m_DPS = 7; // Days per second
+	float m_HPS = 1; // Hours per second
 	std::vector<SBody> m_vBodies;
 	SBody *m_pSunBody = nullptr;
 

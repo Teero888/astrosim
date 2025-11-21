@@ -217,8 +217,13 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody, boo
 	m_Shader.SetVec3("uRock", m_pBody->m_RenderParams.m_Colors.m_Rock);
 	m_Shader.SetVec3("uTundra", m_pBody->m_RenderParams.m_Colors.m_Tundra);
 
+	// Get rotation as GLM matrix from our custom physics quaternion
+	Quat q = m_pBody->m_SimParams.m_Orientation;
+	glm::quat glmQ(q.w, q.x, q.y, q.z); // GLM constructor is (w, x, y, z)
+	glm::mat4 rotationMat = glm::mat4_cast(glmQ);
+
 	if(m_pRootNode)
-		m_pRootNode->Render(m_Shader, Camera.m_AbsolutePosition, m_pBody->m_SimParams.m_Position);
+		m_pRootNode->Render(m_Shader, Camera.m_AbsolutePosition, m_pBody->m_SimParams.m_Position, rotationMat);
 }
 
 void CProceduralMesh::Destroy()
@@ -553,7 +558,14 @@ void COctreeNode::Update(CCamera &Camera)
 	// Frustum planes are in Camera-Relative space.
 	// So we need the node's center in Camera-Relative space.
 	// NodePos_Rel_Cam = NodePos_Rel_Planet - CamPos_Rel_Planet
-	Vec3 NodePosRelCam = m_Center - CamPosRelPlanet;
+
+	// NOTE: With rotation added, m_Center is in "Planet Local" (unrotated) space.
+	// But Frustum Planes are in "World View" space (rotated).
+	// To check frustum correctly, we should rotate the node's center into world space first.
+	Quat q = m_pOwnerMesh->m_pBody->m_SimParams.m_Orientation;
+	Vec3 NodeCenterWorld = q.RotateVector(m_Center); // Rotate local center to world relative
+
+	Vec3 NodePosRelCam = NodeCenterWorld - CamPosRelPlanet;
 
 	// Bounding Sphere Radius approximation for a cube
 	float sphereRadius = (float)(m_Size * 0.87); // 0.5 * sqrt(3)
@@ -573,8 +585,8 @@ void COctreeNode::Update(CCamera &Camera)
 
 	// Dot product check for "Behind" nodes (fallback if horizon culling misses edge cases)
 	// This helps prioritize splitting nodes facing the camera
-	double Dot = glm::dot(glm::normalize((glm::vec3)CamPosRelPlanet), glm::normalize((glm::vec3)m_Center));
-	double LODPenalty = (Dot < 0.0) ? 2.0 : 1.0; // Penalize back-facing nodes slightly less aggressively than before
+	double Dot = glm::dot(glm::normalize((glm::vec3)CamPosRelPlanet), glm::normalize((glm::vec3)NodeCenterWorld));
+	double LODPenalty = (Dot < 0.0) ? 2.0 : 1.0;
 
 	double LODMetric = (DistToSurface / m_Size) * LODPenalty;
 
@@ -613,20 +625,13 @@ void COctreeNode::Update(CCamera &Camera)
 	}
 }
 
-void COctreeNode::Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const Vec3 &PlanetAbsolutePos)
+void COctreeNode::Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const Vec3 &PlanetAbsolutePos, const glm::mat4 &RotationMat)
 {
-	// 1. Calculate the Node Center in World Space (Double Precision)
-	Vec3 nodeAbsolutePos_d = PlanetAbsolutePos + m_Center;
-
-	// 2. Optional: Re-run Frustum Cull for Render (cheaper than Update logic, prevents popping)
-	// But generally, if Update is running per-frame, this isn't strictly necessary.
-	// We skip it here to trust the Update loop state.
-
-	// 3. Subtract Camera Position (Double Precision)
-	Vec3 nodeCamRelativePos_d = nodeAbsolutePos_d - CameraAbsolutePos;
-
-	// 4. Convert to Float for Model Matrix
-	glm::mat4 NodeModel = glm::translate(glm::mat4(1.0f), (glm::vec3)nodeCamRelativePos_d);
+	Vec3 planetCamRel = PlanetAbsolutePos - CameraAbsolutePos;
+	glm::mat4 matPlanetPos = glm::translate(glm::mat4(1.0f), (glm::vec3)planetCamRel);
+	// Node Center is Double precision local coordinate
+	glm::mat4 matNodePos = glm::translate(glm::mat4(1.0f), (glm::vec3)m_Center);
+	glm::mat4 NodeModel = matPlanetPos * RotationMat * matNodePos;
 
 	if(m_bIsLeaf)
 	{
@@ -654,7 +659,7 @@ void COctreeNode::Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const V
 		{
 			for(int i = 0; i < 8; ++i)
 				if(m_pChildren[i])
-					m_pChildren[i]->Render(Shader, CameraAbsolutePos, PlanetAbsolutePos);
+					m_pChildren[i]->Render(Shader, CameraAbsolutePos, PlanetAbsolutePos, RotationMat);
 		}
 		else
 		{

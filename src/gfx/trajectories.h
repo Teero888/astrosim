@@ -8,8 +8,8 @@
 
 #define TRAJECTORY_LENGTH 3600
 
-class CStarSystem;
-class CCamera;
+struct CStarSystem;
+struct CCamera;
 class CTrajectories
 {
 	struct STrajectory

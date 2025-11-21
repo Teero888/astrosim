@@ -258,7 +258,10 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	{
 		ImGui::Begin("Simulation Settings", &m_bShowSimSettings);
 		ImGui::Checkbox("Run Simulation", &m_bIsRunning);
-		ImGui::SliderInt("Days per second", &StarSystem.m_DPS, 1, 365);
+
+		// [CHANGED] Replaced Days per second int slider with Hours per second float slider
+		ImGui::SliderFloat("Hours per second", &StarSystem.m_HPS, 0.1f, 720.0f, "%.1f");
+
 		ImGui::Separator();
 		ImGui::Text("Rendering");
 		ImGui::Checkbox("Show Atmosphere", &m_bShowAtmosphere);
@@ -413,7 +416,6 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	// ========================================================
 	// COPY FBO TO SCREEN
 	// ========================================================
-	// ... [Rest of the function same as before] ...
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_GBufferFBO);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 

@@ -6,6 +6,11 @@
 #include <cmath>
 #include <embedded_shaders.h>
 
+// [FIX] Include GLM quaternion headers for matrix conversion
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+
 void CAtmosphere::Init()
 {
 	m_Shader.CompileShader(Shaders::VERT_ATMOSPHERE, Shaders::FRAG_ATMOSPHERE);
@@ -44,14 +49,32 @@ void CAtmosphere::Render(CStarSystem &System, CCamera &Camera, unsigned int Dept
 	float F = 2.0f / log2(FAR_PLANE + 1.0f);
 	m_Shader.SetFloat("u_logDepthF", F);
 
+	// [FIX] Calculate View-to-Local Space Matrix
+	// 1. Get Planet Rotation
+	Quat q = pFocusedBody->m_SimParams.m_Orientation;
+	// 2. Get Inverse Rotation (World -> Local)
+	Quat qInv = q.Conjugate();
+	glm::quat glmQInv(qInv.w, qInv.x, qInv.y, qInv.z);
+	glm::mat4 matRotInv = glm::mat4_cast(glmQInv);
+
+	// 3. Standard View -> World Matrix (Rotation Only)
 	glm::mat4 gridView = glm::lookAt(glm::vec3(0.0f), (glm::vec3)Camera.m_Front, (glm::vec3)Camera.m_Up);
-	m_Shader.SetMat4("u_invView", glm::inverse(gridView));
+	glm::mat4 viewToWorld = glm::inverse(gridView);
+
+	// 4. Combine: View -> World -> Local
+	// This ensures v_rayDirection in the shader is in Planet Local Space
+	glm::mat4 viewToLocal = matRotInv * viewToWorld;
+
+	m_Shader.SetMat4("u_invView", viewToLocal);
 	m_Shader.SetMat4("u_invProjection", glm::inverse(Camera.m_Projection));
 
 	double realRadius = pFocusedBody->m_RenderParams.m_Radius;
 	// Calculate Camera Position relative to planet center in Unit Space (Scale 1.0)
 	Vec3 relativeCamPos = Camera.m_AbsolutePosition - pFocusedBody->m_SimParams.m_Position;
-	Vec3 normalizedCamPos = relativeCamPos / realRadius;
+
+	// [FIX] Rotate Camera Position into Planet Local Space
+	Vec3 localCamPos = qInv.RotateVector(relativeCamPos);
+	Vec3 normalizedCamPos = localCamPos / realRadius;
 
 	m_Shader.SetVec3("u_cameraPos", (glm::vec3)normalizedCamPos);
 
@@ -60,7 +83,8 @@ void CAtmosphere::Render(CStarSystem &System, CCamera &Camera, unsigned int Dept
 	Vec3 sunDir;
 	if(sunVector.length() > 1.0)
 	{
-		sunDir = sunVector.normalize();
+		// [FIX] Rotate Sun Direction into Planet Local Space
+		sunDir = qInv.RotateVector(sunVector.normalize());
 	}
 	else
 	{

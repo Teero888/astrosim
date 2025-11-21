@@ -10,9 +10,9 @@
 #include "trajectories.h"
 #include <map>
 
-class CStarSystem;
+struct CStarSystem;
 struct SBody;
-class GLFWwindow;
+struct GLFWwindow;
 
 class CGraphics
 {

@@ -12,6 +12,8 @@ void CCamera::SetBody(SBody *pBody)
 {
 	m_pFocusedBody = pBody;
 	m_FocusPoint = pBody->m_SimParams.m_Position;
+	m_ViewDistance = pBody->m_RenderParams.m_Radius * 5;
+	m_WantedViewDistance = m_ViewDistance;
 
 	if(m_CameraMode == MODE_FREEVIEW)
 	{
@@ -113,7 +115,7 @@ void CCamera::ProcessKeyboard(int direction, float deltaTime)
 		altitude = 10.0;
 
 	// Dynamic speed scaling based on altitude
-	double moveSpeed = /* altitude * 2.0 *  */ deltaTime * m_SpeedMultiplier;
+	double moveSpeed = altitude * 2.0 * deltaTime * m_SpeedMultiplier;
 
 	if(m_CameraMode == MODE_FOCUS)
 	{

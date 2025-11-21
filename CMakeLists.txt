@@ -73,6 +73,11 @@ target_link_libraries(astrosim
 	GLEW::GLEW
 )
 
+target_compile_options(astrosim PRIVATE
+	-Wall
+	-g
+)
+
 target_include_directories(astrosim PRIVATE
 	${IMGUI_DIR}
 	${IMGUI_DIR}/backends

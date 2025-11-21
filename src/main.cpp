@@ -17,10 +17,7 @@ int main()
 		return 1;
 	}
 
-	// for(int i = 0; i < 1'000'000; ++i)
-	// 	StarSystem.UpdateBodies();
-
-	GfxEngine.m_Camera.m_pFocusedBody = &StarSystem.m_vBodies.front();
+	GfxEngine.m_Camera.SetBody(&StarSystem.m_vBodies.front());
 
 	// This is for the trajectories
 	CStarSystem PredictedStarSystem = StarSystem;
@@ -31,7 +28,8 @@ int main()
 
 	while(!glfwWindowShouldClose(GfxEngine.GetWindow()))
 	{
-		const double UpdateInterval = 1.0 / (StarSystem.m_DPS * (86400.0 / StarSystem.m_DeltaTime));
+		const double UpdateInterval = 1.0 / (StarSystem.m_HPS * (3600.0 / StarSystem.m_DeltaTime));
+
 		glfwPollEvents();
 
 		if(GfxEngine.m_bReloadRequested)
