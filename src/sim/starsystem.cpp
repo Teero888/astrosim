@@ -1,6 +1,7 @@
 #include "starsystem.h"
 #include "body.h"
 #include "vmath.h"
+#include <chrono>
 
 void CStarSystem::OnInit()
 {
@@ -8,42 +9,54 @@ void CStarSystem::OnInit()
 	LoadBodies("data/bodies.dat");
 }
 
-static Vec3 CalculateForce(const SBody &a, const SBody &b)
-{
-	Vec3 r = b.m_SimParams.m_Position - a.m_SimParams.m_Position;
-	const double Distance = r.length();
-	if(Distance < 1e-3)
-		return Vec3(0);
-	const double ForceMagnitude = (G * a.m_SimParams.m_Mass * b.m_SimParams.m_Mass) / (Distance * Distance);
-	Vec3 Force = r * (ForceMagnitude / Distance);
-	return Force;
-}
-
 void CStarSystem::UpdateBodies()
 {
-	if(m_vBodies.empty())
-		return;
+	const size_t BodyCount = m_vBodies.size();
 
-	for(auto &Body : m_vBodies)
-		Body.m_SimParams.m_Velocity = Body.m_SimParams.m_Velocity + Body.m_SimParams.m_Acceleration * (0.5 * m_DeltaTime);
-
-	for(auto &Body : m_vBodies)
-		Body.m_SimParams.m_Position = Body.m_SimParams.m_Position + Body.m_SimParams.m_Velocity * m_DeltaTime;
-
-	for(auto &Body : m_vBodies)
+	const double HalfDt = 0.5 * m_DeltaTime;
+	for(size_t i = 0; i < BodyCount; ++i)
 	{
-		Vec3 TotalForce(0, 0, 0);
-		for(const auto &other : m_vBodies)
-			if(&Body != &other)
-				TotalForce = TotalForce + CalculateForce(Body, other);
-		Body.m_SimParams.m_Acceleration = TotalForce / Body.m_SimParams.m_Mass;
+		auto &Params = m_vBodies[i].m_SimParams;
+		Params.m_Velocity += Params.m_Acceleration * HalfDt;
+		Params.m_Position += Params.m_Velocity * m_DeltaTime;
+		Params.m_Acceleration = Vec3(0.0);
 	}
 
-	for(auto &Body : m_vBodies)
+	for(size_t i = 0; i < BodyCount; ++i)
 	{
-		Body.m_SimParams.m_Velocity = Body.m_SimParams.m_Velocity + Body.m_SimParams.m_Acceleration * (0.5 * m_DeltaTime);
-		IntegrateRotation(Body.m_SimParams.m_Orientation, Body.m_SimParams.m_AngularVelocity, m_DeltaTime);
+		auto &BodyA = m_vBodies[i].m_SimParams;
+		for(size_t j = i + 1; j < BodyCount; ++j)
+		{
+			auto &BodyB = m_vBodies[j].m_SimParams;
+			Vec3 r = BodyB.m_Position - BodyA.m_Position;
+			double DistSq = r.dot(r);
+			double Dist = std::sqrt(DistSq);
+			double DistCubed = DistSq * Dist;
+			double CommonFactor = G / DistCubed;
+			Vec3 ForceVec = r * CommonFactor;
+			BodyA.m_Acceleration += ForceVec * BodyB.m_Mass;
+			BodyB.m_Acceleration -= ForceVec * BodyA.m_Mass;
+		}
+	}
+
+	for(size_t i = 0; i < BodyCount; ++i)
+	{
+		auto &Params = m_vBodies[i].m_SimParams;
+		Params.m_Velocity += Params.m_Acceleration * HalfDt;
+		IntegrateRotation(Params.m_Orientation, Params.m_AngularVelocity, m_DeltaTime);
 	}
 
 	++m_SimTick;
+}
+
+int CStarSystem::Benchmark()
+{
+	using namespace std::chrono;
+	auto Start = high_resolution_clock::now();
+
+	for(int i = 0; i < 1e6; ++i)
+		UpdateBodies();
+
+	auto End = high_resolution_clock::now();
+	return 1e6 / (high_resolution_clock::duration(End - Start).count() / 1e9);
 }

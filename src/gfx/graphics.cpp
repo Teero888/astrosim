@@ -277,6 +277,12 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 		ImGui::Text("Debug");
 		ImGui::SliderInt("Atmosphere Debug Mode", &m_DebugMode, 0, 5);
 		ImGui::Text("0:Nrm 1:RawZ 2:LinDist 3:Occ 4:RayDir 5:Shadow");
+		if(ImGui::Button("Benchmark"))
+		{
+			ReloadSimulation();
+			printf("TPS: %d\n", m_pStarSystem->Benchmark());
+		}
+		ImGui::Text("Current TPS: %.5f", (m_pStarSystem->m_HPS * (3600.0 / m_pStarSystem->m_DeltaTime)));
 		ImGui::End();
 	}
 

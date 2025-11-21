@@ -10,7 +10,7 @@ constexpr double PI = 3.14159265358979323846;
 
 struct CStarSystem
 {
-	double m_DeltaTime = 1.0; // Time step in minutes
+	double m_DeltaTime = 1.0 * 5.0; // Time step in seconds
 	uint64_t m_SimTick = 0;
 	float m_HPS = 1; // Hours per second
 	std::vector<SBody> m_vBodies;
@@ -19,6 +19,7 @@ struct CStarSystem
 	void OnInit();
 	void LoadBodies(const std::string &filename);
 	void UpdateBodies();
+	int Benchmark(); // returns TPS
 };
 
 #endif // STARTSYSTEM_H

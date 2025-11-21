@@ -61,6 +61,7 @@ add_executable(astrosim
 	src/main.cpp
 	src/sim/body.cpp
 	src/sim/body.h
+	src/sim/starconfig.cpp
 	src/sim/starsystem.cpp
 	src/sim/starsystem.h
 	src/sim/vmath.h

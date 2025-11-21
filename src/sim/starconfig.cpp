@@ -47,29 +47,17 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 			// Initialize Rotation Physics
 			if(RenderParams.m_RotationPeriod > 0.0)
 			{
-				// 1. Calculate Global Up Vector tilted by Obliquity
-				// Default Up is (0, 1, 0). We tilt it around Z axis (or X).
-				// Standard obliquity usually tilts away from orbital plane normal.
 				Vec3 orbitalUp(0, 1, 0);
-
-				// Create a rotation quaternion for the tilt
 				Quat tilt = Quat::FromAxisAngle(Vec3(0, 0, 1), -RenderParams.m_Obliquity); // Tilt 'right'
-
-				// Apply tilt to the Up vector to get the physical rotation axis
 				Vec3 rotationAxis = tilt.RotateVector(orbitalUp);
-
-				// 2. Set initial Orientation
 				SimParams.m_Orientation = tilt;
-
-				// 3. Calculate Angular Velocity Vector
-				// Omega = (2 * PI / Period) * Axis
 				double angSpeed = (2.0 * PI) / RenderParams.m_RotationPeriod;
 				SimParams.m_AngularVelocity = rotationAxis * angSpeed;
 			}
 
 			m_vBodies.emplace_back(IdCounter++, Name, SimParams, RenderParams);
 			SimParams = {};
-			RenderParams = {}; // Resets m_Atmosphere.Enabled to false by default
+			RenderParams = {};
 			Name = "";
 			CurrentSelection = "";
 		}
