@@ -12,6 +12,16 @@ void CTrajectories::Init()
 
 void CTrajectories::Update(CStarSystem &PredictedSystem)
 {
+	if(m_SampleRate <= 0)
+		return;
+
+	if(PredictedSystem.m_SimTick % m_SampleRate != 0)
+		return;
+
+	int maxPoints = GetMaxVisualPoints();
+	if(maxPoints < 2)
+		return;
+
 	if(m_vPlanetTrajectories.empty())
 	{
 		m_vPlanetTrajectories.resize(PredictedSystem.m_vBodies.size());
@@ -21,39 +31,88 @@ void CTrajectories::Update(CStarSystem &PredictedSystem)
 			Traj.m_Color = PredictedSystem.m_vBodies[i].m_RenderParams.m_Color;
 			glGenVertexArrays(1, &Traj.VAO);
 			glGenBuffers(1, &Traj.VBO);
+			Traj.m_PointCount = 0;
 		}
 	}
 
+	uint64_t VisualTick = PredictedSystem.m_SimTick / m_SampleRate;
+	size_t BufferIndex = VisualTick % maxPoints;
+
 	for(size_t i = 0; i < PredictedSystem.m_vBodies.size(); ++i)
-		m_vPlanetTrajectories[i].m_aPositionHistory[PredictedSystem.m_SimTick % TRAJECTORY_LENGTH] = PredictedSystem.m_vBodies[i].m_SimParams.m_Position;
+	{
+		auto &Traj = m_vPlanetTrajectories[i];
+
+		if((int)Traj.m_PositionHistory.size() != maxPoints)
+		{
+			Traj.m_PositionHistory.resize(maxPoints);
+			Traj.m_GLHistory.resize(maxPoints + 2);
+			Traj.m_PointCount = 0;
+			glBindBuffer(GL_ARRAY_BUFFER, Traj.VBO);
+			glBufferData(GL_ARRAY_BUFFER, (maxPoints + 2) * sizeof(glm::vec3), nullptr, GL_STREAM_DRAW);
+		}
+
+		Traj.m_PositionHistory[BufferIndex] = PredictedSystem.m_vBodies[i].m_SimParams.m_Position;
+
+		if(Traj.m_PointCount < maxPoints)
+			Traj.m_PointCount++;
+	}
 }
 
-void CTrajectories::UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera)
+void CTrajectories::UpdateBuffers(CStarSystem &RealTimeSystem, CStarSystem &PredictedSystem, CCamera &Camera)
 {
-	if(m_vPlanetTrajectories.empty() || !m_Show)
+	if(m_vPlanetTrajectories.empty() || !m_Show || m_SampleRate <= 0)
 		return;
+
+	int maxPoints = GetMaxVisualPoints();
+	if(maxPoints < 2)
+		return;
+
+	uint64_t SimTick = PredictedSystem.m_SimTick;
+	if(SimTick == 0)
+		return;
+
+	uint64_t VisualTick = (SimTick - 1) / m_SampleRate;
+	size_t HeadIndex = VisualTick % maxPoints;
 
 	for(int i = 0; i < (int)m_vPlanetTrajectories.size(); ++i)
 	{
 		auto &Trajectory = m_vPlanetTrajectories[i];
-		for(int i = 0; i < TRAJECTORY_LENGTH; ++i)
+
+		if((int)Trajectory.m_PositionHistory.size() != maxPoints)
+			continue;
+		if((int)Trajectory.m_GLHistory.size() != maxPoints + 2)
+			continue;
+
+		int PointsToDraw = Trajectory.m_PointCount + 2; // Start + Samples + End
+
+		Vec3 StartPos = RealTimeSystem.m_vBodies[i].m_SimParams.m_Position;
+		Trajectory.m_GLHistory[0] = (glm::vec3)(StartPos - Camera.m_AbsolutePosition);
+		if(Trajectory.m_GLHistory[0] == glm::vec3(0.0f))
+			Trajectory.m_GLHistory[0] = glm::vec3(0.0001f);
+
+		if(Trajectory.m_PointCount > 0)
 		{
-			Vec3 NewPos = Trajectory.m_aPositionHistory[i] - Camera.m_AbsolutePosition;
-			Trajectory.m_aGLHistory[i] = NewPos;
-			// 0,0,0 is reserved for not rendering so make it some val that is not 0,0,0
-			if(Trajectory.m_aGLHistory[i] == glm::vec3(0.f))
-				Trajectory.m_aGLHistory[i] = glm::vec3(0.01f);
+			size_t TailIndex = (HeadIndex - Trajectory.m_PointCount + 1 + maxPoints) % maxPoints;
+			for(int j = 0; j < Trajectory.m_PointCount; ++j)
+			{
+				size_t RingIndex = (TailIndex + j) % maxPoints;
+				Vec3 WorldPos = Trajectory.m_PositionHistory[RingIndex];
+
+				Vec3 RelPos = WorldPos - Camera.m_AbsolutePosition;
+				Trajectory.m_GLHistory[j + 1] = (glm::vec3)RelPos;
+				if(Trajectory.m_GLHistory[j + 1] == glm::vec3(0.0f))
+					Trajectory.m_GLHistory[j + 1] = glm::vec3(0.0001f);
+			}
 		}
 
-		Trajectory.m_aGLHistory[(PredictedSystem.m_SimTick - 1) % TRAJECTORY_LENGTH] = {};
+		Vec3 EndPos = PredictedSystem.m_vBodies[i].m_SimParams.m_Position;
+		Trajectory.m_GLHistory[PointsToDraw - 1] = (glm::vec3)(EndPos - Camera.m_AbsolutePosition);
+		if(Trajectory.m_GLHistory[PointsToDraw - 1] == glm::vec3(0.0f))
+			Trajectory.m_GLHistory[PointsToDraw - 1] = glm::vec3(0.0001f);
 
-		// update gpu buffers
 		glBindVertexArray(Trajectory.VAO);
 		glBindBuffer(GL_ARRAY_BUFFER, Trajectory.VBO);
-		glBufferData(GL_ARRAY_BUFFER,
-			TRAJECTORY_LENGTH * sizeof(glm::vec3),
-			Trajectory.m_aGLHistory,
-			GL_STATIC_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, PointsToDraw * sizeof(glm::vec3), Trajectory.m_GLHistory.data());
 
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
 		glEnableVertexAttribArray(0);
@@ -68,8 +127,7 @@ void CTrajectories::Render(CCamera &Camera)
 		return;
 	m_Shader.Use();
 
-	// Pass constant needed for logarithmic depth calculation
-	float F = 2.0f / log2(FAR_PLANE + 1.0f); // far plane is 10000.0f
+	float F = 2.0f / log2(FAR_PLANE + 1.0f);
 	m_Shader.SetFloat("u_logDepthF", F);
 
 	auto Model = glm::mat4(1.0f);
@@ -83,22 +141,25 @@ void CTrajectories::Render(CCamera &Camera)
 		++i)
 	{
 		auto &Trajectory = m_vPlanetTrajectories[i];
+		if(Trajectory.VAO == 0)
+			continue;
+
+		int count = Trajectory.m_PointCount + 2;
+		if(count < 2)
+			continue;
+
 		m_Shader.SetVec3("Color", Trajectory.m_Color);
 		glLineWidth(Trajectory.m_LineWidth);
 
 		glBindVertexArray(Trajectory.VAO);
-		glDrawArrays(GL_LINE_STRIP, 0, TRAJECTORY_LENGTH);
+		glDrawArrays(GL_LINE_STRIP, 0, count);
 		glBindVertexArray(0);
 	}
 }
 
 void CTrajectories::Destroy()
 {
-	for(auto &trajectory : m_vPlanetTrajectories)
-	{
-		glDeleteVertexArrays(1, &trajectory.VAO);
-		glDeleteBuffers(1, &trajectory.VBO);
-	}
+	ClearTrajectories();
 	m_Shader.Destroy();
 }
 
@@ -106,8 +167,10 @@ void CTrajectories::ClearTrajectories()
 {
 	for(auto &trajectory : m_vPlanetTrajectories)
 	{
-		glDeleteVertexArrays(1, &trajectory.VAO);
-		glDeleteBuffers(1, &trajectory.VBO);
+		if(trajectory.VAO)
+			glDeleteVertexArrays(1, &trajectory.VAO);
+		if(trajectory.VBO)
+			glDeleteBuffers(1, &trajectory.VBO);
 	}
 	m_vPlanetTrajectories.clear();
 }

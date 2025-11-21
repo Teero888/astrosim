@@ -2,7 +2,7 @@
 #define PROCEDURALMESH_H
 
 #include <GL/glew.h>
-#include <array> // Added for std::array
+#include <array>
 #include <atomic>
 #include <condition_variable>
 #include <glm/glm.hpp>
@@ -38,7 +38,6 @@ public:
 	void Init(SBody *pBody, EBodyType bodyType, int voxelResolution);
 	void Update(CCamera &Camera);
 
-	// [FIX] Added bIsShadowPass parameter
 	void Render(const CCamera &Camera, const SBody *pLightBody, bool bIsShadowPass);
 
 	void Destroy();

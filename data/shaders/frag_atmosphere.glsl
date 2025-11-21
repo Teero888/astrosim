@@ -90,17 +90,17 @@ void main()
 {
 	vec2 uv = gl_FragCoord.xy / u_screenSize;
 
-	// 1. Depth Reconstruction
+	// Depth Reconstruction
 	// Use texelFetch to match pixel centers exactly
 	float depthVal = texelFetch(u_depthTexture, ivec2(gl_FragCoord.xy), 0).r;
 
-	// 2. Constants (Unit Space)
+	// Constants (Unit Space)
 	float earthR = 1.0;
 	float atmR = u_atmosphereRadius / u_realPlanetRadius;
 	vec3 rayOrigin = u_cameraPos;
 	vec3 rayDir = normalize(v_rayDirection);
 
-	// 3. Atmosphere Intersection
+	// Atmosphere Intersection
 	vec2 hitInfo = raySphereIntersect(rayOrigin, rayDir, atmR);
 	if(hitInfo.x > hitInfo.y || hitInfo.y < 0.0)
 	{
@@ -111,7 +111,7 @@ void main()
 	float tStart = max(0.0, hitInfo.x);
 	float tEnd = hitInfo.y;
 
-	// 4. Terrain Occlusion
+	// Terrain Occlusion
 	if(depthVal < 1.0)
 	{
 		vec3 worldPos = ReconstructWorldPos(depthVal, uv);
@@ -125,7 +125,7 @@ void main()
 		return;
 	}
 
-	// 5. Raymarch
+	// Raymarch
 	float stepSize = (tEnd - tStart) / float(NUM_SAMPLES);
 	float halfStep = stepSize * 0.5;
 

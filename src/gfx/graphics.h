@@ -50,6 +50,7 @@ public:
 	bool m_bShowAtmosphere = true;
 	bool m_bShowGrid = true;
 	bool m_bReloadRequested = false;
+	bool m_bPredictionResetRequested = false;
 	bool m_bIsRunning = true;
 
 	// UI Toggles

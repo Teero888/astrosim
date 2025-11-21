@@ -3,36 +3,36 @@
 
 #include "../sim/starsystem.h"
 #include "shader.h"
-#include <cstring>
+#include <glm/glm.hpp>
 #include <vector>
-
-#define TRAJECTORY_LENGTH 3600
 
 struct CStarSystem;
 struct CCamera;
+
 class CTrajectories
 {
 	struct STrajectory
 	{
 		glm::vec3 m_Color;
-		Vec3 m_aPositionHistory[TRAJECTORY_LENGTH];
-		glm::vec3 m_aGLHistory[TRAJECTORY_LENGTH];
-		GLuint VAO, VBO;
+		std::vector<Vec3> m_PositionHistory;
+		std::vector<glm::vec3> m_GLHistory;
+		GLuint VAO = 0, VBO = 0;
 		float m_LineWidth = 2.0f;
-		STrajectory()
-		{
-			memset(m_aPositionHistory, 0, TRAJECTORY_LENGTH * sizeof(Vec3));
-			memset(m_aGLHistory, 0, TRAJECTORY_LENGTH * sizeof(glm::vec3));
-		};
+		int m_PointCount = 0;
 	};
 	CShader m_Shader;
 	std::vector<STrajectory> m_vPlanetTrajectories;
 
 public:
+	int m_PredictionDuration = 200000; // in ticks
+	int m_SampleRate = 2500;
+	int GetMaxVisualPoints() const { return (m_SampleRate > 0) ? (m_PredictionDuration / m_SampleRate) : 0; }
+
 	bool m_Show = true;
 	void Init();
 	void Update(CStarSystem &PredictedSystem);
-	void UpdateBuffers(CStarSystem &PredictedSystem, CCamera &Camera);
+	void UpdateBuffers(CStarSystem &RealTimeSystem, CStarSystem &PredictedSystem, CCamera &Camera);
+
 	void Render(CCamera &Camera);
 	void Destroy();
 	void ClearTrajectories();

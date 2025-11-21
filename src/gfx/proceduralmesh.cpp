@@ -60,7 +60,7 @@ bool IsSphereInFrustum(const std::array<glm::vec4, 6> &planes, const glm::vec3 &
 // Horizon Culling: Returns true if the chunk is completely hidden by the planet curvature
 bool IsChunkOccluded(const Vec3 &chunkCenterRelPlanet, double chunkSize, const Vec3 &camPosRelPlanet, double planetRadius)
 {
-	// 1. Calculate distance from planet center to camera
+	// Calculate distance from planet center to camera
 	double distToCam = camPosRelPlanet.length();
 
 	// If camera is inside the "horizon limit" (close to surface + chunk buffer), don't cull.
@@ -68,17 +68,17 @@ bool IsChunkOccluded(const Vec3 &chunkCenterRelPlanet, double chunkSize, const V
 	if(distToCam < planetRadius + chunkSize * 2.0)
 		return false;
 
-	// 2. Calculate Horizon Distance (Distance from Planet Center to the Horizon Plane)
+	// Calculate Horizon Distance (Distance from Planet Center to the Horizon Plane)
 	// Horizon Plane is perpendicular to the vector P->C.
 	// dist_horizon = R^2 / D
 	double horizonDistFromCenter = (planetRadius * planetRadius) / distToCam;
 
-	// 3. Project Chunk Center onto the Planet->Camera axis
+	// Project Chunk Center onto the Planet->Camera axis
 	// P_proj = Dot(ChunkVec, Normalize(CamVec))
 	Vec3 camDir = camPosRelPlanet / distToCam; // Normalize
 	double projectedDist = chunkCenterRelPlanet.dot(camDir);
 
-	// 4. Check if Chunk is "below" the horizon plane
+	// Check if Chunk is "below" the horizon plane
 	// We add the chunk's bounding radius to be conservative.
 	// Bounding radius of a cube is size * sqrt(3) / 2 ~= size * 0.866
 	double chunkBoundingRadius = chunkSize * 0.87;
@@ -167,7 +167,6 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody, boo
 
 	m_Shader.Use();
 
-	// [FIX] Pass the shadow pass flag
 	m_Shader.SetBool("uIsShadowPass", bIsShadowPass);
 
 	float F = 2.0f / log2(FAR_PLANE + 1.0f);
@@ -539,13 +538,13 @@ void COctreeNode::ApplyMeshBuffers()
 
 void COctreeNode::Update(CCamera &Camera)
 {
-	// 1. Get Relative Positions (Double Precision)
+	// Get Relative Positions (Double Precision)
 	// NodeCenter is relative to PlanetCenter.
 	// PlanetCenter relative to PlanetCenter is (0,0,0).
 	// Camera relative to PlanetCenter:
 	Vec3 CamPosRelPlanet = Camera.m_AbsolutePosition - m_pOwnerMesh->m_pBody->m_SimParams.m_Position;
 
-	// 2. Horizon Culling
+	// Horizon Culling
 	// We only cull nodes that are definitely not the root (Level 0), and we double check the radius.
 	if(m_Level > 0 && IsChunkOccluded(m_Center, m_Size, CamPosRelPlanet, m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius))
 	{
@@ -554,14 +553,14 @@ void COctreeNode::Update(CCamera &Camera)
 		return;
 	}
 
-	// 3. Frustum Culling
+	// Frustum Culling
 	// Frustum planes are in Camera-Relative space.
 	// So we need the node's center in Camera-Relative space.
 	// NodePos_Rel_Cam = NodePos_Rel_Planet - CamPos_Rel_Planet
 
 	// NOTE: With rotation added, m_Center is in "Planet Local" (unrotated) space.
 	// But Frustum Planes are in "World View" space (rotated).
-	// To check frustum correctly, we should rotate the node's center into world space first.
+	// To check frustum correctly, werotate the node's center into world space first.
 	Quat q = m_pOwnerMesh->m_pBody->m_SimParams.m_Orientation;
 	Vec3 NodeCenterWorld = q.RotateVector(m_Center); // Rotate local center to world relative
 
@@ -578,7 +577,7 @@ void COctreeNode::Update(CCamera &Camera)
 		return;
 	}
 
-	// 4. LOD Calculation
+	// LOD Calculation
 	// Calculate distance from Camera to the nearest point on the chunk's surface
 	double DistToCenter = NodePosRelCam.length();
 	double DistToSurface = std::max(0.0, DistToCenter - sphereRadius);

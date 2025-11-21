@@ -91,17 +91,17 @@ void CCamera::UpdateViewMatrix()
 	{
 		// == FREEVIEW QUATERNION LOGIC ==
 
-		// 1. Update Vectors from Quaternion
+		// Update Vectors from Quaternion
 		// Using standard OpenGL Identity: Front -Z, Up +Y, Right +X
 		m_Front = Vec3(m_Orientation * glm::vec3(0, 0, -1));
 		m_Up = Vec3(m_Orientation * glm::vec3(0, 1, 0));
 		m_Right = Vec3(m_Orientation * glm::vec3(1, 0, 0));
 
-		// 2. Update Positions
+		// Update Positions
 		m_AbsolutePosition = m_pFocusedBody->m_SimParams.m_Position + m_LocalPosition;
 		m_ViewDistance = m_LocalPosition.length();
 
-		// 3. Construct View Matrix from Quaternion
+		// Construct View Matrix from Quaternion
 		// We use a rotation matrix derived from the quaternion conjugate (inverse rotation for camera)
 		glm::mat4 rotate = glm::mat4_cast(glm::conjugate(m_Orientation));
 		m_View = rotate;
@@ -174,12 +174,12 @@ void CCamera::ProcessMouse(float xoffset, float yoffset)
 		float xRot = glm::radians(xoffset * (float)m_Sensitivity);
 		float yRot = glm::radians(yoffset * (float)m_Sensitivity);
 
-		// 1. YAW: Rotate around the PLANET'S UP vector (Global relative to planet)
+		// YAW: Rotate around the PLANET'S UP vector (Global relative to planet)
 		// This ensures we turn left/right relative to the ground we are standing on.
 		Vec3 planetUp = m_LocalPosition.normalize();
 		glm::quat yawQuat = glm::angleAxis(-xRot, (glm::vec3)planetUp);
 
-		// 2. PITCH: Rotate around LOCAL RIGHT vector
+		// PITCH: Rotate around LOCAL RIGHT vector
 		glm::vec3 localRight = m_Orientation * glm::vec3(1, 0, 0);
 
 		// FIX: Removed negative sign from yRot to invert control

@@ -39,6 +39,12 @@ int main()
 			GfxEngine.m_bReloadRequested = false;
 		}
 
+		if(GfxEngine.m_bPredictionResetRequested)
+		{
+			PredictedStarSystem = StarSystem;
+			GfxEngine.m_bPredictionResetRequested = false;
+		}
+
 		const auto CurrentTime = high_resolution_clock::now();
 		double ElapsedTime = duration_cast<duration<double>>(CurrentTime - LastRenderTick).count();
 		LastRenderTick = CurrentTime;
@@ -50,7 +56,9 @@ int main()
 			{
 				StarSystem.UpdateBodies();
 				AccTime -= UpdateInterval;
-				while(PredictedStarSystem.m_SimTick < StarSystem.m_SimTick + TRAJECTORY_LENGTH)
+				uint64_t Horizon = (uint64_t)GfxEngine.m_Trajectories.m_PredictionDuration;
+				uint64_t TargetTick = StarSystem.m_SimTick + Horizon;
+				while(PredictedStarSystem.m_SimTick < TargetTick)
 				{
 					GfxEngine.m_Trajectories.Update(PredictedStarSystem);
 					PredictedStarSystem.UpdateBodies();
@@ -59,11 +67,13 @@ int main()
 		}
 		else
 			AccTime = 0.0;
+
 		GfxEngine.m_Camera.UpdateViewMatrix();
-		GfxEngine.m_Trajectories.UpdateBuffers(PredictedStarSystem, GfxEngine.m_Camera);
+		GfxEngine.m_Trajectories.UpdateBuffers(StarSystem, PredictedStarSystem, GfxEngine.m_Camera);
 
 		GfxEngine.OnRender(StarSystem);
 	}
+
 	GfxEngine.OnExit();
 	return 0;
 }

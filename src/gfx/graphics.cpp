@@ -98,9 +98,6 @@ void CGraphics::InitFramebuffer(int width, int height)
 	glGenFramebuffers(1, &m_GBufferFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_GBufferFBO);
 
-	// == COLOR BUFFER CHANGE ==
-	// CHANGED: GL_RGBA8 -> GL_RGBA16F
-	// CHANGED: GL_UNSIGNED_BYTE -> GL_FLOAT
 	glGenTextures(1, &m_GBufferColorTex);
 	glBindTexture(GL_TEXTURE_2D, m_GBufferColorTex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
@@ -108,7 +105,6 @@ void CGraphics::InitFramebuffer(int width, int height)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_GBufferColorTex, 0);
 
-	// Depth Buffer - using 32F for High Precision Occlusion
 	glGenTextures(1, &m_GBufferDepthTex);
 	glBindTexture(GL_TEXTURE_2D, m_GBufferDepthTex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
@@ -259,8 +255,24 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 		ImGui::Begin("Simulation Settings", &m_bShowSimSettings);
 		ImGui::Checkbox("Run Simulation", &m_bIsRunning);
 
-		// [CHANGED] Replaced Days per second int slider with Hours per second float slider
 		ImGui::SliderFloat("Hours per second", &StarSystem.m_HPS, 0.1f, 720.0f, "%.1f");
+
+		if(m_Trajectories.m_Show)
+		{
+			bool bTrajChanged = false;
+			if(ImGui::SliderInt("Prediction Duration", &m_Trajectories.m_PredictionDuration, 1000, 100000000))
+				bTrajChanged = true;
+
+			if(ImGui::SliderInt("Sample Rate", &m_Trajectories.m_SampleRate, 1, 5000))
+				bTrajChanged = true;
+
+			if(bTrajChanged)
+				m_bPredictionResetRequested = true;
+
+			ImGui::TextColored(ImVec4(0.7, 0.7, 0.7, 1.0), "Visual Points: %d", m_Trajectories.GetMaxVisualPoints());
+			float durationHours = (float)m_Trajectories.m_PredictionDuration * (float)StarSystem.m_DeltaTime / 3600.0f;
+			ImGui::TextColored(ImVec4(0.7, 0.7, 0.7, 1.0), "Simulated Time: %.1f Hours", durationHours);
+		}
 
 		ImGui::Separator();
 		ImGui::Text("Rendering");
@@ -275,8 +287,8 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 
 		ImGui::Separator();
 		ImGui::Text("Debug");
-		ImGui::SliderInt("Atmosphere Debug Mode", &m_DebugMode, 0, 5);
-		ImGui::Text("0:Nrm 1:RawZ 2:LinDist 3:Occ 4:RayDir 5:Shadow");
+		/* 		ImGui::SliderInt("Atmosphere Debug Mode", &m_DebugMode, 0, 5);
+				ImGui::Text("0:Nrm 1:RawZ 2:LinDist 3:Occ 4:RayDir 5:Shadow"); */
 		if(ImGui::Button("Benchmark"))
 		{
 			ReloadSimulation();
@@ -419,6 +431,9 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	if(m_bShowWireframe)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	if(m_bShowGrid)
+		m_Grid.Render(StarSystem, m_Camera);
+
 	// ========================================================
 	// COPY FBO TO SCREEN
 	// ========================================================
@@ -445,9 +460,6 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 		m_Atmosphere.Render(StarSystem, m_Camera, 0, m_ShadowMapTexture, m_LightSpaceMatrix, m_DebugMode);
 	}
 
-	if(m_bShowGrid)
-		m_Grid.Render(StarSystem, m_Camera);
-
 	m_Markers.Render(StarSystem, m_Camera);
 
 	ImGui::Render();
@@ -459,7 +471,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	s_LastFrame = std::chrono::steady_clock::now();
 }
 
-// ... [OnExit, Callbacks same as before] ...
+//. [OnExit, Callbacks same as before] ...
 
 void CGraphics::OnExit()
 {
