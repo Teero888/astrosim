@@ -262,6 +262,21 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 			ImGui::TextColored(ImVec4(0.7, 0.7, 0.7, 1.0), "Simulated Time: %.1f Hours", durationHours);
 		}
 
+		if(ImGui::CollapsingHeader("LOD Tuning", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			if(m_Camera.m_pFocusedBody && m_BodyMeshes.count(m_Camera.m_pFocusedBody->m_Id))
+			{
+				auto *pMesh = m_BodyMeshes[m_Camera.m_pFocusedBody->m_Id];
+
+				ImGui::Checkbox("Visualize Octree", &pMesh->m_bVisualizeOctree);
+				ImGui::SliderFloat("Split Ratio", &pMesh->m_SplitMultiplier, 0.01f, 1.0f);
+				ImGui::SliderFloat("Merge Ratio", &pMesh->m_MergeMultiplier, 0.01f, 1.0f);
+
+				if(pMesh->m_MergeMultiplier >= pMesh->m_SplitMultiplier)
+					ImGui::TextColored(ImVec4(1, 0, 0, 1), "Warning: Merge >= Split causes flickering!");
+			}
+		}
+
 		ImGui::Separator();
 		ImGui::Text("Rendering");
 		ImGui::Checkbox("Show Atmosphere", &m_bShowAtmosphere);
@@ -275,14 +290,18 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 
 		ImGui::Separator();
 		ImGui::Text("Debug");
-		/* 		ImGui::SliderInt("Atmosphere Debug Mode", &m_DebugMode, 0, 5);
+		/* ImGui::SliderInt("Atmosphere Debug Mode", &m_DebugMode, 0, 5);
 				ImGui::Text("0:Nrm 1:RawZ 2:LinDist 3:Occ 4:RayDir 5:Shadow"); */
 		if(ImGui::Button("Benchmark"))
 		{
 			ReloadSimulation();
 			printf("TPS: %d\n", m_pStarSystem->Benchmark());
 		}
-		ImGui::Text("Current TPS: %.5f", (m_pStarSystem->m_HPS * (3600.0 / m_pStarSystem->m_DeltaTime)));
+		ImGui::Text("Current TPS: %d", (int)(m_pStarSystem->m_HPS * (3600.0 / m_pStarSystem->m_DeltaTime)));
+		int Count = 0;
+		for(auto &Mesh : m_BodyMeshes)
+			Count += Mesh.second->m_GenerationQueue.size();
+		ImGui::Text("Gen Queue Size: %d", Count);
 		ImGui::End();
 	}
 
@@ -408,6 +427,10 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	}
 	if(m_bShowWireframe)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	// Render Debug Boxes
+	for(auto &p : m_BodyMeshes)
+		p.second->RenderDebug(m_Camera);
 
 	if(m_bShowGrid)
 		m_Grid.Render(StarSystem, m_Camera);

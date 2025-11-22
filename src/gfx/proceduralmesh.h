@@ -39,10 +39,11 @@ public:
 	void Update(CCamera &Camera);
 
 	void Render(const CCamera &Camera, const SBody *pLightBody, bool bIsShadowPass);
+	void RenderDebug(const CCamera &Camera);
 
 	void Destroy();
 
-	void AddToGenerationQueue(std::shared_ptr<COctreeNode> pNode);
+	void AddToGenerationQueue(std::shared_ptr<COctreeNode> pNode, double distToCam);
 	void CheckApplyQueue();
 	void GenerationWorkerLoop();
 
@@ -54,14 +55,31 @@ public:
 	std::array<glm::vec4, 6> m_FrustumPlanes;
 	void CalculateFrustum(const CCamera &Camera);
 
-private:
+	// Tunable LOD settings
+	float m_SplitMultiplier = 0.2f;
+	float m_MergeMultiplier = 0.1f;
+	bool m_bVisualizeOctree = false;
+
 	SBody *m_pBody = nullptr;
 	CShader m_Shader;
 	std::shared_ptr<COctreeNode> m_pRootNode;
 
 	CTerrainGenerator m_TerrainGenerator;
 
-	std::queue<std::shared_ptr<COctreeNode>> m_GenerationQueue;
+	// Priority Queue Task
+	struct SGenTask
+	{
+		std::shared_ptr<COctreeNode> m_pNode;
+		double m_Priority; // Distance to camera
+
+		// we want smallest distance at top, so operator< returns true if lhs has HIGHER distance
+		bool operator<(const SGenTask &other) const
+		{
+			return m_Priority > other.m_Priority;
+		}
+	};
+
+	std::priority_queue<SGenTask> m_GenerationQueue;
 	std::mutex m_GenQueueMutex;
 	std::condition_variable m_GenQueueCV;
 
@@ -72,6 +90,11 @@ private:
 
 	std::vector<std::thread> m_vWorkerThreads;
 	std::atomic<bool> m_bRunWorker;
+
+private:
+	void InitDebug();
+	CShader m_DebugShader;
+	GLuint m_DebugCubeVAO = 0, m_DebugCubeVBO = 0, m_DebugCubeEBO = 0;
 };
 
 class COctreeNode : public std::enable_shared_from_this<COctreeNode>
@@ -86,6 +109,9 @@ public:
 	void Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const Vec3 &PlanetAbsolutePos, const glm::mat4 &RotationMat);
 	void GenerateMesh();
 	void ApplyMeshBuffers();
+
+	// Friend for debug rendering
+	friend class CProceduralMesh;
 
 private:
 	void Subdivide();

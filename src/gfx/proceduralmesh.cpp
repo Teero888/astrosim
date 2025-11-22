@@ -6,6 +6,7 @@
 #include <embedded_shaders.h>
 
 #include <glm/gtc/matrix_access.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/quaternion.hpp>
@@ -14,83 +15,68 @@
 #include <unordered_map>
 
 // =========================================================
-// CULLING HELPER FUNCTIONS
+// HELPER FUNCTIONS
 // =========================================================
 
 // Calculate Frustum Planes from View*Projection Matrix
-// Resulting planes are in the same space as the View Matrix (Camera-Relative World Space)
 void CProceduralMesh::CalculateFrustum(const CCamera &Camera)
 {
 	glm::mat4 VP = Camera.m_Projection * Camera.m_View;
 
-	// Left
-	m_FrustumPlanes[0] = glm::row(VP, 3) + glm::row(VP, 0);
-	// Right
-	m_FrustumPlanes[1] = glm::row(VP, 3) - glm::row(VP, 0);
-	// Bottom
-	m_FrustumPlanes[2] = glm::row(VP, 3) + glm::row(VP, 1);
-	// Top
-	m_FrustumPlanes[3] = glm::row(VP, 3) - glm::row(VP, 1);
-	// Near
-	m_FrustumPlanes[4] = glm::row(VP, 3) + glm::row(VP, 2);
-	// Far
-	m_FrustumPlanes[5] = glm::row(VP, 3) - glm::row(VP, 2);
+	m_FrustumPlanes[0] = glm::row(VP, 3) + glm::row(VP, 0); // Left
+	m_FrustumPlanes[1] = glm::row(VP, 3) - glm::row(VP, 0); // Right
+	m_FrustumPlanes[2] = glm::row(VP, 3) + glm::row(VP, 1); // Bottom
+	m_FrustumPlanes[3] = glm::row(VP, 3) - glm::row(VP, 1); // Top
+	m_FrustumPlanes[4] = glm::row(VP, 3) + glm::row(VP, 2); // Near
+	m_FrustumPlanes[5] = glm::row(VP, 3) - glm::row(VP, 2); // Far
 
-	// Normalize planes
 	for(int i = 0; i < 6; ++i)
 	{
-		float length = glm::length(glm::vec3(m_FrustumPlanes[i]));
-		m_FrustumPlanes[i] /= length;
+		float Length = glm::length(glm::vec3(m_FrustumPlanes[i]));
+		m_FrustumPlanes[i] /= Length;
 	}
 }
 
-// Check if a sphere is inside the frustum
-// Center is in Camera-Relative Space
+// Checks if a Sphere (in Camera-Relative World Space) is inside the frustum
 bool IsSphereInFrustum(const std::array<glm::vec4, 6> &planes, const glm::vec3 &center, float radius)
 {
 	for(int i = 0; i < 6; ++i)
 	{
-		float dist = glm::dot(glm::vec3(planes[i]), center) + planes[i].w;
-		if(dist < -radius)
-			return false; // Fully outside this plane
+		float Dist = glm::dot(glm::vec3(planes[i]), center) + planes[i].w;
+		if(Dist < -radius)
+			return false;
 	}
 	return true;
 }
 
-// Horizon Culling: Returns true if the chunk is completely hidden by the planet curvature
+// Distance to Axis Aligned Bounding Box (All inputs must be in the SAME Local Space)
+double GetDistanceToBox(const Vec3 &pointLocal, const Vec3 &boxCenterLocal, double boxSize)
+{
+	double HalfSize = boxSize * 0.5;
+	// Calculate delta from the box surface
+	double dx = std::max(0.0, std::abs(pointLocal.x - boxCenterLocal.x) - HalfSize);
+	double dy = std::max(0.0, std::abs(pointLocal.y - boxCenterLocal.y) - HalfSize);
+	double dz = std::max(0.0, std::abs(pointLocal.z - boxCenterLocal.z) - HalfSize);
+
+	return std::sqrt(dx * dx + dy * dy + dz * dz);
+}
+
 bool IsChunkOccluded(const Vec3 &chunkCenterRelPlanet, double chunkSize, const Vec3 &camPosRelPlanet, double planetRadius)
 {
-	// Calculate distance from planet center to camera
-	double distToCam = camPosRelPlanet.length();
-
-	// If camera is inside the "horizon limit" (close to surface + chunk buffer), don't cull.
-	// This prevents culling chunks when we are standing on them.
-	if(distToCam < planetRadius + chunkSize * 2.0)
+	double DistToCam = camPosRelPlanet.length();
+	// Don't cull if we are very close (on top of the chunk)
+	if(DistToCam < planetRadius + chunkSize * 4.0)
 		return false;
 
-	// Calculate Horizon Distance (Distance from Planet Center to the Horizon Plane)
-	// Horizon Plane is perpendicular to the vector P->C.
-	// dist_horizon = R^2 / D
-	double horizonDistFromCenter = (planetRadius * planetRadius) / distToCam;
+	// Horizon Culling Math
+	double HorizonDistFromCenter = (planetRadius * planetRadius) / DistToCam;
+	Vec3 CamDir = camPosRelPlanet / DistToCam;
+	double ProjectedDist = chunkCenterRelPlanet.dot(CamDir);
+	double ChunkBoundingRadius = chunkSize * 0.9; // Conservative radius
 
-	// Project Chunk Center onto the Planet->Camera axis
-	// P_proj = Dot(ChunkVec, Normalize(CamVec))
-	Vec3 camDir = camPosRelPlanet / distToCam; // Normalize
-	double projectedDist = chunkCenterRelPlanet.dot(camDir);
-
-	// Check if Chunk is "below" the horizon plane
-	// We add the chunk's bounding radius to be conservative.
-	// Bounding radius of a cube is size * sqrt(3) / 2 ~= size * 0.866
-	double chunkBoundingRadius = chunkSize * 0.87;
-
-	// If the furthest point of the chunk is still closer to the planet center than the horizon plane,
-	// AND it is on the front-facing hemisphere side relative to the camera axis (handled by dot product sign logic implicitly),
-	// actually, we just need to check if it's "behind" the plane defined by horizonDistFromCenter.
-	// Since the camera is at distance D (where D > horizonDist), "behind" means < horizonDist.
-	if(projectedDist + chunkBoundingRadius < horizonDistFromCenter)
-	{
-		return true; // Occluded
-	}
+	// If the chunk is "below" the horizon line relative to the camera
+	if(ProjectedDist + ChunkBoundingRadius < HorizonDistFromCenter)
+		return true;
 
 	return false;
 }
@@ -129,6 +115,10 @@ void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution
 
 	m_Shader.CompileShader(Shaders::VERT_BODY, Shaders::FRAG_BODY);
 
+	// Initialize Debug Shader and Buffers
+	m_DebugShader.CompileShader(Shaders::VERT_SOLID, Shaders::FRAG_SOLID);
+	InitDebug();
+
 	if(m_BodyType == EBodyType::TERRESTRIAL)
 		m_TerrainGenerator.Init(pBody->m_Id + pBody->m_RenderParams.m_Seed, pBody->m_RenderParams.m_Terrain, pBody->m_RenderParams.m_TerrainType);
 
@@ -138,7 +128,6 @@ void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution
 		float max_displacement_factor = terrainParams.m_ContinentHeight + terrainParams.m_MountainHeight + terrainParams.m_HillsHeight + terrainParams.m_DetailHeight;
 		float scale_factor = 1.0f + max_displacement_factor * 1.2f;
 
-		// Use double precision for root size calculation
 		double RootSize = m_pBody->m_RenderParams.m_Radius * 2.0 * (double)scale_factor;
 		m_pRootNode = std::make_shared<COctreeNode>(this, std::weak_ptr<COctreeNode>(), Vec3(0.0), RootSize, 0, voxelResolution);
 	}
@@ -148,6 +137,82 @@ void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution
 
 	for(unsigned int i = 0; i < NumThreads; ++i)
 		m_vWorkerThreads.emplace_back(&CProceduralMesh::GenerationWorkerLoop, this);
+}
+
+void CProceduralMesh::InitDebug()
+{
+	float vertices[] = {
+		-0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f,
+		-0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f};
+	unsigned int indices[] = {
+		0, 1, 1, 2, 2, 3, 3, 0, // Back face
+		4, 5, 5, 6, 6, 7, 7, 4, // Front face
+		0, 4, 1, 5, 2, 6, 3, 7 // Connecting lines
+	};
+	glGenVertexArrays(1, &m_DebugCubeVAO);
+	glGenBuffers(1, &m_DebugCubeVBO);
+	glGenBuffers(1, &m_DebugCubeEBO);
+	glBindVertexArray(m_DebugCubeVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, m_DebugCubeVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_DebugCubeEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+	glEnableVertexAttribArray(0);
+	glBindVertexArray(0);
+}
+
+void CProceduralMesh::RenderDebug(const CCamera &Camera)
+{
+	if(!m_bVisualizeOctree || !m_pRootNode)
+		return;
+
+	glDisable(GL_DEPTH_TEST);
+
+	m_DebugShader.Use();
+	m_DebugShader.SetMat4("uView", Camera.m_View);
+	m_DebugShader.SetMat4("uProjection", Camera.m_Projection);
+
+	Quat q = m_pBody->m_SimParams.m_Orientation;
+	glm::quat glmQ(q.w, q.x, q.y, q.z);
+	glm::mat4 rotationMat = glm::mat4_cast(glmQ);
+
+	std::function<void(COctreeNode *)> DrawNode = [&](COctreeNode *node) {
+		if(!node)
+			return;
+
+		if(node->m_bIsLeaf || node->m_VAO != 0)
+		{
+			Vec3 planetCamRel = m_pBody->m_SimParams.m_Position - Camera.m_AbsolutePosition;
+			glm::mat4 matPlanetPos = glm::translate(glm::mat4(1.0f), (glm::vec3)planetCamRel);
+			glm::mat4 matNodePos = glm::translate(glm::mat4(1.0f), (glm::vec3)node->m_Center);
+			glm::mat4 matScale = glm::scale(glm::mat4(1.0f), glm::vec3(node->m_Size));
+
+			/*
+			 * Matrix Order:
+			 * 1. Scale box to Node Size
+			 * 2. Translate box to Node Center (Local)
+			 * 3. Rotate System (Planet Rotation)
+			 * 4. Translate System to Planet Position (Camera Relative)
+			 */
+			glm::mat4 model = matPlanetPos * rotationMat * matNodePos * matScale;
+			m_DebugShader.SetMat4("uModel", model);
+
+			glBindVertexArray(m_DebugCubeVAO);
+			glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+		}
+
+		if(!node->m_bIsLeaf)
+		{
+			for(int i = 0; i < 8; ++i)
+				DrawNode(node->m_pChildren[i].get());
+		}
+	};
+
+	DrawNode(m_pRootNode.get());
+	glBindVertexArray(0);
+
+	glEnable(GL_DEPTH_TEST);
 }
 
 void CProceduralMesh::Update(CCamera &Camera)
@@ -216,9 +281,8 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody, boo
 	m_Shader.SetVec3("uRock", m_pBody->m_RenderParams.m_Colors.m_Rock);
 	m_Shader.SetVec3("uTundra", m_pBody->m_RenderParams.m_Colors.m_Tundra);
 
-	// Get rotation as GLM matrix from our custom physics quaternion
 	Quat q = m_pBody->m_SimParams.m_Orientation;
-	glm::quat glmQ(q.w, q.x, q.y, q.z); // GLM constructor is (w, x, y, z)
+	glm::quat glmQ(q.w, q.x, q.y, q.z);
 	glm::mat4 rotationMat = glm::mat4_cast(glmQ);
 
 	if(m_pRootNode)
@@ -239,13 +303,20 @@ void CProceduralMesh::Destroy()
 
 	m_pRootNode = nullptr;
 	m_Shader.Destroy();
+	m_DebugShader.Destroy();
+	if(m_DebugCubeVAO)
+		glDeleteVertexArrays(1, &m_DebugCubeVAO);
+	if(m_DebugCubeVBO)
+		glDeleteBuffers(1, &m_DebugCubeVBO);
+	if(m_DebugCubeEBO)
+		glDeleteBuffers(1, &m_DebugCubeEBO);
 }
 
-void CProceduralMesh::AddToGenerationQueue(std::shared_ptr<COctreeNode> pNode)
+void CProceduralMesh::AddToGenerationQueue(std::shared_ptr<COctreeNode> pNode, double distToCam)
 {
 	{
 		std::lock_guard<std::mutex> lock(m_GenQueueMutex);
-		m_GenerationQueue.push(pNode);
+		m_GenerationQueue.push({pNode, distToCam});
 	}
 	m_GenQueueCV.notify_one();
 }
@@ -286,7 +357,8 @@ void CProceduralMesh::GenerationWorkerLoop()
 
 			if(!m_GenerationQueue.empty())
 			{
-				pNode = m_GenerationQueue.front();
+				// Get highest priority (shortest distance)
+				pNode = m_GenerationQueue.top().m_pNode;
 				m_GenerationQueue.pop();
 			}
 		}
@@ -311,7 +383,6 @@ void CProceduralMesh::GenerationWorkerLoop()
 	}
 }
 
-// Constructor now takes Vec3 center and double size
 COctreeNode::COctreeNode(CProceduralMesh *pOwnerMesh, std::weak_ptr<COctreeNode> pParent, Vec3 center, double size, int level, int voxelResolution) :
 	m_pOwnerMesh(pOwnerMesh),
 	m_pParent(pParent),
@@ -349,7 +420,6 @@ void COctreeNode::GenerateMesh()
 
 	std::vector<STerrainOutput> vTerrainGrid(NumGridPoints);
 
-	// Use double precision for grid stepping
 	double StepSize = m_Size / (double)res;
 	Vec3 StartCorner = m_Center - Vec3(m_Size * 0.5);
 	Vec3 SamplingStartCorner = StartCorner - Vec3((double)Padding * StepSize);
@@ -362,12 +432,8 @@ void COctreeNode::GenerateMesh()
 		{
 			for(int x = 0; x <= PaddedRes; ++x)
 			{
-				// High Precision World Position
 				Vec3 world_pos = SamplingStartCorner + Vec3((double)x * StepSize, (double)y * StepSize, (double)z * StepSize);
-
 				int idx = x + y * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
-
-				// Pass double precision vector to Terrain Generator
 				vTerrainGrid[idx] = m_pOwnerMesh->m_TerrainGenerator.GetTerrainOutput(world_pos, radius);
 			}
 		}
@@ -392,7 +458,6 @@ void COctreeNode::GenerateMesh()
 		{
 			for(int x = Padding; x < Padding + res; ++x)
 			{
-				// Corners must be Vec3 (double)
 				Vec3 Corners[8];
 				float Densities[8];
 				int CornerGlobalIndices[8];
@@ -438,10 +503,7 @@ void COctreeNode::GenerateMesh()
 
 							float t = (glm::abs(d1 - d2) > 0.00001f) ? (0.0f - d1) / (d2 - d1) : 0.5f;
 
-							// Interpolate position in Double Precision
 							Vec3 posDouble = p1 * (1.0 - (double)t) + p2 * (double)t;
-
-							// Analytic Normal Calculation
 							glm::vec3 norm = m_pOwnerMesh->m_TerrainGenerator.CalculateDensityGradient(posDouble, radius);
 
 							STerrainOutput t1 = vTerrainGrid[c1_global];
@@ -453,11 +515,8 @@ void COctreeNode::GenerateMesh()
 							float mask = glm::mix(t1.material_mask, t2.material_mask, t);
 
 							SProceduralVertex vert;
-
-							// Subtract Node Center from Absolute Position.
 							Vec3 localPos = posDouble - m_Center;
 							vert.position = (glm::vec3)localPos;
-
 							vert.normal = norm;
 							vert.texCoord = glm::vec2((float)posDouble.x, (float)posDouble.z) / 1000.0f;
 							vert.color_data = glm::vec4(elev, temp, moist, mask);
@@ -538,46 +597,57 @@ void COctreeNode::ApplyMeshBuffers()
 
 void COctreeNode::Update(CCamera &Camera)
 {
-	double LODMetric;
+	bool bSplit;
+	bool bMerge;
+	double DistToBox = 0.f;
 
-	// minimum LOD to avoid issues with the atmosphere and lowpoly terrain
+	// split until minimum is hit
 	if(m_Level <= 3)
-		LODMetric = 0.0;
+	{
+		bSplit = true;
+		bMerge = false;
+	}
 	else
 	{
 		Vec3 CamPosRelPlanet = Camera.m_AbsolutePosition - m_pOwnerMesh->m_pBody->m_SimParams.m_Position;
 
-		if(m_Level > 0 && IsChunkOccluded(m_Center, m_Size, CamPosRelPlanet, m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius))
-		{
-			if(!m_bIsLeaf)
-				Merge();
-			return;
-		}
-
 		Quat q = m_pOwnerMesh->m_pBody->m_SimParams.m_Orientation;
-		Vec3 NodeCenterWorld = q.RotateVector(m_Center); // Rotate local center to world relative
-		Vec3 NodePosRelCam = NodeCenterWorld - CamPosRelPlanet;
-		float sphereRadius = (float)(m_Size * 0.87); // 0.5 * sqrt(3)
-		if(m_Level > 0 && !IsSphereInFrustum(m_pOwnerMesh->m_FrustumPlanes, (glm::vec3)NodePosRelCam, sphereRadius))
+		Vec3 CamPosLocal = q.Conjugate().RotateVector(CamPosRelPlanet);
+
+		Vec3 NodeCenterWorld = q.RotateVector(m_Center);
+		double sphereRadius = m_Size * 0.9;
+
+		if(m_Level > 0)
 		{
-			if(!m_bIsLeaf)
-				Merge();
-			return;
+			// Horizon Culling Planet Center to Camera vs Chunk
+			if(IsChunkOccluded(NodeCenterWorld, m_Size, CamPosRelPlanet, m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius))
+			{
+				if(!m_bIsLeaf)
+					Merge();
+				return;
+			}
+
+			// Frustum Culling
+			Vec3 NodePosRelCam = NodeCenterWorld - CamPosRelPlanet;
+			if(!IsSphereInFrustum(m_pOwnerMesh->m_FrustumPlanes, (glm::vec3)NodePosRelCam, (float)sphereRadius))
+			{
+				if(!m_bIsLeaf)
+					Merge();
+				return;
+			}
 		}
-		double DistToCenter = NodePosRelCam.length();
-		double DistToSurface = std::max(0.0, DistToCenter - sphereRadius);
-		double Dot = glm::dot(glm::normalize((glm::vec3)CamPosRelPlanet), glm::normalize((glm::vec3)NodeCenterWorld));
-		double LODPenalty = (Dot < 0.0) ? 2.0 : 1.0;
 
-		LODMetric = (DistToSurface / m_Size) * LODPenalty;
+		DistToBox = std::max(0.1, GetDistanceToBox(CamPosLocal, m_Center, m_Size));
+
+		double Ratio = m_Size / DistToBox;
+
+		bSplit = Ratio > m_pOwnerMesh->m_SplitMultiplier;
+		bMerge = Ratio < m_pOwnerMesh->m_MergeMultiplier;
 	}
-
-	const double LOD_SPLIT_THRESHOLD = 10.0;
-	const double LOD_MERGE_THRESHOLD = 20.0;
 
 	if(m_bIsLeaf)
 	{
-		if(LODMetric < LOD_SPLIT_THRESHOLD && m_Level < MAX_LOD_LEVEL)
+		if(bSplit && m_Level < MAX_LOD_LEVEL)
 		{
 			if(m_VAO != 0)
 			{
@@ -588,14 +658,14 @@ void COctreeNode::Update(CCamera &Camera)
 			else if(!m_bIsGenerating && !m_bHasGeneratedData && !m_bGenerationAttempted)
 			{
 				m_bIsGenerating = true;
-				m_pOwnerMesh->AddToGenerationQueue(shared_from_this());
+				// Add to queue with distance priority!
+				m_pOwnerMesh->AddToGenerationQueue(shared_from_this(), DistToBox);
 			}
 		}
-		// Note: If VAO is 0, we might still be generating. Don't merge.
 	}
 	else
 	{
-		if(LODMetric > LOD_MERGE_THRESHOLD && m_Level > 0)
+		if(bMerge && m_Level > 0)
 			Merge();
 		else
 			for(int i = 0; i < 8; ++i)
@@ -607,7 +677,6 @@ void COctreeNode::Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const V
 {
 	Vec3 planetCamRel = PlanetAbsolutePos - CameraAbsolutePos;
 	glm::mat4 matPlanetPos = glm::translate(glm::mat4(1.0f), (glm::vec3)planetCamRel);
-	// Node Center is Double precision local coordinate
 	glm::mat4 matNodePos = glm::translate(glm::mat4(1.0f), (glm::vec3)m_Center);
 	glm::mat4 NodeModel = matPlanetPos * RotationMat * matNodePos;
 
@@ -686,6 +755,6 @@ void COctreeNode::Merge()
 		m_bIsGenerating = true;
 		m_bGenerationAttempted = false;
 		m_bHasGeneratedData = false;
-		m_pOwnerMesh->AddToGenerationQueue(shared_from_this());
+		m_pOwnerMesh->AddToGenerationQueue(shared_from_this(), 0.0); // Merge fallback
 	}
 }

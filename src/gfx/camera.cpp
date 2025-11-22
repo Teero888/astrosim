@@ -80,6 +80,9 @@ void CCamera::SetBodyRotationMode(bool bEnable)
 
 void CCamera::UpdateViewMatrix()
 {
+	if(!m_pFocusedBody)
+		return;
+
 	m_Projection = glm::perspective(glm::radians(m_FOV), m_ScreenSize.x / m_ScreenSize.y, NEAR_PLANE, FAR_PLANE);
 
 	glm::quat PlanetRot = glm::quat(1.0, 0.0, 0.0, 0.0);

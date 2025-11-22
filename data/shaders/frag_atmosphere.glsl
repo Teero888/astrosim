@@ -102,7 +102,7 @@ void main()
 		float viewDistUnit = length(worldPos) / u_realPlanetRadius;
 		tEnd = min(tEnd, viewDistUnit);
 	}
-    
+
 	if(tStart >= tEnd)
 	{
 		FragColor = vec4(0.0);
