@@ -219,25 +219,13 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 
 	float deltaTime = (float)m_FrameTime;
 	if(!m_pImGuiIO->WantCaptureKeyboard)
-	{
-		if(glfwGetKey(m_pWindow, GLFW_KEY_W) == GLFW_PRESS)
-			m_Camera.ProcessKeyboard(0, deltaTime);
-		if(glfwGetKey(m_pWindow, GLFW_KEY_S) == GLFW_PRESS)
-			m_Camera.ProcessKeyboard(1, deltaTime);
-		if(glfwGetKey(m_pWindow, GLFW_KEY_A) == GLFW_PRESS)
-			m_Camera.ProcessKeyboard(2, deltaTime);
-		if(glfwGetKey(m_pWindow, GLFW_KEY_D) == GLFW_PRESS)
-			m_Camera.ProcessKeyboard(3, deltaTime);
-		if(glfwGetKey(m_pWindow, GLFW_KEY_Q) == GLFW_PRESS)
-			m_Camera.ProcessKeyboard(4, deltaTime);
-		if(glfwGetKey(m_pWindow, GLFW_KEY_E) == GLFW_PRESS)
-			m_Camera.ProcessKeyboard(5, deltaTime);
-	}
+		m_Camera.ProcessKeyboard(deltaTime);
 
 	if(std::fabs(m_Camera.m_WantedViewDistance - m_Camera.m_ViewDistance) > 1e-3)
 		m_Camera.UpdateViewMatrix();
 
 	// == UI Logic ==
+	// TODO: move to another file
 	if(ImGui::BeginMainMenuBar())
 	{
 		if(ImGui::BeginMenu("Windows"))
@@ -313,6 +301,9 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 			ImGui::Text("Altitude: %.2f km", alt / 1000.0);
 			ImGui::Text("Rel Pos: %.2e, %.2e, %.2e", m_Camera.m_LocalPosition.x, m_Camera.m_LocalPosition.y, m_Camera.m_LocalPosition.z);
 		}
+		bool bRotateWithBody = m_Camera.m_RotateWithBody;
+		if(ImGui::Checkbox("Lock to Surface Rotation", &bRotateWithBody))
+			m_Camera.SetBodyRotationMode(bRotateWithBody);
 		ImGui::End();
 	}
 
@@ -352,18 +343,17 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		// Use standard Back-Face Culling.
-		// Acne is handled by bias logic in shaders.
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 
-		Vec3 sunPos = StarSystem.m_pSunBody->m_SimParams.m_Position;
-		Vec3 bodyPos = m_Camera.m_pFocusedBody->m_SimParams.m_Position;
-		glm::vec3 lightDir = glm::normalize((glm::vec3)(sunPos - bodyPos));
+		Vec3 SunPos = StarSystem.m_pSunBody->m_SimParams.m_Position;
+		Vec3 BodyPos = m_Camera.m_pFocusedBody->m_SimParams.m_Position;
+		glm::vec3 LightDir = glm::normalize((glm::vec3)(SunPos - BodyPos));
 
 		double Alt = m_Camera.m_ViewDistance - m_Camera.m_pFocusedBody->m_RenderParams.m_Radius;
 		ShadowOrthoSize = (float)std::max(10000.0, Alt * 1.5);
 
-		glm::vec3 LightCamPos = (glm::vec3)m_Camera.m_LocalPosition + lightDir * ShadowOrthoSize;
+		glm::vec3 LightCamPos = (glm::vec3)m_Camera.m_LocalPosition + LightDir * ShadowOrthoSize;
 		glm::mat4 LightView = glm::lookAt(LightCamPos, (glm::vec3)m_Camera.m_LocalPosition, glm::vec3(0, 1, 0));
 
 		// Infinite Z Range for Shadows
@@ -379,8 +369,8 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 
 		if(m_BodyMeshes.count(m_Camera.m_pFocusedBody->m_Id))
 		{
-			auto mesh = m_BodyMeshes[m_Camera.m_pFocusedBody->m_Id];
-			mesh->Render(ShadowCam, StarSystem.m_pSunBody, true);
+			auto Mesh = m_BodyMeshes[m_Camera.m_pFocusedBody->m_Id];
+			Mesh->Render(ShadowCam, StarSystem.m_pSunBody, true);
 		}
 
 		glDisable(GL_CULL_FACE);
@@ -410,9 +400,9 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 			auto &Body = StarSystem.m_vBodies[i];
 			if(m_BodyMeshes.count(Body.m_Id))
 			{
-				auto mesh = m_BodyMeshes[Body.m_Id];
-				mesh->Update(m_Camera);
-				mesh->Render(m_Camera, m_pStarSystem->m_pSunBody, false);
+				auto Mesh = m_BodyMeshes[Body.m_Id];
+				Mesh->Update(m_Camera);
+				Mesh->Render(m_Camera, m_pStarSystem->m_pSunBody, false);
 			}
 		}
 	}

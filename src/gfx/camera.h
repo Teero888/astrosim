@@ -49,13 +49,15 @@ struct CCamera
 	glm::mat4 m_View;
 	glm::mat4 m_Projection;
 
+	bool m_RotateWithBody = false;
 	int m_LOD = 0;
 
 	void SetBody(SBody *pBody);
+	void SetBodyRotationMode(bool bEnable);
 	void ToggleMode();
 	void ResetCameraAngle();
 	void UpdateViewMatrix();
-	void ProcessKeyboard(int direction, float deltaTime);
+	void ProcessKeyboard(float DeltaTime);
 	void ProcessMouse(float xoffset, float yoffset);
 };
 
