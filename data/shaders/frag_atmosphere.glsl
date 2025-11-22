@@ -103,11 +103,11 @@ void main()
 		tEnd = min(tEnd, viewDistUnit);
 	}
 
-	vec2 planetHit = raySphereIntersect(rayOrigin, rayDir, earthR);
+/* 	vec2 planetHit = raySphereIntersect(rayOrigin, rayDir, earthR);
 	if(planetHit.x < 1000.0 && planetHit.x > 0.0)
 	{
 		tEnd = min(tEnd, planetHit.x);
-	}
+	} */
 
 	if(tStart >= tEnd)
 	{

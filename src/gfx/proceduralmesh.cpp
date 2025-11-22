@@ -538,62 +538,41 @@ void COctreeNode::ApplyMeshBuffers()
 
 void COctreeNode::Update(CCamera &Camera)
 {
-	// Get Relative Positions (Double Precision)
-	// NodeCenter is relative to PlanetCenter.
-	// PlanetCenter relative to PlanetCenter is (0,0,0).
-	// Camera relative to PlanetCenter:
-	Vec3 CamPosRelPlanet = Camera.m_AbsolutePosition - m_pOwnerMesh->m_pBody->m_SimParams.m_Position;
+	double LODMetric;
 
-	// Horizon Culling
-	// We only cull nodes that are definitely not the root (Level 0), and we double check the radius.
-	if(m_Level > 0 && IsChunkOccluded(m_Center, m_Size, CamPosRelPlanet, m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius))
-	{
-		if(!m_bIsLeaf)
-			Merge();
-		return;
-	}
-
-	// Frustum Culling
-	// Frustum planes are in Camera-Relative space.
-	// So we need the node's center in Camera-Relative space.
-	// NodePos_Rel_Cam = NodePos_Rel_Planet - CamPos_Rel_Planet
-
-	// NOTE: With rotation added, m_Center is in "Planet Local" (unrotated) space.
-	// But Frustum Planes are in "World View" space (rotated).
-	// To check frustum correctly, werotate the node's center into world space first.
-	Quat q = m_pOwnerMesh->m_pBody->m_SimParams.m_Orientation;
-	Vec3 NodeCenterWorld = q.RotateVector(m_Center); // Rotate local center to world relative
-
-	Vec3 NodePosRelCam = NodeCenterWorld - CamPosRelPlanet;
-
-	// Bounding Sphere Radius approximation for a cube
-	float sphereRadius = (float)(m_Size * 0.87); // 0.5 * sqrt(3)
-
-	// Skip culling for root or very close nodes to be safe
-	if(m_Level > 0 && !IsSphereInFrustum(m_pOwnerMesh->m_FrustumPlanes, (glm::vec3)NodePosRelCam, sphereRadius))
-	{
-		if(!m_bIsLeaf)
-			Merge();
-		return;
-	}
-
-	// LOD Calculation
-	// Calculate distance from Camera to the nearest point on the chunk's surface
-	double DistToCenter = NodePosRelCam.length();
-	double DistToSurface = std::max(0.0, DistToCenter - sphereRadius);
-
-	// Dot product check for "Behind" nodes (fallback if horizon culling misses edge cases)
-	// This helps prioritize splitting nodes facing the camera
-	double Dot = glm::dot(glm::normalize((glm::vec3)CamPosRelPlanet), glm::normalize((glm::vec3)NodeCenterWorld));
-	double LODPenalty = (Dot < 0.0) ? 2.0 : 1.0;
-
-	double LODMetric = (DistToSurface / m_Size) * LODPenalty;
-
-	// At Level 0 or 1, force split to get initial sphere shape
-	if(m_Level <= 1)
+	// minimum LOD to avoid issues with the atmosphere and lowpoly terrain
+	if(m_Level <= 3)
 		LODMetric = 0.0;
+	else
+	{
+		Vec3 CamPosRelPlanet = Camera.m_AbsolutePosition - m_pOwnerMesh->m_pBody->m_SimParams.m_Position;
 
-	const double LOD_SPLIT_THRESHOLD = 10.0; // Tuned for balance
+		if(m_Level > 0 && IsChunkOccluded(m_Center, m_Size, CamPosRelPlanet, m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius))
+		{
+			if(!m_bIsLeaf)
+				Merge();
+			return;
+		}
+
+		Quat q = m_pOwnerMesh->m_pBody->m_SimParams.m_Orientation;
+		Vec3 NodeCenterWorld = q.RotateVector(m_Center); // Rotate local center to world relative
+		Vec3 NodePosRelCam = NodeCenterWorld - CamPosRelPlanet;
+		float sphereRadius = (float)(m_Size * 0.87); // 0.5 * sqrt(3)
+		if(m_Level > 0 && !IsSphereInFrustum(m_pOwnerMesh->m_FrustumPlanes, (glm::vec3)NodePosRelCam, sphereRadius))
+		{
+			if(!m_bIsLeaf)
+				Merge();
+			return;
+		}
+		double DistToCenter = NodePosRelCam.length();
+		double DistToSurface = std::max(0.0, DistToCenter - sphereRadius);
+		double Dot = glm::dot(glm::normalize((glm::vec3)CamPosRelPlanet), glm::normalize((glm::vec3)NodeCenterWorld));
+		double LODPenalty = (Dot < 0.0) ? 2.0 : 1.0;
+
+		LODMetric = (DistToSurface / m_Size) * LODPenalty;
+	}
+
+	const double LOD_SPLIT_THRESHOLD = 10.0;
 	const double LOD_MERGE_THRESHOLD = 20.0;
 
 	if(m_bIsLeaf)
