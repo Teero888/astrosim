@@ -63,12 +63,11 @@ void CGrid::Render(CStarSystem &System, CCamera &Camera)
 	GLint loc = glGetUniformLocation(m_Shader.m_Program, "u_cameraPos");
 	glUniform3dv(loc, 1, &Camera.m_AbsolutePosition.x);
 
-	m_Shader.SetVec3("u_gridColor", glm::vec3(0.4f));
 	m_Shader.SetFloat("u_viewDistance", (float)Camera.m_ViewDistance);
 
 	// Pass focused body info for planet cutout.
 	SBody *pFocusedBody = Camera.m_pFocusedBody;
-	m_Shader.SetFloat("u_gridPlaneY", (float)pFocusedBody->m_SimParams.m_Position.y);
+
 	GLint body_loc = glGetUniformLocation(m_Shader.m_Program, "u_focusedBodyPos");
 	glUniform3dv(body_loc, 1, &pFocusedBody->m_SimParams.m_Position.x);
 	m_Shader.SetFloat("u_focusedBodyRadius", (float)pFocusedBody->m_RenderParams.m_Radius);

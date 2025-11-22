@@ -102,13 +102,7 @@ void main()
 		float viewDistUnit = length(worldPos) / u_realPlanetRadius;
 		tEnd = min(tEnd, viewDistUnit);
 	}
-
-/* 	vec2 planetHit = raySphereIntersect(rayOrigin, rayDir, earthR);
-	if(planetHit.x < 1000.0 && planetHit.x > 0.0)
-	{
-		tEnd = min(tEnd, planetHit.x);
-	} */
-
+    
 	if(tStart >= tEnd)
 	{
 		FragColor = vec4(0.0);
