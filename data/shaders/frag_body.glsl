@@ -10,6 +10,7 @@ uniform vec3 uLightDir;
 uniform vec3 uLightColor;
 uniform vec3 uObjectColor;
 uniform vec3 uViewPos;
+uniform vec3 uPlanetCenterRelCam;
 uniform float uAmbientStrength;
 uniform float uSpecularStrength;
 uniform float uShininess;
@@ -90,7 +91,7 @@ vec3 GetTerrainColor()
 		return mix(uShallowOcean, uDeepOcean, depth);
 	}
 
-	vec3 up = normalize(FragPos + uViewPos);
+	vec3 up = normalize(FragPos - uPlanetCenterRelCam);
 	float slope = 1.0 - dot(normalize(Normal), up);
 
 	vec3 terrainColor = GetBiomeColor(temp, moisture);

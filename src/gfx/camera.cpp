@@ -30,7 +30,7 @@ void CCamera::SetBody(SBody *pBody)
 			glm::quat PlanetRot(q.w, q.x, q.y, q.z);
 			glm::quat PlanetRotInv = glm::inverse(PlanetRot);
 
-			m_LocalPosition = Vec3(PlanetRotInv * (glm::vec3)WorldOffset);
+			m_LocalPosition = q.Conjugate().RotateVector(WorldOffset);
 			m_Orientation = PlanetRotInv * WorldOrientation;
 		}
 		else
@@ -55,13 +55,13 @@ void CCamera::SetBodyRotationMode(bool bEnable)
 
 	if(bEnable)
 	{
-		m_LocalPosition = Vec3(PlanetRotInv * (glm::vec3)m_LocalPosition);
+		m_LocalPosition = q.Conjugate().RotateVector(m_LocalPosition);
 		if(m_CameraMode == MODE_FREEVIEW)
 			m_Orientation = PlanetRotInv * m_Orientation;
 	}
 	else
 	{
-		m_LocalPosition = Vec3(PlanetRot * (glm::vec3)m_LocalPosition);
+		m_LocalPosition = q.RotateVector(m_LocalPosition);
 		if(m_CameraMode == MODE_FREEVIEW)
 			m_Orientation = PlanetRot * m_Orientation;
 	}
@@ -86,9 +86,11 @@ void CCamera::UpdateViewMatrix()
 	m_Projection = glm::perspective(glm::radians(m_FOV), m_ScreenSize.x / m_ScreenSize.y, NEAR_PLANE, FAR_PLANE);
 
 	glm::quat PlanetRot = glm::quat(1.0, 0.0, 0.0, 0.0);
+	Quat q = Quat::Identity();
+
 	if(m_pFocusedBody)
 	{
-		Quat q = m_pFocusedBody->m_SimParams.m_Orientation;
+		q = m_pFocusedBody->m_SimParams.m_Orientation;
 		PlanetRot = glm::quat(q.w, q.x, q.y, q.z);
 	}
 
@@ -112,7 +114,7 @@ void CCamera::UpdateViewMatrix()
 			m_Up = Vec3(PlanetRot * (glm::vec3)LocalUp);
 			m_Right = Vec3(PlanetRot * (glm::vec3)LocalRight);
 
-			Vec3 WorldOffset = Vec3(PlanetRot * (glm::vec3)(LocalDir * m_ViewDistance));
+			Vec3 WorldOffset = q.RotateVector(LocalDir * m_ViewDistance);
 			m_AbsolutePosition = m_pFocusedBody->m_SimParams.m_Position + WorldOffset;
 
 			m_LocalPosition = LocalDir * m_ViewDistance;
@@ -140,7 +142,7 @@ void CCamera::UpdateViewMatrix()
 			// m_LocalPosition is in BODY SPACE.
 
 			WorldOrientation = PlanetRot * m_Orientation;
-			Vec3 worldOffset = Vec3(PlanetRot * (glm::vec3)m_LocalPosition);
+			Vec3 worldOffset = q.RotateVector(m_LocalPosition);
 			WorldPos = m_pFocusedBody->m_SimParams.m_Position + worldOffset;
 		}
 		else
@@ -205,22 +207,6 @@ void CCamera::ToggleMode()
 
 void CCamera::ProcessKeyboard(float DeltaTime)
 {
-	int Direction = -1;
-	if(ImGui::IsKeyDown(ImGuiKey_W))
-		Direction = 0;
-	if(ImGui::IsKeyDown(ImGuiKey_S))
-		Direction = 1;
-	if(ImGui::IsKeyDown(ImGuiKey_A))
-		Direction = 2;
-	if(ImGui::IsKeyDown(ImGuiKey_D))
-		Direction = 3;
-	if(ImGui::IsKeyDown(ImGuiKey_Q))
-		Direction = 4;
-	if(ImGui::IsKeyDown(ImGuiKey_E))
-		Direction = 5;
-	if(Direction == -1)
-		return;
-
 	double Altitude = m_ViewDistance - m_pFocusedBody->m_RenderParams.m_Radius;
 	if(Altitude < 10.0)
 		Altitude = 10.0;
@@ -252,17 +238,17 @@ void CCamera::ProcessKeyboard(float DeltaTime)
 			MoveUp = m_Up;
 		}
 
-		if(Direction == 0)
+		if(ImGui::IsKeyDown(ImGuiKey_W))
 			m_LocalPosition += MoveFront * MoveSpeed; // W
-		if(Direction == 1)
+		if(ImGui::IsKeyDown(ImGuiKey_S))
 			m_LocalPosition -= MoveFront * MoveSpeed; // S
-		if(Direction == 2)
+		if(ImGui::IsKeyDown(ImGuiKey_A))
 			m_LocalPosition -= MoveRight * MoveSpeed; // A
-		if(Direction == 3)
+		if(ImGui::IsKeyDown(ImGuiKey_D))
 			m_LocalPosition += MoveRight * MoveSpeed; // D
-		if(Direction == 4)
+		if(ImGui::IsKeyDown(ImGuiKey_Q))
 			m_LocalPosition += MoveUp * MoveSpeed; // Q (Up local)
-		if(Direction == 5)
+		if(ImGui::IsKeyDown(ImGuiKey_E))
 			m_LocalPosition -= MoveUp * MoveSpeed; // E (Down local)
 
 		if(m_LocalPosition.length() > 0.1)

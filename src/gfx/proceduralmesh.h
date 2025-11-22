@@ -106,7 +106,7 @@ public:
 	~COctreeNode();
 
 	void Update(CCamera &Camera);
-	void Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const Vec3 &PlanetAbsolutePos, const glm::mat4 &RotationMat);
+	void Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const Vec3 &PlanetAbsolutePos, const Quat &PlanetOrientation);
 	void GenerateMesh();
 	void ApplyMeshBuffers();
 

@@ -183,20 +183,15 @@ void CProceduralMesh::RenderDebug(const CCamera &Camera)
 
 		if(node->m_bIsLeaf || node->m_VAO != 0)
 		{
-			Vec3 planetCamRel = m_pBody->m_SimParams.m_Position - Camera.m_AbsolutePosition;
-			glm::mat4 matPlanetPos = glm::translate(glm::mat4(1.0f), (glm::vec3)planetCamRel);
-			glm::mat4 matNodePos = glm::translate(glm::mat4(1.0f), (glm::vec3)node->m_Center);
-			glm::mat4 matScale = glm::scale(glm::mat4(1.0f), glm::vec3(node->m_Size));
+			Vec3 PlanetToCam = m_pBody->m_SimParams.m_Position - Camera.m_AbsolutePosition;
+			Vec3 NodeCenterWorld = q.RotateVector(node->m_Center);
+			Vec3 NodeToCam = PlanetToCam + NodeCenterWorld;
+			glm::mat4 MatTranslate = glm::translate(glm::mat4(1.0f), (glm::vec3)NodeToCam);
+			glm::mat4 MatScale = glm::scale(glm::mat4(1.0f), glm::vec3(node->m_Size));
 
-			/*
-			 * Matrix Order:
-			 * 1. Scale box to Node Size
-			 * 2. Translate box to Node Center (Local)
-			 * 3. Rotate System (Planet Rotation)
-			 * 4. Translate System to Planet Position (Camera Relative)
-			 */
-			glm::mat4 model = matPlanetPos * rotationMat * matNodePos * matScale;
-			m_DebugShader.SetMat4("uModel", model);
+			glm::mat4 Model = MatTranslate * rotationMat * MatScale;
+
+			m_DebugShader.SetMat4("uModel", Model);
 
 			glBindVertexArray(m_DebugCubeVAO);
 			glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
@@ -243,7 +238,8 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody, boo
 	m_Shader.SetMat4("uProjection", Camera.m_Projection);
 
 	Vec3 relativeCamPos = Camera.m_AbsolutePosition - m_pBody->m_SimParams.m_Position;
-	m_Shader.SetVec3("uViewPos", (glm::vec3)relativeCamPos);
+	m_Shader.SetVec3("uViewPos", glm::vec3(0.0f));
+	m_Shader.SetVec3("uPlanetCenterRelCam", (glm::vec3)(-relativeCamPos));
 	m_Shader.SetFloat("uAmbientStrength", 0.1f);
 
 	m_Shader.SetFloat("uSpecularStrength", 0.05f);
@@ -281,12 +277,8 @@ void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody, boo
 	m_Shader.SetVec3("uRock", m_pBody->m_RenderParams.m_Colors.m_Rock);
 	m_Shader.SetVec3("uTundra", m_pBody->m_RenderParams.m_Colors.m_Tundra);
 
-	Quat q = m_pBody->m_SimParams.m_Orientation;
-	glm::quat glmQ(q.w, q.x, q.y, q.z);
-	glm::mat4 rotationMat = glm::mat4_cast(glmQ);
-
 	if(m_pRootNode)
-		m_pRootNode->Render(m_Shader, Camera.m_AbsolutePosition, m_pBody->m_SimParams.m_Position, rotationMat);
+		m_pRootNode->Render(m_Shader, Camera.m_AbsolutePosition, m_pBody->m_SimParams.m_Position, m_pBody->m_SimParams.m_Orientation);
 }
 
 void CProceduralMesh::Destroy()
@@ -541,6 +533,111 @@ void COctreeNode::GenerateMesh()
 		}
 	}
 
+	// ==========================================
+	// SKIRT GENERATION
+	// ==========================================
+	// This pass detects vertices on the edges of the chunk and generates "skirts"
+	// (geometry pointing inwards) to hide gaps between different LOD levels.
+
+	float BoundsLimit = (float)(m_Size * 0.5) * 0.99f;
+	float SkirtDepth = (float)(StepSize * 0.5); // Depth of the skirt, proportional to voxel size
+
+	// Helper to determine boundary mask for a position
+	// 1: x-, 2: x+, 4: y-, 8: y+, 16: z-, 32: z+
+	auto GetBoundaryMask = [&](const glm::vec3 &p) -> int {
+		int mask = 0;
+		if(p.x < -BoundsLimit)
+			mask |= 1;
+		if(p.x > BoundsLimit)
+			mask |= 2;
+		if(p.y < -BoundsLimit)
+			mask |= 4;
+		if(p.y > BoundsLimit)
+			mask |= 8;
+		if(p.z < -BoundsLimit)
+			mask |= 16;
+		if(p.z > BoundsLimit)
+			mask |= 32;
+		return mask;
+	};
+
+	// We iterate only the currently generated triangles before adding skirts
+	size_t OriginalIndexCount = m_vGeneratedIndices.size();
+
+	// Map to reuse skirt vertices: key is (original_vertex_index << 6) | boundary_mask
+	// This prevents adding duplicate skirt vertices for the same corner
+	std::unordered_map<uint64_t, unsigned int> SkirtVertexMap;
+
+	auto GetOrCreateSkirtVertex = [&](unsigned int originalIdx, int boundaryMask) -> unsigned int {
+		uint64_t key = ((uint64_t)originalIdx << 6) | (uint64_t)boundaryMask;
+		if(SkirtVertexMap.find(key) != SkirtVertexMap.end())
+			return SkirtVertexMap[key];
+
+		SProceduralVertex NewVert = m_vGeneratedVertices[originalIdx];
+		// Move vertex "down" relative to the surface normal to create a skirt
+		NewVert.position -= NewVert.normal * SkirtDepth;
+
+		m_vGeneratedVertices.push_back(NewVert);
+		unsigned int newIdx = (unsigned int)m_vGeneratedVertices.size() - 1;
+		SkirtVertexMap[key] = newIdx;
+		return newIdx;
+	};
+
+	for(size_t i = 0; i < OriginalIndexCount; i += 3)
+	{
+		unsigned int i1 = m_vGeneratedIndices[i];
+		unsigned int i2 = m_vGeneratedIndices[i + 1];
+		unsigned int i3 = m_vGeneratedIndices[i + 2];
+
+		int m1 = GetBoundaryMask(m_vGeneratedVertices[i1].position);
+		int m2 = GetBoundaryMask(m_vGeneratedVertices[i2].position);
+		int m3 = GetBoundaryMask(m_vGeneratedVertices[i3].position);
+
+		// Check Edge 1-2
+		int EdgeMask = m1 & m2;
+		if(EdgeMask != 0)
+		{
+			unsigned int s1 = GetOrCreateSkirtVertex(i1, EdgeMask);
+			unsigned int s2 = GetOrCreateSkirtVertex(i2, EdgeMask);
+			// Add Quad (Triangle 1)
+			m_vGeneratedIndices.push_back(i1);
+			m_vGeneratedIndices.push_back(s1);
+			m_vGeneratedIndices.push_back(i2);
+			// Add Quad (Triangle 2)
+			m_vGeneratedIndices.push_back(i2);
+			m_vGeneratedIndices.push_back(s1);
+			m_vGeneratedIndices.push_back(s2);
+		}
+
+		// Check Edge 2-3
+		EdgeMask = m2 & m3;
+		if(EdgeMask != 0)
+		{
+			unsigned int s2 = GetOrCreateSkirtVertex(i2, EdgeMask);
+			unsigned int s3 = GetOrCreateSkirtVertex(i3, EdgeMask);
+			m_vGeneratedIndices.push_back(i2);
+			m_vGeneratedIndices.push_back(s2);
+			m_vGeneratedIndices.push_back(i3);
+			m_vGeneratedIndices.push_back(i3);
+			m_vGeneratedIndices.push_back(s2);
+			m_vGeneratedIndices.push_back(s3);
+		}
+
+		// Check Edge 3-1
+		EdgeMask = m3 & m1;
+		if(EdgeMask != 0)
+		{
+			unsigned int s3 = GetOrCreateSkirtVertex(i3, EdgeMask);
+			unsigned int s1 = GetOrCreateSkirtVertex(i1, EdgeMask);
+			m_vGeneratedIndices.push_back(i3);
+			m_vGeneratedIndices.push_back(s3);
+			m_vGeneratedIndices.push_back(i1);
+			m_vGeneratedIndices.push_back(i1);
+			m_vGeneratedIndices.push_back(s3);
+			m_vGeneratedIndices.push_back(s1);
+		}
+	}
+
 	m_bHasGeneratedData = true;
 	m_bIsGenerating = false;
 }
@@ -602,7 +699,7 @@ void COctreeNode::Update(CCamera &Camera)
 	double DistToBox = 0.f;
 
 	// split until minimum is hit
-	if(m_Level <= 3)
+	if(m_pOwnerMesh->m_pBody == Camera.m_pFocusedBody && m_Level <= 3)
 	{
 		bSplit = true;
 		bMerge = false;
@@ -673,12 +770,17 @@ void COctreeNode::Update(CCamera &Camera)
 	}
 }
 
-void COctreeNode::Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const Vec3 &PlanetAbsolutePos, const glm::mat4 &RotationMat)
+void COctreeNode::Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const Vec3 &PlanetAbsolutePos, const Quat &PlanetOrientation)
 {
-	Vec3 planetCamRel = PlanetAbsolutePos - CameraAbsolutePos;
-	glm::mat4 matPlanetPos = glm::translate(glm::mat4(1.0f), (glm::vec3)planetCamRel);
-	glm::mat4 matNodePos = glm::translate(glm::mat4(1.0f), (glm::vec3)m_Center);
-	glm::mat4 NodeModel = matPlanetPos * RotationMat * matNodePos;
+	Vec3 PlanetToCam = PlanetAbsolutePos - CameraAbsolutePos;
+	Vec3 NodeCenterWorld = PlanetOrientation.RotateVector(m_Center);
+	Vec3 NodeToCam = PlanetToCam + NodeCenterWorld;
+	glm::mat4 MatTranslate = glm::translate(glm::mat4(1.0f), (glm::vec3)NodeToCam);
+
+	glm::quat glmQ(PlanetOrientation.w, PlanetOrientation.x, PlanetOrientation.y, PlanetOrientation.z);
+	glm::mat4 MatRotate = glm::mat4_cast(glmQ);
+
+	glm::mat4 NodeModel = MatTranslate * MatRotate;
 
 	if(m_bIsLeaf)
 	{
@@ -706,7 +808,7 @@ void COctreeNode::Render(CShader &Shader, const Vec3 &CameraAbsolutePos, const V
 		{
 			for(int i = 0; i < 8; ++i)
 				if(m_pChildren[i])
-					m_pChildren[i]->Render(Shader, CameraAbsolutePos, PlanetAbsolutePos, RotationMat);
+					m_pChildren[i]->Render(Shader, CameraAbsolutePos, PlanetAbsolutePos, PlanetOrientation);
 		}
 		else
 		{

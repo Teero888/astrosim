@@ -71,7 +71,7 @@ struct Quat
 	}
 };
 
-// Integration Helper: Integrate angular velocity over dt
+// Integrate angular velocity over dt
 // q_new = q_old + 0.5 * omega * q_old * dt
 inline void IntegrateRotation(Quat &orientation, const Vec3 &angularVelocity, double dt)
 {
