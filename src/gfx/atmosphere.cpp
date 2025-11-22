@@ -39,37 +39,41 @@ void CAtmosphere::Render(CStarSystem &System, CCamera &Camera, unsigned int Dept
 
 	m_Shader.Use();
 
-	// We just tell the shader which unit it is on.
 	m_Shader.SetInt("u_depthTexture", DepthTextureUnit);
 
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, ShadowTextureID);
+	m_Shader.SetInt("u_shadowMap", 1);
+
+	m_Shader.SetMat4("u_lightSpaceMatrix", LightSpaceMatrix);
 	m_Shader.SetVec2("u_screenSize", Camera.m_ScreenSize);
 	m_Shader.SetInt("u_debugMode", DebugMode);
 
 	float F = 2.0f / log2(FAR_PLANE + 1.0f);
 	m_Shader.SetFloat("u_logDepthF", F);
 
-	//  Get Planet Rotation
+	// == Rotation Handling ==
 	Quat q = pFocusedBody->m_SimParams.m_Orientation;
-	// Get Inverse Rotation (World -> Local)
+
+	// 1. Pass Rotation Matrix for Shadow Map Lookup (Local -> World)
+	glm::quat glmQ(q.w, q.x, q.y, q.z);
+	glm::mat4 matRot = glm::mat4_cast(glmQ);
+	m_Shader.SetMat4("u_planetRotation", matRot);
+
+	// 2. Pass Inverse for Ray Direction (World -> Local)
 	Quat qInv = q.Conjugate();
 	glm::quat glmQInv(qInv.w, qInv.x, qInv.y, qInv.z);
 	glm::mat4 matRotInv = glm::mat4_cast(glmQInv);
 
-	// Standard View -> World Matrix (Rotation Only)
 	glm::mat4 gridView = glm::lookAt(glm::vec3(0.0f), (glm::vec3)Camera.m_Front, (glm::vec3)Camera.m_Up);
 	glm::mat4 viewToWorld = glm::inverse(gridView);
-
-	// Combine: View -> World -> Local
-	// This ensures v_rayDirection in the shader is in Planet Local Space
 	glm::mat4 viewToLocal = matRotInv * viewToWorld;
 
 	m_Shader.SetMat4("u_invView", viewToLocal);
 	m_Shader.SetMat4("u_invProjection", glm::inverse(Camera.m_Projection));
 
 	double realRadius = pFocusedBody->m_RenderParams.m_Radius;
-	// Calculate Camera Position relative to planet center in Unit Space (Scale 1.0)
 	Vec3 relativeCamPos = Camera.m_AbsolutePosition - pFocusedBody->m_SimParams.m_Position;
-
 	Vec3 localCamPos = qInv.RotateVector(relativeCamPos);
 	Vec3 normalizedCamPos = localCamPos / realRadius;
 
@@ -83,14 +87,10 @@ void CAtmosphere::Render(CStarSystem &System, CCamera &Camera, unsigned int Dept
 		sunDir = Vec3(0, 1, 0);
 	m_Shader.SetVec3("u_sunDirection", (glm::vec3)sunDir);
 
-	// Pass real radius in meters for physics calcs
 	m_Shader.SetFloat("u_realPlanetRadius", (float)realRadius);
-
-	// Physics params (Meters)
 	m_Shader.SetFloat("u_sunIntensity", pFocusedBody->m_RenderParams.m_Atmosphere.m_SunIntensity);
 
 	float atmRadMeters = pFocusedBody->m_RenderParams.m_Atmosphere.m_AtmosphereRadius * (float)realRadius;
-
 	m_Shader.SetFloat("u_atmosphereRadius", atmRadMeters);
 
 	m_Shader.SetVec3("u_rayleighScatteringCoeff", pFocusedBody->m_RenderParams.m_Atmosphere.m_RayleighScatteringCoeff);

@@ -51,7 +51,7 @@ public:
 	bool m_bShowGrid = true;
 	bool m_bReloadRequested = false;
 	bool m_bPredictionResetRequested = false;
-	bool m_bIsRunning = true;
+	bool m_bIsRunning = false;
 
 	// UI Toggles
 	bool m_bShowSimSettings = true;

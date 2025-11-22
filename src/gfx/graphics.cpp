@@ -343,55 +343,47 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	// ========================================================
 	// RENDER PASS 0: SHADOW MAP (Sun Perspective)
 	// ========================================================
+	float ShadowOrthoSize = 10000.0f;
+
 	if(m_Camera.m_pFocusedBody && m_bShowAtmosphere)
 	{
 		glViewport(0, 0, SHADOW_RES, SHADOW_RES);
 		glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		glDisable(GL_CULL_FACE); // Render backfaces for robust closed meshes
-
-		// Shadow logic for Arbitrary Meshes (Terrain)
-		// We want the shadow map to cover the area the camera is looking at.
-		// Standard "Follow the Camera" shadow map.
+		// Use standard Back-Face Culling.
+		// Acne is handled by bias logic in shaders.
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
 
 		Vec3 sunPos = StarSystem.m_pSunBody->m_SimParams.m_Position;
 		Vec3 bodyPos = m_Camera.m_pFocusedBody->m_SimParams.m_Position;
-
 		glm::vec3 lightDir = glm::normalize((glm::vec3)(sunPos - bodyPos));
 
-		// Center the light view on the camera's projected position on the planet surface
-		// to maximize resolution where we are looking.
-		// Simplified: Center on Camera Position.
+		double Alt = m_Camera.m_ViewDistance - m_Camera.m_pFocusedBody->m_RenderParams.m_Radius;
+		ShadowOrthoSize = (float)std::max(10000.0, Alt * 1.5);
 
-		// Determine Ortho size based on altitude
-		double alt = m_Camera.m_ViewDistance - m_Camera.m_pFocusedBody->m_RenderParams.m_Radius;
-		float orthoSize = (float)std::max(5000.0, alt * 1.0); // Minimum 5km area
+		glm::vec3 LightCamPos = (glm::vec3)m_Camera.m_LocalPosition + lightDir * ShadowOrthoSize;
+		glm::mat4 LightView = glm::lookAt(LightCamPos, (glm::vec3)m_Camera.m_LocalPosition, glm::vec3(0, 1, 0));
 
-		// Position light camera "above" the player relative to light dir
-		glm::vec3 lightCamPos = (glm::vec3)m_Camera.m_LocalPosition + lightDir * orthoSize;
+		// Infinite Z Range for Shadows
+		float PlanetDiameter = (float)m_Camera.m_pFocusedBody->m_RenderParams.m_Radius * 2.5f;
+		glm::mat4 LightProj = glm::ortho(-ShadowOrthoSize, ShadowOrthoSize, -ShadowOrthoSize, ShadowOrthoSize, -PlanetDiameter, PlanetDiameter);
 
-		glm::mat4 lightView = glm::lookAt(lightCamPos, (glm::vec3)m_Camera.m_LocalPosition, glm::vec3(0, 1, 0));
-		glm::mat4 lightProj = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, 10.0f, orthoSize * 4.0f);
-
-		m_LightSpaceMatrix = lightProj * lightView;
+		m_LightSpaceMatrix = LightProj * LightView;
 
 		CCamera ShadowCam;
-		ShadowCam.m_View = lightView;
-		ShadowCam.m_Projection = lightProj;
-		// Crucial: ShadowCam absolute position determines where the procedural mesh generates.
-		// It must match the main camera so the LODs match (roughly).
+		ShadowCam.m_View = LightView;
+		ShadowCam.m_Projection = LightProj;
 		ShadowCam.m_AbsolutePosition = m_Camera.m_AbsolutePosition;
 
 		if(m_BodyMeshes.count(m_Camera.m_pFocusedBody->m_Id))
 		{
 			auto mesh = m_BodyMeshes[m_Camera.m_pFocusedBody->m_Id];
-			// Pass true for bIsShadowPass
 			mesh->Render(ShadowCam, StarSystem.m_pSunBody, true);
 		}
 
-		// We used to Enable Culling here. Removed to prevent affecting main pass.
-		// glEnable(GL_CULL_FACE);
+		glDisable(GL_CULL_FACE);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
@@ -403,11 +395,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// FIX: Disable Culling explicitly for the main pass
-	// because the Shadow Pass might have touched it, and our procedural
-	// mesh winding order might be inverted or messy.
 	glDisable(GL_CULL_FACE);
-
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
@@ -456,7 +444,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	{
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, m_GBufferDepthTex);
-		// Pass Texture Unit 0 (Depth) and Texture ID (Shadow)
+
 		m_Atmosphere.Render(StarSystem, m_Camera, 0, m_ShadowMapTexture, m_LightSpaceMatrix, m_DebugMode);
 	}
 
@@ -470,8 +458,6 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	m_FrameTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - s_LastFrame).count() / 1e9;
 	s_LastFrame = std::chrono::steady_clock::now();
 }
-
-//. [OnExit, Callbacks same as before] ...
 
 void CGraphics::OnExit()
 {
