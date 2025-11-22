@@ -18,8 +18,8 @@ void CTrajectories::Update(CStarSystem &PredictedSystem)
 	if(PredictedSystem.m_SimTick % m_SampleRate != 0)
 		return;
 
-	int maxPoints = GetMaxVisualPoints();
-	if(maxPoints < 2)
+	int MaxPoints = GetMaxVisualPoints();
+	if(MaxPoints < 2)
 		return;
 
 	if(m_vPlanetTrajectories.empty())
@@ -36,24 +36,24 @@ void CTrajectories::Update(CStarSystem &PredictedSystem)
 	}
 
 	uint64_t VisualTick = PredictedSystem.m_SimTick / m_SampleRate;
-	size_t BufferIndex = VisualTick % maxPoints;
+	size_t BufferIndex = VisualTick % MaxPoints;
 
 	for(size_t i = 0; i < PredictedSystem.m_vBodies.size(); ++i)
 	{
 		auto &Traj = m_vPlanetTrajectories[i];
 
-		if((int)Traj.m_PositionHistory.size() != maxPoints)
+		if((int)Traj.m_PositionHistory.size() != MaxPoints)
 		{
-			Traj.m_PositionHistory.resize(maxPoints);
-			Traj.m_GLHistory.resize(maxPoints + 2);
+			Traj.m_PositionHistory.resize(MaxPoints);
+			Traj.m_GLHistory.resize(MaxPoints + 2);
 			Traj.m_PointCount = 0;
 			glBindBuffer(GL_ARRAY_BUFFER, Traj.VBO);
-			glBufferData(GL_ARRAY_BUFFER, (maxPoints + 2) * sizeof(glm::vec3), nullptr, GL_STREAM_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, (MaxPoints + 2) * sizeof(glm::vec3), nullptr, GL_STREAM_DRAW);
 		}
 
 		Traj.m_PositionHistory[BufferIndex] = PredictedSystem.m_vBodies[i].m_SimParams.m_Position;
 
-		if(Traj.m_PointCount < maxPoints)
+		if(Traj.m_PointCount < MaxPoints)
 			Traj.m_PointCount++;
 	}
 }

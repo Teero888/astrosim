@@ -56,17 +56,19 @@ int main()
 			{
 				StarSystem.UpdateBodies();
 				AccTime -= UpdateInterval;
-				uint64_t Horizon = (uint64_t)GfxEngine.m_Trajectories.m_PredictionDuration;
-				uint64_t TargetTick = StarSystem.m_SimTick + Horizon;
-				while(PredictedStarSystem.m_SimTick < TargetTick)
-				{
-					GfxEngine.m_Trajectories.Update(PredictedStarSystem);
-					PredictedStarSystem.UpdateBodies();
-				}
 			}
 		}
 		else
 			AccTime = 0.0;
+
+		// Advance prediction no matter if the real simulation is running, we never want to lag behind significantly
+		uint64_t Horizon = (uint64_t)GfxEngine.m_Trajectories.m_PredictionDuration;
+		uint64_t TargetTick = StarSystem.m_SimTick + Horizon;
+		while(PredictedStarSystem.m_SimTick < TargetTick)
+		{
+			GfxEngine.m_Trajectories.Update(PredictedStarSystem);
+			PredictedStarSystem.UpdateBodies();
+		}
 
 		GfxEngine.m_Camera.UpdateViewMatrix();
 		GfxEngine.m_Trajectories.UpdateBuffers(StarSystem, PredictedStarSystem, GfxEngine.m_Camera);

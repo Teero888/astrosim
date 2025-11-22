@@ -248,7 +248,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 		if(m_Trajectories.m_Show)
 		{
 			bool bTrajChanged = false;
-			if(ImGui::SliderInt("Prediction Duration", &m_Trajectories.m_PredictionDuration, 1000, 100000000))
+			if(ImGui::SliderInt("Prediction Duration", &m_Trajectories.m_PredictionDuration, 1e3, 1e9))
 				bTrajChanged = true;
 
 			if(ImGui::SliderInt("Sample Rate", &m_Trajectories.m_SampleRate, 1, 5000))
@@ -408,8 +408,6 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
-	m_Trajectories.Render(m_Camera);
-
 	if(m_bShowWireframe)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	if(!StarSystem.m_vBodies.empty())
@@ -431,6 +429,8 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	// Render Debug Boxes
 	for(auto &p : m_BodyMeshes)
 		p.second->RenderDebug(m_Camera);
+
+	m_Trajectories.Render(m_Camera);
 
 	if(m_bShowGrid)
 		m_Grid.Render(StarSystem, m_Camera);

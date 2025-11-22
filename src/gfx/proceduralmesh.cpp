@@ -181,7 +181,7 @@ void CProceduralMesh::RenderDebug(const CCamera &Camera)
 		if(!node)
 			return;
 
-		if(node->m_bIsLeaf || node->m_VAO != 0)
+		if(/* node->m_bIsLeaf ||  */ node->m_VAO != 0)
 		{
 			Vec3 PlanetToCam = m_pBody->m_SimParams.m_Position - Camera.m_AbsolutePosition;
 			Vec3 NodeCenterWorld = q.RotateVector(node->m_Center);
