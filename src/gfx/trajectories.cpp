@@ -74,6 +74,16 @@ void CTrajectories::UpdateBuffers(CStarSystem &RealTimeSystem, CStarSystem &Pred
 	uint64_t VisualTick = (SimTick - 1) / m_SampleRate;
 	size_t HeadIndex = VisualTick % maxPoints;
 
+	int RefIndex = Camera.m_pFocusedBody->m_Id;
+
+	// Get Reference Positions (Current and Future)
+	Vec3 RealTimeRefPos = (RefIndex != -1) ? RealTimeSystem.m_vBodies[RefIndex].m_SimParams.m_Position : Vec3(0.0);
+	Vec3 PredictedRefPos = (RefIndex != -1) ? PredictedSystem.m_vBodies[RefIndex].m_SimParams.m_Position : Vec3(0.0);
+
+	// Pre-calculate View Offset (Current Ref Pos relative to Camera)
+	// This centers the coordinate system on the Reference Body's CURRENT position
+	Vec3 ViewOffset = RealTimeRefPos - Camera.m_AbsolutePosition;
+
 	for(int i = 0; i < (int)m_vPlanetTrajectories.size(); ++i)
 	{
 		auto &Trajectory = m_vPlanetTrajectories[i];
@@ -85,28 +95,43 @@ void CTrajectories::UpdateBuffers(CStarSystem &RealTimeSystem, CStarSystem &Pred
 
 		int PointsToDraw = Trajectory.m_PointCount + 2; // Start + Samples + End
 
+		// START POINT (RealTime)
+		// Relative Pos = (Pos - RefPos)
+		// World Pos = CurrentRefPos + RelativePos
+		// GL Pos = World Pos - CameraPos = ViewOffset + RelativePos
 		Vec3 StartPos = RealTimeSystem.m_vBodies[i].m_SimParams.m_Position;
-		Trajectory.m_GLHistory[0] = (glm::vec3)(StartPos - Camera.m_AbsolutePosition);
+		Vec3 RelStart = StartPos - RealTimeRefPos;
+
+		Trajectory.m_GLHistory[0] = (glm::vec3)(ViewOffset + RelStart);
 		if(Trajectory.m_GLHistory[0] == glm::vec3(0.0f))
 			Trajectory.m_GLHistory[0] = glm::vec3(0.0001f);
 
+		// HISTORY POINTS
 		if(Trajectory.m_PointCount > 0)
 		{
 			size_t TailIndex = (HeadIndex - Trajectory.m_PointCount + 1 + maxPoints) % maxPoints;
 			for(int j = 0; j < Trajectory.m_PointCount; ++j)
 			{
 				size_t RingIndex = (TailIndex + j) % maxPoints;
-				Vec3 WorldPos = Trajectory.m_PositionHistory[RingIndex];
 
-				Vec3 RelPos = WorldPos - Camera.m_AbsolutePosition;
-				Trajectory.m_GLHistory[j + 1] = (glm::vec3)RelPos;
+				Vec3 HistoryPos = Trajectory.m_PositionHistory[RingIndex];
+				Vec3 RefHistoryPos = (RefIndex != -1) ? m_vPlanetTrajectories[RefIndex].m_PositionHistory[RingIndex] : Vec3(0.0);
+
+				Vec3 RelHistory = HistoryPos - RefHistoryPos;
+
+				Trajectory.m_GLHistory[j + 1] = (glm::vec3)(ViewOffset + RelHistory);
+
 				if(Trajectory.m_GLHistory[j + 1] == glm::vec3(0.0f))
 					Trajectory.m_GLHistory[j + 1] = glm::vec3(0.0001f);
 			}
 		}
 
+		// END POINT (Predicted)
 		Vec3 EndPos = PredictedSystem.m_vBodies[i].m_SimParams.m_Position;
-		Trajectory.m_GLHistory[PointsToDraw - 1] = (glm::vec3)(EndPos - Camera.m_AbsolutePosition);
+		Vec3 RelEnd = EndPos - PredictedRefPos;
+
+		Trajectory.m_GLHistory[PointsToDraw - 1] = (glm::vec3)(ViewOffset + RelEnd);
+
 		if(Trajectory.m_GLHistory[PointsToDraw - 1] == glm::vec3(0.0f))
 			Trajectory.m_GLHistory[PointsToDraw - 1] = glm::vec3(0.0001f);
 
