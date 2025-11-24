@@ -38,7 +38,7 @@ public:
 	void Init(SBody *pBody, EBodyType bodyType, int voxelResolution);
 	void Update(CCamera &Camera);
 
-	void Render(const CCamera &Camera, const SBody *pLightBody, bool bIsShadowPass);
+	void Render(const CCamera &Camera, const SBody *pLightBody, bool bIsShadowPass, double Time = 0.0);
 	void RenderDebug(const CCamera &Camera);
 
 	void Destroy();
@@ -93,8 +93,13 @@ public:
 
 private:
 	void InitDebug();
+	void InitGasGiantGeometry();
 	CShader m_DebugShader;
 	GLuint m_DebugCubeVAO = 0, m_DebugCubeVBO = 0, m_DebugCubeEBO = 0;
+
+	// Proxy geometry for Gas Giants
+	GLuint m_ProxyVAO = 0, m_ProxyVBO = 0, m_ProxyEBO = 0;
+	unsigned int m_ProxyIndexCount = 0;
 };
 
 class COctreeNode : public std::enable_shared_from_this<COctreeNode>

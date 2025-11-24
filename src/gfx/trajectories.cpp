@@ -123,7 +123,7 @@ void CTrajectories::UpdateBuffers(CStarSystem &RealTimeSystem, CStarSystem &Pred
 
 void CTrajectories::Render(CCamera &Camera)
 {
-	if(m_vPlanetTrajectories.empty())
+	if(!m_Show || m_vPlanetTrajectories.empty())
 		return;
 	m_Shader.Use();
 
@@ -136,9 +136,7 @@ void CTrajectories::Render(CCamera &Camera)
 	m_Shader.SetMat4("Projection", Camera.m_Projection);
 	glEnable(GL_LINE_SMOOTH);
 
-	for(int i = m_Show ? 0 : Camera.m_pFocusedBody->m_Id;
-		m_Show ? i < (int)m_vPlanetTrajectories.size() : i == Camera.m_pFocusedBody->m_Id;
-		++i)
+	for(int i = 0; i < (int)m_vPlanetTrajectories.size(); ++i)
 	{
 		auto &Trajectory = m_vPlanetTrajectories[i];
 		if(Trajectory.VAO == 0)

@@ -61,6 +61,15 @@ struct SAtmosphereParameters
 	float m_MiePreferredScatteringDir = 0.758f;
 };
 
+struct SGasGiantParameters
+{
+	glm::vec3 m_BaseColor = glm::vec3(0.8f, 0.7f, 0.6f);
+	glm::vec3 m_BandColor = glm::vec3(0.6f, 0.4f, 0.3f);
+	float m_WindSpeed = 1.0f;
+	float m_Turbulence = 1.0f;
+	float m_Seed = 0.0f;
+};
+
 struct SColorPalette
 {
 	glm::vec3 m_DeepOcean = glm::vec3(0.0f, 0.05f, 0.2f);
@@ -101,6 +110,7 @@ struct SBody
 		EBodyType m_BodyType = EBodyType::TERRESTRIAL;
 		ETerrainType m_TerrainType = ETerrainType::TERRESTRIAL;
 		STerrainParameters m_Terrain;
+		SGasGiantParameters m_GasGiant;
 		SColorPalette m_Colors;
 		SAtmosphereParameters m_Atmosphere;
 		int m_Seed = 0;

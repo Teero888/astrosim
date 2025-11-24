@@ -113,6 +113,12 @@ void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution
 	m_pBody = pBody;
 	m_BodyType = bodyType;
 
+	if(m_BodyType == EBodyType::GAS_GIANT)
+	{
+		m_Shader.CompileShader(Shaders::VERT_GASGIANT, Shaders::FRAG_GASGIANT);
+		InitGasGiantGeometry();
+		return; // Skip Terrain Generation and Workers
+	}
 	m_Shader.CompileShader(Shaders::VERT_BODY, Shaders::FRAG_BODY);
 
 	// Initialize Debug Shader and Buffers
@@ -122,13 +128,15 @@ void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution
 	if(m_BodyType == EBodyType::TERRESTRIAL)
 		m_TerrainGenerator.Init(pBody->m_Id + pBody->m_RenderParams.m_Seed, pBody->m_RenderParams.m_Terrain, pBody->m_RenderParams.m_TerrainType);
 
-	if(m_BodyType == EBodyType::TERRESTRIAL || m_BodyType == EBodyType::STAR)
+	if(m_BodyType == EBodyType::TERRESTRIAL || m_BodyType == EBodyType::STAR || m_BodyType == EBodyType::GAS_GIANT)
 	{
 		const auto &terrainParams = m_pBody->m_RenderParams.m_Terrain;
-		float max_displacement_factor = terrainParams.m_ContinentHeight + terrainParams.m_MountainHeight + terrainParams.m_HillsHeight + terrainParams.m_DetailHeight;
-		float scale_factor = 1.0f + max_displacement_factor * 1.2f;
+		float MaxDisplacementFactor = terrainParams.m_ContinentHeight + terrainParams.m_MountainHeight + terrainParams.m_HillsHeight + terrainParams.m_DetailHeight;
+		if(m_BodyType == EBodyType::GAS_GIANT)
+			MaxDisplacementFactor = 0.0f;
+		float ScaleFactor = 1.0f + MaxDisplacementFactor * 1.2f;
 
-		double RootSize = m_pBody->m_RenderParams.m_Radius * 2.0 * (double)scale_factor;
+		double RootSize = m_pBody->m_RenderParams.m_Radius * 2.0 * (double)ScaleFactor;
 		m_pRootNode = std::make_shared<COctreeNode>(this, std::weak_ptr<COctreeNode>(), Vec3(0.0), RootSize, 0, voxelResolution);
 	}
 
@@ -137,6 +145,56 @@ void CProceduralMesh::Init(SBody *pBody, EBodyType bodyType, int voxelResolution
 
 	for(unsigned int i = 0; i < NumThreads; ++i)
 		m_vWorkerThreads.emplace_back(&CProceduralMesh::GenerationWorkerLoop, this);
+}
+
+void CProceduralMesh::InitGasGiantGeometry()
+{
+	float aCubeVertices[] = {
+		-1.0f, -1.0f, -1.0f, // 0
+		1.0f, -1.0f, -1.0f, // 1
+		1.0f, 1.0f, -1.0f, // 2
+		-1.0f, 1.0f, -1.0f, // 3
+		-1.0f, -1.0f, 1.0f, // 4
+		1.0f, -1.0f, 1.0f, // 5
+		1.0f, 1.0f, 1.0f, // 6
+		-1.0f, 1.0f, 1.0f // 7
+	};
+
+	unsigned int aCubeIndices[] = {
+		0, 1, 2, 2, 3, 0, // Front
+		1, 5, 6, 6, 2, 1, // Right
+		5, 4, 7, 7, 6, 5, // Back
+		4, 0, 3, 3, 7, 4, // Left
+		3, 2, 6, 6, 7, 3, // Top
+		4, 5, 1, 1, 0, 4 // Bottom
+	};
+
+	m_ProxyIndexCount = 36;
+
+	glGenVertexArrays(1, &m_ProxyVAO);
+	glGenBuffers(1, &m_ProxyVBO);
+	glGenBuffers(1, &m_ProxyEBO);
+
+	glBindVertexArray(m_ProxyVAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_ProxyVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(aCubeVertices), aCubeVertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ProxyEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(aCubeIndices), aCubeIndices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+	glEnableVertexAttribArray(0);
+
+	// NOTE:
+	// Dummy Normal/TexCoord/Color to satisfy layout location=1,2,3 if reused
+	// Actually, shader only needs pos (loc 0) if we rewrite vert_gasgiant.glsl properly.
+	// Let's just disable the other attributes in the Render call or ensure shader doesn't use them.
+	// For safety against strict VAO validation, we can just reuse the position buffer for normals
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+	glEnableVertexAttribArray(1);
+
+	glBindVertexArray(0);
 }
 
 void CProceduralMesh::InitDebug()
@@ -220,8 +278,62 @@ void CProceduralMesh::Update(CCamera &Camera)
 		m_pRootNode->Update(Camera);
 }
 
-void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody, bool bIsShadowPass)
+void CProceduralMesh::Render(const CCamera &Camera, const SBody *pLightBody, bool bIsShadowPass, double Time)
 {
+	if(m_BodyType == EBodyType::GAS_GIANT)
+	{
+		m_Shader.Use();
+		glDisable(GL_CULL_FACE);
+
+		m_Shader.SetVec3("uBaseColor", m_pBody->m_RenderParams.m_GasGiant.m_BaseColor);
+		m_Shader.SetVec3("uBandColor", m_pBody->m_RenderParams.m_GasGiant.m_BandColor);
+		m_Shader.SetFloat("uWindSpeed", m_pBody->m_RenderParams.m_GasGiant.m_WindSpeed);
+		m_Shader.SetFloat("uTurbulence", m_pBody->m_RenderParams.m_GasGiant.m_Turbulence);
+		m_Shader.SetFloat("uSeed", m_pBody->m_RenderParams.m_GasGiant.m_Seed);
+		m_Shader.SetFloat("uTime", (float)Time);
+		m_Shader.SetBool("uIsShadowPass", bIsShadowPass);
+
+		float F = 2.0f / log2(FAR_PLANE + 1.0f);
+		m_Shader.SetFloat("u_logDepthF", F);
+
+		// Light
+		Vec3 LightDir = (pLightBody->m_SimParams.m_Position - m_pBody->m_SimParams.m_Position).normalize();
+		m_Shader.SetVec3("uLightDir", (glm::vec3)LightDir);
+
+		// Model Matrix (Position & Rotation)
+		Vec3 RelativeCamPos = Camera.m_AbsolutePosition - m_pBody->m_SimParams.m_Position;
+		m_Shader.SetVec3("uCameraLocalPos", (glm::vec3)RelativeCamPos); // Pass relative pos directly to handle double precision in shader if needed, or just scaled
+
+		// Construct Model Matrix
+		Vec3 PlanetToCam = m_pBody->m_SimParams.m_Position - Camera.m_AbsolutePosition;
+		glm::mat4 MatTranslate = glm::translate(glm::mat4(1.0f), (glm::vec3)PlanetToCam);
+		Quat q = m_pBody->m_SimParams.m_Orientation;
+		glm::quat glmQ(q.w, q.x, q.y, q.z);
+		glm::mat4 MatRotate = glm::mat4_cast(glmQ);
+		glm::mat4 MatScale = glm::scale(glm::mat4(1.0f), glm::vec3(m_pBody->m_RenderParams.m_Radius));
+
+		glm::mat4 Model = MatTranslate * MatRotate * MatScale;
+
+		// We need the Inverse Model to transform Ray Origin/Dir into Unit Sphere Space
+		glm::mat4 InvModel = glm::inverse(Model);
+
+		// Extract rotation from InvModel for Light Direction transform (World -> Model)
+		glm::mat3 InvRotation = glm::mat3(InvModel);
+		Vec3 LocalLightDir = InvRotation * (glm::vec3)LightDir;
+		m_Shader.SetVec3("uLightDir", (glm::vec3)LocalLightDir);
+
+		m_Shader.SetMat4("uModel", Model);
+		m_Shader.SetMat4("uView", Camera.m_View);
+		m_Shader.SetMat4("uProjection", Camera.m_Projection);
+		m_Shader.SetMat4("uInvModel", InvModel);
+
+		glBindVertexArray(m_ProxyVAO);
+		glDrawElements(GL_TRIANGLES, m_ProxyIndexCount, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glDisable(GL_CULL_FACE); // Restore engine state
+		return;
+	}
+
 	if(!m_pRootNode)
 		return;
 
@@ -424,9 +536,9 @@ void COctreeNode::GenerateMesh()
 		{
 			for(int x = 0; x <= PaddedRes; ++x)
 			{
-				Vec3 world_pos = SamplingStartCorner + Vec3((double)x * StepSize, (double)y * StepSize, (double)z * StepSize);
-				int idx = x + y * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
-				vTerrainGrid[idx] = m_pOwnerMesh->m_TerrainGenerator.GetTerrainOutput(world_pos, radius);
+				Vec3 WorldPos = SamplingStartCorner + Vec3((double)x * StepSize, (double)y * StepSize, (double)z * StepSize);
+				int Idx = x + y * PaddedRes1 + z * PaddedRes1 * PaddedRes1;
+				vTerrainGrid[Idx] = m_pOwnerMesh->m_TerrainGenerator.GetTerrainOutput(WorldPos, radius);
 			}
 		}
 	}
@@ -495,8 +607,10 @@ void COctreeNode::GenerateMesh()
 
 							float t = (glm::abs(d1 - d2) > 0.00001f) ? (0.0f - d1) / (d2 - d1) : 0.5f;
 
-							Vec3 posDouble = p1 * (1.0 - (double)t) + p2 * (double)t;
-							glm::vec3 norm = m_pOwnerMesh->m_TerrainGenerator.CalculateDensityGradient(posDouble, radius);
+							Vec3 PosDouble = p1 * (1.0 - (double)t) + p2 * (double)t;
+							glm::vec3 Norm;
+
+							Norm = m_pOwnerMesh->m_TerrainGenerator.CalculateDensityGradient(PosDouble, radius);
 
 							STerrainOutput t1 = vTerrainGrid[c1_global];
 							STerrainOutput t2 = vTerrainGrid[c2_global];
@@ -507,10 +621,10 @@ void COctreeNode::GenerateMesh()
 							float mask = glm::mix(t1.material_mask, t2.material_mask, t);
 
 							SProceduralVertex vert;
-							Vec3 localPos = posDouble - m_Center;
+							Vec3 localPos = PosDouble - m_Center;
 							vert.position = (glm::vec3)localPos;
-							vert.normal = norm;
-							vert.texCoord = glm::vec2((float)posDouble.x, (float)posDouble.z) / 1000.0f;
+							vert.normal = Norm;
+							vert.texCoord = glm::vec2((float)PosDouble.x, (float)PosDouble.z) / 1000.0f;
 							vert.color_data = glm::vec4(elev, temp, moist, mask);
 
 							m_vGeneratedVertices.push_back(vert);

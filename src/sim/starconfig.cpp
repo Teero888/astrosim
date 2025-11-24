@@ -223,6 +223,27 @@ void CStarSystem::LoadBodies(const std::string &Filename)
 			else if(Key == "TemperatureOffset")
 				RenderParams.m_Terrain.m_TemperatureOffset = std::stof(value);
 		}
+		else if(CurrentSelection == "gasgiant")
+		{
+			if(Key == "BaseColor")
+			{
+				std::stringstream ssv(value);
+				char comma;
+				ssv >> RenderParams.m_GasGiant.m_BaseColor.x >> comma >> RenderParams.m_GasGiant.m_BaseColor.y >> comma >> RenderParams.m_GasGiant.m_BaseColor.z;
+			}
+			else if(Key == "BandColor")
+			{
+				std::stringstream ssv(value);
+				char comma;
+				ssv >> RenderParams.m_GasGiant.m_BandColor.x >> comma >> RenderParams.m_GasGiant.m_BandColor.y >> comma >> RenderParams.m_GasGiant.m_BandColor.z;
+			}
+			else if(Key == "WindSpeed")
+				RenderParams.m_GasGiant.m_WindSpeed = std::stof(value);
+			else if(Key == "Turbulence")
+				RenderParams.m_GasGiant.m_Turbulence = std::stof(value);
+			else if(Key == "Seed")
+				RenderParams.m_GasGiant.m_Seed = std::stof(value);
+		}
 		else if(CurrentSelection == "atmosphere")
 		{
 			// Enabling atmosphere explicitly

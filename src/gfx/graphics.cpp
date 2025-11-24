@@ -354,6 +354,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 	// RENDER PASS 0: SHADOW MAP (Sun Perspective)
 	// ========================================================
 	float ShadowOrthoSize = 10000.0f;
+	double SimTime = (double)StarSystem.m_SimTick * StarSystem.m_DeltaTime;
 
 	if(m_Camera.m_pFocusedBody && m_bShowAtmosphere)
 	{
@@ -389,7 +390,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 		if(m_BodyMeshes.count(m_Camera.m_pFocusedBody->m_Id))
 		{
 			auto Mesh = m_BodyMeshes[m_Camera.m_pFocusedBody->m_Id];
-			Mesh->Render(ShadowCam, StarSystem.m_pSunBody, true);
+			Mesh->Render(ShadowCam, StarSystem.m_pSunBody, true, SimTime);
 		}
 
 		glDisable(GL_CULL_FACE);
@@ -419,7 +420,7 @@ void CGraphics::OnRender(CStarSystem &StarSystem)
 			{
 				auto Mesh = m_BodyMeshes[Body.m_Id];
 				Mesh->Update(m_Camera);
-				Mesh->Render(m_Camera, m_pStarSystem->m_pSunBody, false);
+				Mesh->Render(m_Camera, m_pStarSystem->m_pSunBody, false, SimTime);
 			}
 		}
 	}

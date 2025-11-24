@@ -249,55 +249,21 @@ MiePreferredScatteringDir=0.8
 # ==========================================
 # JUPITER
 # ==========================================
-# Simulating Gas Giant using Terrestrial shader with specific bands
 Name=Jupiter
-Type=TERRESTRIAL
-TerrainType=terrestrial
+Type=GAS_GIANT
 Mass=1.898e27
 Radius=6.991e7
-# 5.2 AU
 Position=7.78e11,0,0
 Velocity=0,0,13070
 Color=0.8,0.7,0.6
-Seed=303
 RotationPeriod=35730.0
 Obliquity=3.13
-
-[colors]
-# Banded colors mapped to Biomes
-DeepOcean=0.5,0.3,0.2
-ShallowOcean=0.6,0.4,0.3
-Beach=0.8,0.7,0.6
-Grass=0.7,0.6,0.5
-Forest=0.55,0.35,0.25
-Desert=0.85,0.75,0.65
-Rock=0.4,0.3,0.2
-Tundra=0.75,0.65,0.55
-Snow=0.9,0.85,0.8
-
-[terrain]
-# Very flat to simulate gas surface
-ContinentFrequency=0.5
-ContinentHeight=0.00001
-SeaLevel=-1000.0
-MountainFrequency=1.0
-MountainHeight=0.00001
-HillsFrequency=1.0
-HillsHeight=0.00001
-DetailFrequency=10.0
-DetailHeight=0.00001
-PolarIceCapLatitude=2.0
-MoistureOffset=0.0
-TemperatureOffset=0.0
-
-[atmosphere]
-AtmosphereRadius=1.01
-SunIntensity=10.0
-RayleighScatteringCoeff=0.000005,0.000005,0.000005
-RayleighScaleHeight=20000.0
-MieScatteringCoeff=0.000005,0.000005,0.000005
-MieScaleHeight=10000.0
-MiePreferredScatteringDir=0.8
+[gasgiant]
+BaseColor=0.8,0.7,0.6
+BandColor=0.6,0.4,0.3
+WindSpeed=1.2
+Turbulence=0.8
+Seed=123.0
 
 # ==========================================
 # IO (Jupiter Moon)
@@ -375,42 +341,20 @@ MoistureOffset=1.0
 # SATURN
 # ==========================================
 Name=Saturn
-Type=TERRESTRIAL
-TerrainType=terrestrial
+Type=GAS_GIANT
 Mass=5.683e26
 Radius=5.823e7
-# 9.58 AU
 Position=1.434e12,0,0
 Velocity=0,0,9680
 Color=0.9,0.8,0.6
-Seed=404
 RotationPeriod=38360.0
 Obliquity=26.73
-
-[colors]
-DeepOcean=0.7,0.6,0.4
-ShallowOcean=0.8,0.7,0.5
-Beach=0.85,0.75,0.55
-Grass=0.8,0.7,0.5
-Forest=0.75,0.65,0.45
-Desert=0.9,0.8,0.6
-Rock=0.7,0.6,0.5
-Tundra=0.8,0.7,0.6
-Snow=0.9,0.85,0.75
-
-[terrain]
-ContinentFrequency=0.5
-ContinentHeight=0.00001
-SeaLevel=-1000.0
-MountainFrequency=1.0
-MountainHeight=0.00001
-HillsFrequency=1.0
-HillsHeight=0.00001
-DetailFrequency=10.0
-DetailHeight=0.00001
-PolarIceCapLatitude=2.0
-MoistureOffset=0.0
-TemperatureOffset=0.0
+[gasgiant]
+BaseColor=0.9,0.85,0.7
+BandColor=0.8,0.7,0.5
+WindSpeed=1.8
+Turbulence=0.5
+Seed=404.0
 
 [atmosphere]
 AtmosphereRadius=1.015
