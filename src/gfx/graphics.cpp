@@ -69,9 +69,9 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 	glDepthMask(GL_TRUE);
 
 	// Initialize Framebuffer
-	int width, height;
-	glfwGetWindowSize(m_pWindow, &width, &height);
-	InitFramebuffer(width, height);
+	int Width, Height;
+	glfwGetWindowSize(m_pWindow, &Width, &Height);
+	InitFramebuffer(Width, Height);
 	InitShadowMap();
 
 	m_Grid.Init();
@@ -82,6 +82,8 @@ bool CGraphics::OnInit(CStarSystem *pStarSystem)
 
 	CleanupMeshes();
 	OnBodiesReloaded(pStarSystem);
+
+	WindowSizeCallback(m_pWindow, Width, Height);
 
 	return true;
 }
