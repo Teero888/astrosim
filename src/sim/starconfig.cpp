@@ -2,278 +2,179 @@
 #include "body.h"
 #include "starsystem.h"
 
+#include <toml.hpp>
+
+#include <iostream>
 #include <string>
 
 #include "glm/ext/vector_float3.hpp"
-#include <cstdio>
-#include <fstream>
-#include <iostream>
-#include <sstream>
 
-static std::string trim(const std::string &Str)
+// Helper to get vec3 from array
+static glm::vec3 get_vec3(const toml::array *arr)
 {
-	size_t First = Str.find_first_not_of(" \t\n\r");
-	if(std::string::npos == First)
-	{
-		return Str;
-	}
-	size_t Last = Str.find_last_not_of(" \t\n\r");
-	return Str.substr(First, (Last - First + 1));
+	if(!arr || arr->size() < 3)
+		return glm::vec3(0.0f);
+	return glm::vec3(
+		arr->get(0)->value_or(0.0f),
+		arr->get(1)->value_or(0.0f),
+		arr->get(2)->value_or(0.0f));
+}
+
+static Vec3 get_Vec3(const toml::array *arr)
+{
+	if(!arr || arr->size() < 3)
+		return Vec3(0.0);
+	return Vec3(
+		arr->get(0)->value_or(0.0),
+		arr->get(1)->value_or(0.0),
+		arr->get(2)->value_or(0.0));
 }
 
 void CStarSystem::LoadBodies(const std::string &Filename)
 {
 	m_vBodies.clear();
 
-	std::ifstream File(Filename);
-	if(!File.is_open())
+	toml::table tbl;
+	try
 	{
-		std::cerr << "Error: Could not open bodies data file: " << Filename << std::endl;
+		tbl = toml::parse_file(Filename);
+	}
+	catch(const toml::parse_error &err)
+	{
+		std::cerr << "Error parsing TOML: " << err << "\n";
 		m_vBodies.emplace_back(0, "Error", SBody::SSimParams{1, Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0)}, SBody::SRenderParams{1, glm::vec3(1, 0, 0)});
 		return;
 	}
 
-	int IdCounter = 0;
-	std::string Line;
-
-	SBody::SSimParams SimParams = {};
-	SBody::SRenderParams RenderParams = {};
-	std::string Name = "";
-	std::string CurrentSelection = "";
-
-	auto AddBody = [&]() {
-		if(!Name.empty())
-		{
-			// Initialize Rotation Physics
-			if(RenderParams.m_RotationPeriod > 0.0)
-			{
-				Vec3 orbitalUp(0, 1, 0);
-				Quat tilt = Quat::FromAxisAngle(Vec3(0, 0, 1), -RenderParams.m_Obliquity); // Tilt 'right'
-				Vec3 rotationAxis = tilt.RotateVector(orbitalUp);
-				SimParams.m_Orientation = tilt;
-				double angSpeed = (2.0 * PI) / RenderParams.m_RotationPeriod;
-				SimParams.m_AngularVelocity = rotationAxis * angSpeed;
-			}
-
-			m_vBodies.emplace_back(IdCounter++, Name, SimParams, RenderParams);
-			SimParams = {};
-			RenderParams = {};
-			Name = "";
-			CurrentSelection = "";
-		}
-	};
-
-	while(std::getline(File, Line))
+	if(!tbl["bodies"].is_array())
 	{
-		Line = trim(Line);
-		if(Line.empty())
-			continue;
-		if(Line[0] == '#')
-			continue;
-
-		if(Line[0] == '[' && Line.back() == ']')
-		{
-			CurrentSelection = Line.substr(1, Line.length() - 2);
-			continue;
-		}
-
-		std::stringstream ss(Line);
-		std::string Key, value;
-		std::getline(ss, Key, '=');
-		std::getline(ss, value);
-		Key = trim(Key);
-		value = trim(value);
-
-		if(Key == "Name")
-		{
-			AddBody();
-			CurrentSelection = "";
-			Name = value;
-			continue;
-		}
-
-		if(Name.empty())
-			continue;
-
-		if(CurrentSelection.empty())
-		{
-			if(Key == "Type")
-			{
-				if(value == "STAR")
-				{
-					RenderParams.m_BodyType = EBodyType::STAR;
-					RenderParams.m_Atmosphere.m_Enabled = false;
-				}
-				else if(value == "TERRESTRIAL")
-					RenderParams.m_BodyType = EBodyType::TERRESTRIAL;
-				else if(value == "GAS_GIANT")
-					RenderParams.m_BodyType = EBodyType::GAS_GIANT;
-			}
-			else if(Key == "TerrainType")
-			{
-				if(value == "volcanic")
-					RenderParams.m_TerrainType = ETerrainType::VOLCANIC;
-				else if(value == "ice")
-					RenderParams.m_TerrainType = ETerrainType::ICE;
-				else if(value == "barren")
-					RenderParams.m_TerrainType = ETerrainType::BARREN;
-				else
-					RenderParams.m_TerrainType = ETerrainType::TERRESTRIAL;
-			}
-			else if(Key == "Mass")
-				SimParams.m_Mass = std::stod(value);
-			else if(Key == "Radius")
-				RenderParams.m_Radius = std::stod(value);
-			else if(Key == "Seed")
-				RenderParams.m_Seed = std::stod(value);
-			else if(Key == "RotationPeriod")
-				RenderParams.m_RotationPeriod = std::stod(value);
-			else if(Key == "Obliquity")
-				RenderParams.m_Obliquity = std::stod(value);
-			else if(Key == "Position")
-			{
-				std::stringstream ssv(value);
-				char comma;
-				ssv >> SimParams.m_Position.x >> comma >> SimParams.m_Position.y >> comma >> SimParams.m_Position.z;
-			}
-			else if(Key == "Velocity")
-			{
-				std::stringstream ssv(value);
-				char comma;
-				ssv >> SimParams.m_Velocity.x >> comma >> SimParams.m_Velocity.y >> comma >> SimParams.m_Velocity.z;
-			}
-			else if(Key == "Color")
-			{
-				std::stringstream ssv(value);
-				char comma;
-				ssv >> RenderParams.m_Color.x >> comma >> RenderParams.m_Color.y >> comma >> RenderParams.m_Color.z;
-			}
-			else if(Key == "HasAtmosphere")
-			{
-				RenderParams.m_Atmosphere.m_Enabled = (value == "true");
-			}
-		}
-		else if(CurrentSelection == "colors")
-		{
-			glm::vec3 *pColor = nullptr;
-			if(Key == "DeepOcean")
-				pColor = &RenderParams.m_Colors.m_DeepOcean;
-			else if(Key == "ShallowOcean")
-				pColor = &RenderParams.m_Colors.m_ShallowOcean;
-			else if(Key == "Beach")
-				pColor = &RenderParams.m_Colors.m_Beach;
-			else if(Key == "Grass")
-				pColor = &RenderParams.m_Colors.m_Grass;
-			else if(Key == "Forest")
-				pColor = &RenderParams.m_Colors.m_Forest;
-			else if(Key == "Desert")
-				pColor = &RenderParams.m_Colors.m_Desert;
-			else if(Key == "Snow")
-				pColor = &RenderParams.m_Colors.m_Snow;
-			else if(Key == "Rock")
-				pColor = &RenderParams.m_Colors.m_Rock;
-			else if(Key == "Tundra")
-				pColor = &RenderParams.m_Colors.m_Tundra;
-
-			if(pColor)
-			{
-				std::stringstream ssv(value);
-				char comma;
-				ssv >> pColor->x >> comma >> pColor->y >> comma >> pColor->z;
-			}
-		}
-		else if(CurrentSelection == "terrain")
-		{
-			if(Key == "ContinentFrequency")
-				RenderParams.m_Terrain.m_ContinentFrequency = std::stof(value);
-			else if(Key == "ContinentOctaves")
-				RenderParams.m_Terrain.m_ContinentOctaves = std::stoi(value);
-			else if(Key == "MountainFrequency")
-				RenderParams.m_Terrain.m_MountainFrequency = std::stof(value);
-			else if(Key == "MountainOctaves")
-				RenderParams.m_Terrain.m_MountainOctaves = std::stoi(value);
-			else if(Key == "HillsFrequency")
-				RenderParams.m_Terrain.m_HillsFrequency = std::stof(value);
-			else if(Key == "HillsOctaves")
-				RenderParams.m_Terrain.m_HillsOctaves = std::stoi(value);
-			else if(Key == "DetailFrequency")
-				RenderParams.m_Terrain.m_DetailFrequency = std::stof(value);
-			else if(Key == "DetailOctaves")
-				RenderParams.m_Terrain.m_DetailOctaves = std::stoi(value);
-			else if(Key == "MountainWarpStrength")
-				RenderParams.m_Terrain.m_MountainWarpStrength = std::stof(value);
-			else if(Key == "SeaLevel")
-				RenderParams.m_Terrain.m_SeaLevel = std::stof(value);
-			else if(Key == "OceanDepth")
-				RenderParams.m_Terrain.m_OceanDepth = std::stof(value);
-			else if(Key == "ContinentHeight")
-				RenderParams.m_Terrain.m_ContinentHeight = std::stof(value);
-			else if(Key == "MountainHeight")
-				RenderParams.m_Terrain.m_MountainHeight = std::stof(value);
-			else if(Key == "HillsHeight")
-				RenderParams.m_Terrain.m_HillsHeight = std::stof(value);
-			else if(Key == "DetailHeight")
-				RenderParams.m_Terrain.m_DetailHeight = std::stof(value);
-			else if(Key == "MountainMaskFrequency")
-				RenderParams.m_Terrain.m_MountainMaskFrequency = std::stof(value);
-			else if(Key == "PolarIceCapLatitude")
-				RenderParams.m_Terrain.m_PolarIceCapLatitude = std::stof(value);
-			else if(Key == "MoistureOffset")
-				RenderParams.m_Terrain.m_MoistureOffset = std::stof(value);
-			else if(Key == "TemperatureOffset")
-				RenderParams.m_Terrain.m_TemperatureOffset = std::stof(value);
-		}
-		else if(CurrentSelection == "gasgiant")
-		{
-			if(Key == "BaseColor")
-			{
-				std::stringstream ssv(value);
-				char comma;
-				ssv >> RenderParams.m_GasGiant.m_BaseColor.x >> comma >> RenderParams.m_GasGiant.m_BaseColor.y >> comma >> RenderParams.m_GasGiant.m_BaseColor.z;
-			}
-			else if(Key == "BandColor")
-			{
-				std::stringstream ssv(value);
-				char comma;
-				ssv >> RenderParams.m_GasGiant.m_BandColor.x >> comma >> RenderParams.m_GasGiant.m_BandColor.y >> comma >> RenderParams.m_GasGiant.m_BandColor.z;
-			}
-			else if(Key == "WindSpeed")
-				RenderParams.m_GasGiant.m_WindSpeed = std::stof(value);
-			else if(Key == "Turbulence")
-				RenderParams.m_GasGiant.m_Turbulence = std::stof(value);
-			else if(Key == "Seed")
-				RenderParams.m_GasGiant.m_Seed = std::stof(value);
-		}
-		else if(CurrentSelection == "atmosphere")
-		{
-			// Enabling atmosphere explicitly
-			RenderParams.m_Atmosphere.m_Enabled = true;
-
-			if(Key == "AtmosphereRadius")
-				RenderParams.m_Atmosphere.m_AtmosphereRadius = std::stof(value);
-			else if(Key == "SunIntensity")
-				RenderParams.m_Atmosphere.m_SunIntensity = std::stof(value);
-			else if(Key == "RayleighScatteringCoeff")
-			{
-				std::stringstream ssv(value);
-				char comma;
-				ssv >> RenderParams.m_Atmosphere.m_RayleighScatteringCoeff.x >> comma >> RenderParams.m_Atmosphere.m_RayleighScatteringCoeff.y >> comma >> RenderParams.m_Atmosphere.m_RayleighScatteringCoeff.z;
-			}
-			else if(Key == "RayleighScaleHeight")
-				RenderParams.m_Atmosphere.m_RayleighScaleHeight = std::stof(value);
-			else if(Key == "MieScatteringCoeff")
-			{
-				std::stringstream ssv(value);
-				char comma;
-				ssv >> RenderParams.m_Atmosphere.m_MieScatteringCoeff.x >> comma >> RenderParams.m_Atmosphere.m_MieScatteringCoeff.y >> comma >> RenderParams.m_Atmosphere.m_MieScatteringCoeff.z;
-			}
-			else if(Key == "MieScaleHeight")
-				RenderParams.m_Atmosphere.m_MieScaleHeight = std::stof(value);
-			else if(Key == "MiePreferredScatteringDir")
-				RenderParams.m_Atmosphere.m_MiePreferredScatteringDir = std::stof(value);
-		}
+		std::cerr << "Error: 'bodies' array not found in config.\n";
+		m_vBodies.emplace_back(0, "Error", SBody::SSimParams{1, Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0)}, SBody::SRenderParams{1, glm::vec3(1, 0, 0)});
+		return;
 	}
-	AddBody();
+
+	const auto &bodies = *tbl["bodies"].as_array();
+	int IdCounter = 0;
+
+	for(const auto &elem : bodies)
+	{
+		if(!elem.is_table())
+			continue;
+		const auto &bodyTbl = *elem.as_table();
+
+		std::string Name = bodyTbl["name"].value_or("Unknown");
+
+		SBody::SSimParams SimParams = {};
+		SBody::SRenderParams RenderParams = {};
+
+		// Type
+		std::string typeStr = bodyTbl["type"].value_or("TERRESTRIAL");
+		if(typeStr == "STAR")
+			RenderParams.m_BodyType = EBodyType::STAR;
+		else if(typeStr == "GAS_GIANT")
+			RenderParams.m_BodyType = EBodyType::GAS_GIANT;
+		else
+			RenderParams.m_BodyType = EBodyType::TERRESTRIAL;
+
+		// Terrain Type
+		std::string terrainTypeStr = bodyTbl["terrain_type"].value_or("terrestrial");
+		if(terrainTypeStr == "volcanic")
+			RenderParams.m_TerrainType = ETerrainType::VOLCANIC;
+		else if(terrainTypeStr == "ice")
+			RenderParams.m_TerrainType = ETerrainType::ICE;
+		else if(terrainTypeStr == "barren")
+			RenderParams.m_TerrainType = ETerrainType::BARREN;
+		else
+			RenderParams.m_TerrainType = ETerrainType::TERRESTRIAL;
+
+		SimParams.m_Mass = bodyTbl["mass"].value_or(1.0);
+		RenderParams.m_Radius = bodyTbl["radius"].value_or(1.0);
+		RenderParams.m_Seed = bodyTbl["seed"].value_or(0);
+		RenderParams.m_RotationPeriod = bodyTbl["rotation_period"].value_or(0.0);
+		RenderParams.m_Obliquity = bodyTbl["obliquity"].value_or(0.0);
+
+		SimParams.m_Position = get_Vec3(bodyTbl["position"].as_array());
+		SimParams.m_Velocity = get_Vec3(bodyTbl["velocity"].as_array());
+		RenderParams.m_Color = get_vec3(bodyTbl["color"].as_array());
+
+		// Colors
+		if(const auto *colors = bodyTbl["colors"].as_table())
+		{
+			RenderParams.m_Colors.m_DeepOcean = get_vec3((*colors)["deep_ocean"].as_array());
+			RenderParams.m_Colors.m_ShallowOcean = get_vec3((*colors)["shallow_ocean"].as_array());
+			RenderParams.m_Colors.m_Beach = get_vec3((*colors)["beach"].as_array());
+			RenderParams.m_Colors.m_Grass = get_vec3((*colors)["grass"].as_array());
+			RenderParams.m_Colors.m_Forest = get_vec3((*colors)["forest"].as_array());
+			RenderParams.m_Colors.m_Desert = get_vec3((*colors)["desert"].as_array());
+			RenderParams.m_Colors.m_Snow = get_vec3((*colors)["snow"].as_array());
+			RenderParams.m_Colors.m_Rock = get_vec3((*colors)["rock"].as_array());
+			RenderParams.m_Colors.m_Tundra = get_vec3((*colors)["tundra"].as_array());
+		}
+
+		// Terrain
+		if(const auto *terrain = bodyTbl["terrain"].as_table())
+		{
+			RenderParams.m_Terrain.m_ContinentFrequency = (*terrain)["continent_frequency"].value_or(0.02f);
+			RenderParams.m_Terrain.m_ContinentOctaves = (*terrain)["continent_octaves"].value_or(4);
+			RenderParams.m_Terrain.m_ContinentHeight = (*terrain)["continent_height"].value_or(0.005f);
+			RenderParams.m_Terrain.m_SeaLevel = (*terrain)["sea_level"].value_or(0.0f);
+			RenderParams.m_Terrain.m_OceanDepth = (*terrain)["ocean_depth"].value_or(0.01f);
+
+			RenderParams.m_Terrain.m_MountainFrequency = (*terrain)["mountain_frequency"].value_or(0.08f);
+			RenderParams.m_Terrain.m_MountainOctaves = (*terrain)["mountain_octaves"].value_or(6);
+			RenderParams.m_Terrain.m_MountainHeight = (*terrain)["mountain_height"].value_or(0.015f);
+			RenderParams.m_Terrain.m_MountainMaskFrequency = (*terrain)["mountain_mask_frequency"].value_or(0.01f);
+			RenderParams.m_Terrain.m_MountainWarpStrength = (*terrain)["mountain_warp_strength"].value_or(1.0f);
+
+			RenderParams.m_Terrain.m_HillsFrequency = (*terrain)["hills_frequency"].value_or(0.3f);
+			RenderParams.m_Terrain.m_HillsOctaves = (*terrain)["hills_octaves"].value_or(3);
+			RenderParams.m_Terrain.m_HillsHeight = (*terrain)["hills_height"].value_or(0.001f);
+
+			RenderParams.m_Terrain.m_DetailFrequency = (*terrain)["detail_frequency"].value_or(1.5f);
+			RenderParams.m_Terrain.m_DetailOctaves = (*terrain)["detail_octaves"].value_or(4);
+			RenderParams.m_Terrain.m_DetailHeight = (*terrain)["detail_height"].value_or(0.0005f);
+
+			RenderParams.m_Terrain.m_PolarIceCapLatitude = (*terrain)["polar_ice_cap_latitude"].value_or(0.75f);
+			RenderParams.m_Terrain.m_MoistureOffset = (*terrain)["moisture_offset"].value_or(0.0f);
+			RenderParams.m_Terrain.m_TemperatureOffset = (*terrain)["temperature_offset"].value_or(0.0f);
+		}
+
+		// Gas Giant
+		if(const auto *gg = bodyTbl["gasgiant"].as_table())
+		{
+			RenderParams.m_GasGiant.m_BaseColor = get_vec3((*gg)["base_color"].as_array());
+			RenderParams.m_GasGiant.m_BandColor = get_vec3((*gg)["band_color"].as_array());
+			RenderParams.m_GasGiant.m_WindSpeed = (*gg)["wind_speed"].value_or(1.0f);
+			RenderParams.m_GasGiant.m_Turbulence = (*gg)["turbulence"].value_or(1.0f);
+			RenderParams.m_GasGiant.m_Seed = (*gg)["seed"].value_or(0.0f);
+		}
+
+		// Atmosphere
+		if(const auto *atm = bodyTbl["atmosphere"].as_table())
+		{
+			RenderParams.m_Atmosphere.m_Enabled = (*atm)["enabled"].value_or(false);
+			RenderParams.m_Atmosphere.m_AtmosphereRadius = (*atm)["radius"].value_or(1.025f);
+			RenderParams.m_Atmosphere.m_SunIntensity = (*atm)["sun_intensity"].value_or(20.0f);
+			RenderParams.m_Atmosphere.m_RayleighScatteringCoeff = get_vec3((*atm)["rayleigh_scattering_coeff"].as_array());
+			RenderParams.m_Atmosphere.m_RayleighScaleHeight = (*atm)["rayleigh_scale_height"].value_or(8000.0f);
+			RenderParams.m_Atmosphere.m_MieScatteringCoeff = get_vec3((*atm)["mie_scattering_coeff"].as_array());
+			RenderParams.m_Atmosphere.m_MieScaleHeight = (*atm)["mie_scale_height"].value_or(1200.0f);
+			RenderParams.m_Atmosphere.m_MiePreferredScatteringDir = (*atm)["mie_preferred_scattering_dir"].value_or(0.758f);
+		}
+
+		// Rotation Logic
+		if(RenderParams.m_RotationPeriod != 0.0)
+		{
+			Vec3 orbitalUp(0, 1, 0);
+			Quat tilt = Quat::FromAxisAngle(Vec3(0, 0, 1), -RenderParams.m_Obliquity);
+			Vec3 rotationAxis = tilt.RotateVector(orbitalUp);
+			SimParams.m_Orientation = tilt;
+			double angSpeed = (2.0 * PI) / RenderParams.m_RotationPeriod;
+			SimParams.m_AngularVelocity = rotationAxis * angSpeed;
+		}
+
+		m_vBodies.emplace_back(IdCounter++, Name, SimParams, RenderParams);
+	}
 
 	if(!m_vBodies.empty())
 	{

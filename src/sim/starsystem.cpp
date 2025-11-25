@@ -6,7 +6,7 @@
 void CStarSystem::OnInit()
 {
 	*this = CStarSystem();
-	LoadBodies("data/bodies.dat");
+	LoadBodies("data/bodies.toml");
 }
 
 void CStarSystem::UpdateBodies()

@@ -17,6 +17,9 @@ set(GLM_DIR ${CMAKE_SOURCE_DIR}/libs/glm)
 # include fastnoiselite (header-only)
 set(FASTNOISE_DIR ${CMAKE_SOURCE_DIR}/libs/FastNoiseLite/Cpp)
 
+# include toml++ (header-only)
+set(TOMLPLUSPLUS_DIR ${CMAKE_SOURCE_DIR}/libs/toml++)
+
 # add imgui sources
 file(GLOB IMGUI_SOURCES
 	${IMGUI_DIR}/*.cpp
@@ -84,6 +87,7 @@ target_include_directories(astrosim PRIVATE
 	${IMGUI_DIR}/backends
 	${GLM_DIR}
 	${FASTNOISE_DIR}
+	${TOMLPLUSPLUS_DIR}
 	${CMAKE_SOURCE_DIR}/shaders
 	${CMAKE_SOURCE_DIR}/src
 	${CMAKE_SOURCE_DIR}/src/sim

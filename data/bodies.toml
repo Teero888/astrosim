@@ -1,0 +1,466 @@
+# ==========================================
+# THE SUN
+# ==========================================
+[[bodies]]
+name = "Sun"
+type = "STAR"
+mass = 1.989e30
+radius = 6.9634e8
+position = [0.0, 0.0, 0.0]
+velocity = [0.0, 0.0, 0.0]
+color = [1.0, 0.98, 0.95]
+rotation_period = 2160000.0
+obliquity = 7.25
+
+# ==========================================
+# MERCURY
+# ==========================================
+[[bodies]]
+name = "Mercury"
+type = "TERRESTRIAL"
+terrain_type = "barren"
+mass = 3.301e23
+radius = 2.439e6
+position = [5.79e10, 0.0, 0.0]
+velocity = [0.0, 0.0, 47870.0]
+color = [0.4, 0.38, 0.35]
+seed = 101
+rotation_period = 5067000.0
+obliquity = 0.034
+
+# Colors
+colors.deep_ocean = [0.2, 0.2, 0.2]
+colors.shallow_ocean = [0.25, 0.25, 0.25]
+colors.beach = [0.3, 0.3, 0.3]
+colors.grass = [0.35, 0.33, 0.3]
+colors.forest = [0.3, 0.28, 0.25]
+colors.desert = [0.4, 0.38, 0.35]
+colors.tundra = [0.45, 0.43, 0.4]
+colors.rock = [0.25, 0.23, 0.2]
+colors.snow = [0.5, 0.5, 0.5]
+
+# Terrain
+terrain.continent_frequency = 4.0
+terrain.continent_height = 0.002
+terrain.sea_level = -1000.0
+terrain.mountain_frequency = 10.0
+terrain.mountain_height = 0.003
+terrain.hills_frequency = 30.0
+terrain.hills_height = 0.001
+terrain.detail_frequency = 100.0
+terrain.detail_height = 0.0005
+terrain.polar_ice_cap_latitude = 2.0
+terrain.moisture_offset = -1.0
+terrain.temperature_offset = 0.5
+
+# ==========================================
+# VENUS
+# ==========================================
+[[bodies]]
+name = "Venus"
+type = "TERRESTRIAL"
+terrain_type = "volcanic"
+mass = 4.867e24
+radius = 6.051e6
+position = [1.082e11, 0.0, 0.0]
+velocity = [0.0, 0.0, 35020.0]
+color = [0.8, 0.7, 0.5]
+seed = 202
+rotation_period = -20996800.0
+obliquity = 177.4
+
+# Colors
+colors.deep_ocean = [0.6, 0.4, 0.1]
+colors.shallow_ocean = [0.7, 0.5, 0.2]
+colors.beach = [0.75, 0.55, 0.2]
+colors.grass = [0.8, 0.6, 0.2]
+colors.forest = [0.7, 0.5, 0.15]
+colors.desert = [0.85, 0.65, 0.25]
+colors.rock = [0.5, 0.3, 0.1]
+colors.tundra = [0.8, 0.6, 0.2]
+colors.snow = [0.9, 0.8, 0.5]
+
+# Terrain
+terrain.continent_frequency = 0.8
+terrain.continent_height = 0.001
+terrain.sea_level = -1000.0
+terrain.mountain_frequency = 3.0
+terrain.mountain_height = 0.004
+terrain.hills_frequency = 10.0
+terrain.hills_height = 0.0005
+terrain.polar_ice_cap_latitude = 2.0
+terrain.moisture_offset = -1.0
+terrain.temperature_offset = 1.0
+
+# Atmosphere
+atmosphere.enabled = true
+atmosphere.radius = 1.1
+atmosphere.sun_intensity = 20.0
+atmosphere.rayleigh_scattering_coeff = [0.00001, 0.000005, 0.000002]
+atmosphere.rayleigh_scale_height = 6000.0
+atmosphere.mie_scattering_coeff = [0.0001, 0.00008, 0.00005]
+atmosphere.mie_scale_height = 4000.0
+atmosphere.mie_preferred_scattering_dir = 0.8
+
+# ==========================================
+# EARTH
+# ==========================================
+[[bodies]]
+name = "Earth"
+type = "TERRESTRIAL"
+terrain_type = "terrestrial"
+mass = 5.972e24
+radius = 6.371e6
+position = [1.496e11, 0.0, 0.0]
+velocity = [0.0, 0.0, 29780.0]
+color = [0.0, 0.05, 0.2]
+seed = 1337
+rotation_period = 86164.1
+obliquity = 23.44
+
+# Colors
+colors.deep_ocean = [0.0, 0.02, 0.10]
+colors.shallow_ocean = [0.0, 0.15, 0.35]
+colors.beach = [0.76, 0.70, 0.50]
+colors.grass = [0.10, 0.25, 0.05]
+colors.forest = [0.02, 0.15, 0.02]
+colors.desert = [0.75, 0.65, 0.45]
+colors.tundra = [0.40, 0.35, 0.30]
+colors.rock = [0.30, 0.30, 0.30]
+colors.snow = [0.98, 0.98, 1.0]
+
+# Terrain
+terrain.continent_frequency = 1.2
+terrain.continent_octaves = 8
+terrain.continent_height = 0.0005
+terrain.sea_level = 0.0
+terrain.mountain_frequency = 12.0
+terrain.mountain_mask_frequency = 1.5
+terrain.mountain_height = 0.0015
+terrain.mountain_octaves = 8
+terrain.hills_frequency = 25.0
+terrain.hills_height = 0.0001
+terrain.detail_frequency = 100.0
+terrain.detail_height = 0.00001
+terrain.polar_ice_cap_latitude = 0.85
+terrain.moisture_offset = 0.0
+terrain.temperature_offset = 0.0
+
+# Atmosphere
+atmosphere.enabled = true
+atmosphere.radius = 1.025
+atmosphere.sun_intensity = 22.0
+atmosphere.rayleigh_scattering_coeff = [5.5e-6, 1.3e-5, 3.3e-5]
+atmosphere.rayleigh_scale_height = 8000.0
+atmosphere.mie_scattering_coeff = [2.0e-6, 2.0e-6, 2.0e-6]
+atmosphere.mie_scale_height = 1200.0
+atmosphere.mie_preferred_scattering_dir = 0.76
+
+# ==========================================
+# MOON
+# ==========================================
+[[bodies]]
+name = "Moon"
+type = "TERRESTRIAL"
+terrain_type = "barren"
+mass = 7.342e22
+radius = 1.737e6
+position = [1.499844e11, 0.0, 0.0]
+velocity = [0.0, 0.0, 30802.0]
+color = [0.5, 0.5, 0.5]
+seed = 9999
+rotation_period = 2360590.0
+obliquity = 6.68
+
+# Colors
+colors.deep_ocean = [0.1, 0.1, 0.1]
+colors.shallow_ocean = [0.15, 0.15, 0.15]
+colors.beach = [0.3, 0.3, 0.3]
+colors.grass = [0.4, 0.4, 0.4]
+colors.forest = [0.2, 0.2, 0.2]
+colors.desert = [0.5, 0.5, 0.5]
+colors.tundra = [0.6, 0.6, 0.6]
+colors.rock = [0.3, 0.3, 0.3]
+colors.snow = [0.8, 0.8, 0.8]
+
+# Terrain
+terrain.continent_frequency = 3.0
+terrain.continent_height = 0.001
+terrain.sea_level = -1000.0
+terrain.mountain_frequency = 15.0
+terrain.mountain_height = 0.004
+terrain.hills_frequency = 30.0
+terrain.hills_height = 0.001
+terrain.detail_frequency = 80.0
+terrain.detail_height = 0.0002
+terrain.polar_ice_cap_latitude = 2.0
+terrain.moisture_offset = -1.0
+terrain.temperature_offset = -1.0
+
+# ==========================================
+# MARS
+# ==========================================
+[[bodies]]
+name = "Mars"
+type = "TERRESTRIAL"
+terrain_type = "barren"
+mass = 6.39e23
+radius = 3.389e6
+position = [2.279e11, 0.0, 0.0]
+velocity = [0.0, 0.0, 24070.0]
+color = [0.8, 0.4, 0.2]
+seed = 5050
+rotation_period = 88642.0
+obliquity = 25.19
+
+# Colors
+colors.deep_ocean = [0.3, 0.15, 0.05]
+colors.shallow_ocean = [0.4, 0.2, 0.1]
+colors.beach = [0.5, 0.25, 0.1]
+colors.grass = [0.6, 0.3, 0.1]
+colors.forest = [0.45, 0.2, 0.1]
+colors.desert = [0.7, 0.35, 0.15]
+colors.rock = [0.3, 0.1, 0.05]
+colors.tundra = [0.4, 0.2, 0.1]
+colors.snow = [0.9, 0.9, 0.95]
+
+# Terrain
+terrain.continent_frequency = 1.5
+terrain.continent_height = 0.002
+terrain.sea_level = -1000.0
+terrain.mountain_frequency = 5.0
+terrain.mountain_mask_frequency = 1.0
+terrain.mountain_height = 0.007
+terrain.mountain_octaves = 8
+terrain.hills_frequency = 15.0
+terrain.hills_height = 0.0005
+terrain.detail_frequency = 60.0
+terrain.detail_height = 0.0001
+terrain.polar_ice_cap_latitude = 0.9
+terrain.moisture_offset = -0.8
+terrain.temperature_offset = -0.3
+
+# Atmosphere
+atmosphere.enabled = true
+atmosphere.radius = 1.02
+atmosphere.sun_intensity = 15.0
+atmosphere.rayleigh_scattering_coeff = [0.0000019, 0.0000013, 0.00000058]
+atmosphere.rayleigh_scale_height = 11000.0
+atmosphere.mie_scattering_coeff = [0.00002, 0.000015, 0.00001]
+atmosphere.mie_scale_height = 3000.0
+atmosphere.mie_preferred_scattering_dir = 0.8
+
+# ==========================================
+# JUPITER
+# ==========================================
+[[bodies]]
+name = "Jupiter"
+type = "GAS_GIANT"
+mass = 1.898e27
+radius = 6.991e7
+position = [7.78e11, 0.0, 0.0]
+velocity = [0.0, 0.0, 13070.0]
+color = [0.8, 0.7, 0.6]
+rotation_period = 35730.0
+obliquity = 3.13
+
+gasgiant.base_color = [0.8, 0.7, 0.6]
+gasgiant.band_color = [0.6, 0.4, 0.3]
+gasgiant.wind_speed = 1.2
+gasgiant.turbulence = 0.8
+gasgiant.seed = 123.0
+
+# ==========================================
+# IO
+# ==========================================
+[[bodies]]
+name = "Io"
+type = "TERRESTRIAL"
+terrain_type = "volcanic"
+mass = 8.93e22
+radius = 1.821e6
+position = [7.7842e11, 0.0, 0.0]
+velocity = [0.0, 0.0, 30400.0]
+color = [0.9, 0.9, 0.4]
+seed = 304
+rotation_period = 152853.0
+obliquity = 0.0
+
+# Colors
+colors.deep_ocean = [0.8, 0.8, 0.2]
+colors.shallow_ocean = [0.9, 0.9, 0.3]
+colors.beach = [0.9, 0.8, 0.4]
+colors.grass = [0.8, 0.7, 0.2]
+colors.forest = [0.7, 0.6, 0.1]
+colors.desert = [1.0, 0.9, 0.5]
+colors.rock = [0.6, 0.5, 0.2]
+colors.tundra = [0.9, 0.9, 0.6]
+colors.snow = [1.0, 1.0, 0.8]
+
+# Terrain
+terrain.continent_frequency = 2.0
+terrain.continent_height = 0.003
+terrain.sea_level = -1000.0
+terrain.mountain_frequency = 8.0
+terrain.mountain_height = 0.005
+terrain.polar_ice_cap_latitude = 2.0
+terrain.moisture_offset = -1.0
+
+# ==========================================
+# EUROPA
+# ==========================================
+[[bodies]]
+name = "Europa"
+type = "TERRESTRIAL"
+terrain_type = "ice"
+mass = 4.8e22
+radius = 1.560e6
+position = [7.7867e11, 0.0, 0.0]
+velocity = [0.0, 0.0, 26800.0]
+color = [0.9, 0.9, 1.0]
+seed = 305
+rotation_period = 306822.0
+obliquity = 0.1
+
+# Colors
+colors.deep_ocean = [0.8, 0.8, 0.9]
+colors.shallow_ocean = [0.85, 0.85, 0.95]
+colors.beach = [0.9, 0.9, 1.0]
+colors.grass = [0.9, 0.9, 1.0]
+colors.forest = [0.8, 0.8, 0.9]
+colors.desert = [0.95, 0.95, 1.0]
+colors.rock = [0.7, 0.7, 0.8]
+colors.tundra = [0.85, 0.85, 0.95]
+colors.snow = [1.0, 1.0, 1.0]
+
+# Terrain
+terrain.continent_frequency = 0.5
+terrain.continent_height = 0.0005
+terrain.sea_level = -1000.0
+terrain.mountain_frequency = 20.0
+terrain.mountain_height = 0.0002
+terrain.polar_ice_cap_latitude = -1.0
+terrain.moisture_offset = 1.0
+
+# ==========================================
+# SATURN
+# ==========================================
+[[bodies]]
+name = "Saturn"
+type = "GAS_GIANT"
+mass = 5.683e26
+radius = 5.823e7
+position = [1.434e12, 0.0, 0.0]
+velocity = [0.0, 0.0, 9680.0]
+color = [0.9, 0.8, 0.6]
+rotation_period = 38360.0
+obliquity = 26.73
+
+gasgiant.base_color = [0.9, 0.85, 0.7]
+gasgiant.band_color = [0.8, 0.7, 0.5]
+gasgiant.wind_speed = 1.8
+gasgiant.turbulence = 0.5
+gasgiant.seed = 404.0
+
+atmosphere.enabled = true
+atmosphere.radius = 1.015
+atmosphere.sun_intensity = 8.0
+atmosphere.rayleigh_scattering_coeff = [0.000005, 0.000005, 0.000004]
+atmosphere.rayleigh_scale_height = 20000.0
+atmosphere.mie_scattering_coeff = [0.000005, 0.000005, 0.000004]
+atmosphere.mie_scale_height = 10000.0
+atmosphere.mie_preferred_scattering_dir = 0.8
+
+# ==========================================
+# TITAN
+# ==========================================
+[[bodies]]
+name = "Titan"
+type = "TERRESTRIAL"
+terrain_type = "terrestrial"
+mass = 1.345e23
+radius = 2.574e6
+position = [1.4352e12, 0.0, 0.0]
+velocity = [0.0, 0.0, 15250.0]
+color = [0.8, 0.6, 0.2]
+seed = 405
+rotation_period = 1377648.0
+obliquity = 0.0
+
+# Colors
+colors.deep_ocean = [0.1, 0.1, 0.05]
+colors.shallow_ocean = [0.2, 0.2, 0.1]
+colors.beach = [0.4, 0.3, 0.1]
+colors.grass = [0.3, 0.2, 0.1]
+colors.forest = [0.2, 0.15, 0.05]
+colors.desert = [0.5, 0.4, 0.1]
+colors.rock = [0.2, 0.2, 0.2]
+colors.tundra = [0.3, 0.25, 0.15]
+colors.snow = [0.4, 0.35, 0.2]
+
+# Terrain
+terrain.continent_frequency = 1.0
+terrain.continent_height = 0.001
+terrain.sea_level = -0.0005
+terrain.mountain_frequency = 5.0
+terrain.mountain_height = 0.002
+terrain.moisture_offset = 0.5
+
+# Atmosphere
+atmosphere.enabled = true
+atmosphere.radius = 1.15
+atmosphere.sun_intensity = 5.0
+atmosphere.rayleigh_scattering_coeff = [0.00001, 0.000005, 0.000001]
+atmosphere.rayleigh_scale_height = 8000.0
+atmosphere.mie_scattering_coeff = [0.00005, 0.00003, 0.00001]
+atmosphere.mie_scale_height = 5000.0
+atmosphere.mie_preferred_scattering_dir = 0.85
+
+# ==========================================
+# PLUTO
+# ==========================================
+[[bodies]]
+name = "Pluto"
+type = "TERRESTRIAL"
+terrain_type = "barren"
+mass = 1.309e22
+radius = 1.188e6
+position = [5.906e12, 0.0, 0.0]
+velocity = [0.0, 0.0, 4700.0]
+color = [0.6, 0.5, 0.4]
+seed = 707
+rotation_period = -551856.0
+obliquity = 122.53
+
+# Colors
+colors.deep_ocean = [0.3, 0.2, 0.2]
+colors.shallow_ocean = [0.4, 0.3, 0.3]
+colors.beach = [0.6, 0.5, 0.4]
+colors.grass = [0.5, 0.4, 0.3]
+colors.forest = [0.4, 0.3, 0.2]
+colors.desert = [0.7, 0.6, 0.5]
+colors.rock = [0.3, 0.3, 0.3]
+colors.tundra = [0.5, 0.4, 0.4]
+colors.snow = [0.8, 0.7, 0.7]
+
+# Terrain
+terrain.continent_frequency = 2.0
+terrain.continent_height = 0.002
+terrain.sea_level = -1000.0
+terrain.mountain_frequency = 5.0
+terrain.mountain_height = 0.005
+terrain.hills_frequency = 15.0
+terrain.hills_height = 0.001
+terrain.polar_ice_cap_latitude = 0.3
+terrain.moisture_offset = -0.5
+terrain.temperature_offset = -2.0
+
+# Atmosphere
+atmosphere.enabled = true
+atmosphere.radius = 1.05
+atmosphere.sun_intensity = 1.0
+atmosphere.rayleigh_scattering_coeff = [0.000002, 0.000002, 0.000004]
+atmosphere.rayleigh_scale_height = 4000.0
+atmosphere.mie_scattering_coeff = [0.000001, 0.000001, 0.000001]
+atmosphere.mie_scale_height = 2000.0
+atmosphere.mie_preferred_scattering_dir = 0.7

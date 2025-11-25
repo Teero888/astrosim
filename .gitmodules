@@ -7,3 +7,6 @@
 [submodule "libs/FastNoiseLite"]
 	path = libs/FastNoiseLite
 	url = https://github.com/Auburn/FastNoiseLite.git
+[submodule "libs/toml++"]
+	path = libs/toml++
+	url = https://github.com/marzer/tomlplusplus
