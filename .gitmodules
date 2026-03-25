@@ -9,4 +9,4 @@
 	url = https://github.com/Auburn/FastNoiseLite.git
 [submodule "libs/toml++"]
 	path = libs/toml++
-	url = https://github.com/marzer/tomlplusplus
+	url = https://github.com/marzer/tomlplusplus.git
