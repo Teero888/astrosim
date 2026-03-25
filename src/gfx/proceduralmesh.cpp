@@ -812,46 +812,44 @@ void COctreeNode::Update(CCamera &Camera)
 	bool bMerge;
 	double DistToBox = 0.f;
 
-	// split until minimum is hit
-	if(m_pOwnerMesh->m_pBody == Camera.m_pFocusedBody && m_Level <= 3)
+	Vec3 CamPosRelPlanet = Camera.m_AbsolutePosition - m_pOwnerMesh->m_pBody->m_SimParams.m_Position;
+
+	Quat q = m_pOwnerMesh->m_pBody->m_SimParams.m_Orientation;
+	Vec3 CamPosLocal = q.Conjugate().RotateVector(CamPosRelPlanet);
+
+	Vec3 NodeCenterWorld = q.RotateVector(m_Center);
+	double sphereRadius = m_Size * 0.9;
+
+	// Culling: Apply to ALL levels to prevent generating unseen chunks
+	if(m_Level > 0)
+	{
+		// Horizon Culling: Chunk behind the planet
+		if(IsChunkOccluded(NodeCenterWorld, m_Size, CamPosRelPlanet, m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius))
+		{
+			if(!m_bIsLeaf) Merge();
+			return;
+		}
+
+		// Frustum Culling: Chunk off-screen
+		Vec3 NodePosRelCam = NodeCenterWorld - CamPosRelPlanet;
+		if(!IsSphereInFrustum(m_pOwnerMesh->m_FrustumPlanes, (glm::vec3)NodePosRelCam, (float)sphereRadius))
+		{
+			if(!m_bIsLeaf) Merge();
+			return;
+		}
+	}
+
+	DistToBox = std::max(0.1, GetDistanceToBox(CamPosLocal, m_Center, m_Size));
+
+	// Minimum LOD level for the focused body to ensure we always have a base shape
+	if(m_pOwnerMesh->m_pBody == Camera.m_pFocusedBody && m_Level < 2)
 	{
 		bSplit = true;
 		bMerge = false;
 	}
 	else
 	{
-		Vec3 CamPosRelPlanet = Camera.m_AbsolutePosition - m_pOwnerMesh->m_pBody->m_SimParams.m_Position;
-
-		Quat q = m_pOwnerMesh->m_pBody->m_SimParams.m_Orientation;
-		Vec3 CamPosLocal = q.Conjugate().RotateVector(CamPosRelPlanet);
-
-		Vec3 NodeCenterWorld = q.RotateVector(m_Center);
-		double sphereRadius = m_Size * 0.9;
-
-		if(m_Level > 0)
-		{
-			// Horizon Culling Planet Center to Camera vs Chunk
-			if(IsChunkOccluded(NodeCenterWorld, m_Size, CamPosRelPlanet, m_pOwnerMesh->m_pBody->m_RenderParams.m_Radius))
-			{
-				if(!m_bIsLeaf)
-					Merge();
-				return;
-			}
-
-			// Frustum Culling
-			Vec3 NodePosRelCam = NodeCenterWorld - CamPosRelPlanet;
-			if(!IsSphereInFrustum(m_pOwnerMesh->m_FrustumPlanes, (glm::vec3)NodePosRelCam, (float)sphereRadius))
-			{
-				if(!m_bIsLeaf)
-					Merge();
-				return;
-			}
-		}
-
-		DistToBox = std::max(0.1, GetDistanceToBox(CamPosLocal, m_Center, m_Size));
-
 		double Ratio = m_Size / DistToBox;
-
 		bSplit = Ratio > m_pOwnerMesh->m_SplitMultiplier;
 		bMerge = Ratio < m_pOwnerMesh->m_MergeMultiplier;
 	}
